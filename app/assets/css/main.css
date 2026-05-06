@@ -1,0 +1,41 @@
+@import "tailwindcss";
+@import "@nuxt/ui";
+
+/* ── 强制浅色：覆盖 Nuxt UI v3 的深色背景 ── */
+
+/* Input / Select / Textarea */
+input, select, textarea,
+[class*="UInput"] input,
+[class*="USelect"] select {
+  background-color: #ffffff !important;
+  color: #1c1917 !important;
+}
+
+/* Nuxt UI Input wrapper */
+.ui-input,
+div[class*="rounded"][class*="ring"] {
+  background-color: #ffffff;
+}
+
+/* UTabs 背景 */
+div[role="tablist"] {
+  background-color: #fef9f0 !important;
+  border: 1px solid #f0e6d8 !important;
+  border-radius: 0.75rem !important;
+}
+
+div[role="tab"] {
+  color: #78716c !important;
+}
+
+div[role="tab"][data-state="active"],
+div[role="tab"][aria-selected="true"] {
+  background-color: #ffffff !important;
+  color: #92400e !important;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.08) !important;
+}
+
+/* UCard */
+.ui-card {
+  background-color: #ffffff;
+}

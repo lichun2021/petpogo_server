@@ -1,0 +1,30 @@
+{
+  "name": "petpogo-server",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "nuxt dev",
+    "build": "nuxt build",
+    "start": "node .output/server/index.mjs",
+    "preview": "nuxt preview"
+  },
+  "dependencies": {
+    "@alicloud/dysmsapi20170525": "^2.0.9",
+    "@alicloud/openapi-client": "^0.4.11",
+    "@nuxt/ui": "^3.1.0",
+    "@vueuse/nuxt": "^12.0.0",
+    "ali-oss": "^6.21.0",
+    "axios": "^1.6.8",
+    "ioredis": "^5.3.2",
+    "jose": "^5.9.3",
+    "mysql2": "^3.9.4",
+    "nuxt": "^4.4.4",
+    "tls-sig-api-v2": "^1.0.2"
+  },
+  "devDependencies": {
+    "@iconify-json/heroicons": "^1.2.3",
+    "@types/node": "^20.11.20",
+    "typescript": "^5.3.3"
+  }
+}
