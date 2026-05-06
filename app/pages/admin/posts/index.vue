@@ -33,8 +33,9 @@
           <div v-else class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
             <div
               v-for="p in list" :key="p.id"
-              class="bg-white rounded-xl border p-4 hover:border-amber-200 transition-colors"
+              class="bg-white rounded-xl border p-4 hover:border-amber-300 hover:shadow-sm transition-all cursor-pointer"
               style="border-color: #f0e6d8"
+              @click="navigateTo(`/admin/posts/${p.id}`)"
             >
               <!-- 用户信息 -->
               <div class="flex items-center gap-2 mb-2">
