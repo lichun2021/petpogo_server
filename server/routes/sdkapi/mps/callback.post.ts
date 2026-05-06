@@ -15,6 +15,14 @@ export default defineEventHandler(async (event) => {
     } catch { /* 解析失败则用原始 body */ }
   }
 
+  // ── D: EventBridge / Data 包裹格式 ────────────────────
+  // 格式: { "Data": "{...}" } 或 { "Data": { ... } }
+  if (body?.Data !== undefined) {
+    try {
+      body = typeof body.Data === 'string' ? JSON.parse(body.Data) : body.Data
+    } catch { /* 解析失败则用原始 body */ }
+  }
+
   const db     = useDb()
   const config = useRuntimeConfig()
   const base   = config.public.ossCdnBaseUrl
