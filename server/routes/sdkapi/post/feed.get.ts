@@ -8,8 +8,10 @@ export default defineEventHandler(async (event) => {
   const [posts]: any = await db.query(
     `SELECT p.id, p.content, p.media_type, p.media_urls, p.video_url, p.cover_url,
             p.duration, p.location, p.like_count, p.comment_count, p.view_count, p.created_at,
-            u.id as user_id, u.nickname, u.avatar as user_avatar
-     FROM t_post p JOIN t_user u ON p.user_id=u.id
+            p.user_id,
+            COALESCE(u.nickname, '宠友') AS nickname,
+            u.avatar AS user_avatar
+     FROM t_post p LEFT JOIN t_user u ON p.user_id=u.id
      WHERE p.deleted=0 AND p.status=1 AND p.visibility=1
      ORDER BY p.created_at DESC LIMIT ? OFFSET ?`,
     [Number(size), offset]
