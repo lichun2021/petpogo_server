@@ -31,9 +31,14 @@ export default defineEventHandler(async (event) => {
     ...post,
     id:         String(post.id),
     user_id:    String(post.user_id),
-    media_urls: Array.isArray(post.media_urls)
-      ? post.media_urls
-      : (typeof post.media_urls === 'string' ? JSON.parse(post.media_urls) : []),
+    media_urls: (() => {
+      const v = post.media_urls
+      if (Array.isArray(v)) return v
+      if (typeof v !== 'string' || !v) return []
+      if (v.startsWith('[')) { try { return JSON.parse(v) } catch { return [] } }
+      if (v.startsWith('http')) return [v]
+      return []
+    })(),
     comments: comments.map((c: any) => ({
       ...c,
       id:      String(c.id),

@@ -43,9 +43,14 @@ export default defineEventHandler(async (event) => {
       ...p,
       id:         String(p.id),
       user_id:    String(p.user_id),
-      media_urls: Array.isArray(p.media_urls)
-        ? p.media_urls
-        : (typeof p.media_urls === 'string' ? JSON.parse(p.media_urls) : []),
+      media_urls: (() => {
+        const v = p.media_urls
+        if (Array.isArray(v)) return v
+        if (typeof v !== 'string' || !v) return []
+        if (v.startsWith('[')) { try { return JSON.parse(v) } catch { return [] } }
+        if (v.startsWith('http')) return [v]   // 裸 URL 直接包装
+        return []
+      })(),
     })),
     total:        Number(total),
     pendingCount: Number(pendingCount),
