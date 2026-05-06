@@ -49,8 +49,8 @@ export default defineEventHandler(async (event) => {
     key,
     bucket,
     region:   config.aliOssRegion,
-    // 图片直接返回 CDN 可用 URL，视频等 MPS 回调后才有最终 URL
-    cdnUrl:   isVideo ? null : `${config.public.ossCdnBaseUrl}/${key}`,
+    // 图片和视频均直接返回 CDN URL（未配置 MPS 时视频同样直接可用）
+    cdnUrl:   `${config.public.ossCdnBaseUrl}/${key}`,
     isVideo,
     mimeType: resolvedMime || (isVideo ? 'video/mp4' : 'image/jpeg'),
   }

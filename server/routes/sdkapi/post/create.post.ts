@@ -9,17 +9,22 @@ export default defineEventHandler(async (event) => {
 
   const db = useDb()
   const redis = useRedis()
+  const config = useRuntimeConfig()
   const id = generateId()
 
-  // 视频帖：MPS 处理中状态
-  const status = (mediaType === 2 && rawVideoKey) ? 2 : 1
+  // 无 MPS 时，视频上传后直接可用：用 rawVideoKey 拼出完整 CDN URL
+  const resolvedVideoUrl = videoUrl
+    || (rawVideoKey ? `${config.public.ossCdnBaseUrl}/${rawVideoKey}` : null)
+
+  // 视频已有可用 URL 就直接发布（status=1），否则占位等待转码
+  const status = (mediaType === 2 && rawVideoKey && !resolvedVideoUrl) ? 2 : 1
 
   await db.query(
     `INSERT INTO t_post(id,user_id,content,media_type,media_urls,video_url,cover_url,raw_video_key,location,longitude,latitude,visibility,status,created_at)
      VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,NOW())`,
     [id, user.userId, content || '', mediaType || 0,
      mediaUrls ? JSON.stringify(mediaUrls) : null,
-     videoUrl || null, coverUrl || null, rawVideoKey || null,
+     resolvedVideoUrl, coverUrl || null, rawVideoKey || null,
      location || null, longitude || null, latitude || null,
      visibility ?? 1, status]
   )
