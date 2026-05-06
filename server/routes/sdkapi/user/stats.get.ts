@@ -14,7 +14,7 @@ export default defineEventHandler(async (event) => {
     `SELECT
       (SELECT COUNT(*) FROM t_post   WHERE user_id = ? AND deleted = 0)                                                AS post_count,
       (SELECT COUNT(*) FROM t_follow WHERE following_id = ?)                                                            AS follower_count,
-      (SELECT COUNT(*) FROM t_like   WHERE post_id IN (SELECT id FROM t_post WHERE user_id = ? AND deleted = 0) AND deleted = 0) AS like_count
+      (SELECT COUNT(*) FROM t_like   WHERE target_type = 1 AND target_id IN (SELECT id FROM t_post WHERE user_id = ? AND deleted = 0)) AS like_count
     `,
     [targetUserId, targetUserId, targetUserId]
   )

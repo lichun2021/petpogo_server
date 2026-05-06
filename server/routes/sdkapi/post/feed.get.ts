@@ -25,7 +25,9 @@ export default defineEventHandler(async (event) => {
       ...p,
       id:         String(p.id),
       user_id:    String(p.user_id),
-      media_urls: p.media_urls ? JSON.parse(p.media_urls) : [],
+      media_urls: Array.isArray(p.media_urls)
+        ? p.media_urls
+        : (typeof p.media_urls === 'string' ? JSON.parse(p.media_urls) : []),
       like_count: likes  ? Number(likes)  : p.like_count,
       view_count: views  ? Number(views)  : p.view_count,
     }
