@@ -13,7 +13,7 @@ export default defineEventHandler(async (event) => {
   const [[{ pending }]]: any = await db.query('SELECT COUNT(*) as pending FROM t_post WHERE status=2 AND deleted=0')
   const [list]: any          = await db.query(
     `SELECT p.id, p.user_id, p.content, p.media_type, p.media_urls, p.video_url, p.cover_url,
-            p.status, p.created_at, u.nickname, u.avatar as user_avatar
+            p.status, p.reject_reason, p.created_at, u.nickname, u.avatar as user_avatar
      FROM t_post p LEFT JOIN t_user u ON p.user_id=u.id
      ${where} ORDER BY p.created_at DESC LIMIT ? OFFSET ?`,
     [...params, Number(size), offset]
