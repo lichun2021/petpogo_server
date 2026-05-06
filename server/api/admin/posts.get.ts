@@ -22,7 +22,14 @@ export default defineEventHandler(async (event) => {
     list: list.map((p: any) => ({
       ...p,
       id:         String(p.id),
-      media_urls: p.media_urls ? JSON.parse(p.media_urls) : [],
+      media_urls: (() => {
+        const v = p.media_urls
+        if (Array.isArray(v)) return v
+        if (typeof v !== 'string' || !v) return []
+        if (v.startsWith('[')) { try { return JSON.parse(v) } catch { return [] } }
+        if (v.startsWith('http')) return [v]
+        return []
+      })(),
     })),
     total:        Number(total),
     pendingCount: Number(pending),
