@@ -109,8 +109,12 @@ export default defineEventHandler(async (event) => {
         : Promise.resolve(null),
     ])
 
-    const videoUrl = outputKey ? `${base}/${outputKey}` : `${base}/${inputKey}`
-    const coverUrl = coverKey  ? `${base}/${coverKey}`  : null
+    const videoUrl = outputKey
+      ? `${base}/${decodeURIComponent(outputKey)}`
+      : `${base}/${inputKey}`
+    const coverUrl = coverKey
+      ? `${base}/${decodeURIComponent(coverKey)}`
+      : null
 
     console.log('[MPS] 输出路径:', { outputKey, coverKey, videoUrl, coverUrl })
 
