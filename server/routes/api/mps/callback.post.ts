@@ -44,17 +44,8 @@ async function queryMpsJobOutput(
       // 截图 job：输出 key 在 SnapshotConfig.OutputFile.Object
       return data?.SnapshotJobList?.SnapshotJob?.[0]?.SnapshotConfig?.OutputFile?.Object ?? null
     } else {
-      // 打印完整响应，找到转码输出 key 的正确字段路径
-      console.log('[MPS QueryJobList 原始响应]', JSON.stringify(data))
-      const job = data?.JobList?.Job?.[0]
-      // 尝试多条已知路径
-      const outputKey = job?.Output?.OutputObject
-                     ?? job?.MNSMessageResult?.OutputObject
-                     ?? job?.Output?.OutputFile?.Object
-                     ?? job?.TranscodeTask?.Output?.OutputObject
-                     ?? null
-      console.log('[MPS 转码 Job]', JSON.stringify(job))
-      return outputKey
+      // 转码 job：输出 key 在 JobList.Job[0].Output.OutputObject
+      return data?.JobList?.Job?.[0]?.Output?.OutputObject ?? null
     }
   } catch (e) {
     console.error(`[MPS] 查询 ${action} 失败:`, e)
