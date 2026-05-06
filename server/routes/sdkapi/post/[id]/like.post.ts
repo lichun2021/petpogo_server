@@ -18,8 +18,7 @@ export default defineEventHandler(async (event) => {
     return { liked: false }
   } else {
     // 点赞
-    const id = generateId()
-    await db.query('INSERT INTO t_like(id,user_id,target_id,target_type,created_at) VALUES(?,?,?,1,NOW())', [id, user.userId, postId])
+    await db.query('INSERT INTO t_like(user_id,target_id,target_type,created_at) VALUES(?,?,1,NOW())', [user.userId, postId])
     await redis.incr(RedisKey.postLikes(postId))
     await db.query('UPDATE t_post SET like_count=like_count+1 WHERE id=?', [postId])
 

@@ -7,12 +7,12 @@ export default defineEventHandler(async (event) => {
 
   const db = useDb()
   const redis = useRedis()
-  const id = generateId()
 
-  await db.query(
-    'INSERT INTO t_post_comment(id,post_id,user_id,parent_id,reply_to_id,content,created_at) VALUES(?,?,?,?,?,?,NOW())',
-    [id, postId, user.userId, parentId || 0, replyToId || null, content]
+  const [result]: any = await db.query(
+    'INSERT INTO t_post_comment(post_id,user_id,parent_id,reply_to_id,content,created_at) VALUES(?,?,?,?,?,NOW())',
+    [postId, user.userId, parentId || 0, replyToId || null, content]
   )
+  const id = result.insertId
   await redis.incr(RedisKey.postComments(postId))
   await db.query('UPDATE t_post SET comment_count=comment_count+1 WHERE id=?', [postId])
 

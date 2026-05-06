@@ -5,11 +5,10 @@ export default defineEventHandler(async (event) => {
   if (!deviceId || !longitude || !latitude) throw createError({ statusCode: 400, message: '缺少必要参数' })
 
   const db = useDb()
-  const id = generateId()
-  await db.query(
-    `INSERT INTO t_pet_fence(id,device_id,user_id,fence_name,radius,longitude,latitude,address,created_at)
-     VALUES(?,?,?,?,?,?,?,?,NOW())`,
-    [id, deviceId, user.userId, fenceName || '我的围栏', radius || 500, longitude, latitude, address || '']
+  const [result]: any = await db.query(
+    `INSERT INTO t_pet_fence(device_id,user_id,fence_name,radius,longitude,latitude,address,created_at)
+     VALUES(?,?,?,?,?,?,?,NOW())`,
+    [deviceId, user.userId, fenceName || '我的围栏', radius || 500, longitude, latitude, address || '']
   )
-  return { id: String(id), fenceName: fenceName || '我的围栏' }
+  return { id: String(result.insertId), fenceName: fenceName || '我的围栏' }
 })

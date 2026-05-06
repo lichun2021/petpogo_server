@@ -16,10 +16,9 @@ export default defineEventHandler(async (event) => {
   )
   if (exist) throw createError({ statusCode: 409, message: '设备已绑定' })
 
-  const id = generateId()
   await db.query(
-    'INSERT INTO t_user_device(id,user_id,device_id,mac,nickname,u_type,created_at) VALUES(?,?,?,?,?,?,NOW())',
-    [id, user.userId, device.id, mac, nickname || mac, 'owner']
+    'INSERT INTO t_user_device(user_id,device_id,mac,nickname,u_type,created_at) VALUES(?,?,?,?,?,NOW())',
+    [user.userId, device.id, mac, nickname || mac, 'owner']
   )
   return { success: true, deviceId: String(device.id) }
 })
