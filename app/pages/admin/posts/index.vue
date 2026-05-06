@@ -99,7 +99,7 @@ const typeOpts = [
   { label: '文字', value: '0' },
 ]
 
-const activeTab    = ref(0)
+const activeTab    = ref(4)  // 默认显示全部
 const mediaType    = ref('')
 const page         = ref(1)
 const pageSize     = 12
