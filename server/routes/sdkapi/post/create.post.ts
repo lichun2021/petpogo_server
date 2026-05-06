@@ -3,7 +3,7 @@ export default defineEventHandler(async (event) => {
   const user = await requireAuth(event)
   const { content, mediaType, mediaUrls, videoUrl, coverUrl, rawVideoKey, location, longitude, latitude, visibility } = await readBody(event)
 
-  if (!content && !mediaUrls?.length && !videoUrl) {
+  if (!content && !mediaUrls?.length && !videoUrl && !rawVideoKey) {
     throw createError({ statusCode: 400, message: '内容不能为空' })
   }
 
