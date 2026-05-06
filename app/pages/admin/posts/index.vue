@@ -57,8 +57,8 @@
               <div class="flex items-center justify-between pt-2 border-t border-stone-100">
                 <div class="flex items-center gap-2">
                   <UBadge
-                    :label="p.status === 1 ? '已通过' : p.status === 2 ? '待审核' : '已违规'"
-                    :color="p.status === 1 ? 'green' : p.status === 2 ? 'yellow' : 'red'"
+                    :label="{ 0: '转码中', 1: '已通过', 2: '待审核', 3: '已违规' }[p.status] || '-'"
+                    :color="{ 0: 'gray', 1: 'green', 2: 'yellow', 3: 'red' }[p.status] || 'gray'"
                     variant="subtle" size="xs"
                   />
                   <span class="text-xs text-stone-400">{{ formatDate(p.created_at) }}</span>
@@ -88,6 +88,7 @@ const tabs = [
   { label: '待审核', key: '2' },
   { label: '已通过', key: '1' },
   { label: '已违规', key: '3' },
+  { label: '转码中', key: '0' },
   { label: '全部',   key: ''  },
 ]
 

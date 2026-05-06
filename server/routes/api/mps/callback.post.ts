@@ -119,21 +119,12 @@ export default defineEventHandler(async (event) => {
     console.log('[MPS] 输出路径:', { outputKey, coverKey, videoUrl, coverUrl })
 
     await db.query(
-      `UPDATE t_post SET video_url=?, cover_url=?, status=1
+      `UPDATE t_post SET video_url=?, cover_url=?, status=2
        WHERE raw_video_key=? AND deleted=0`,
       [videoUrl, coverUrl, inputKey]
     )
-
-    // 推入 Redis Feed（仅公开帖）
-    const redis = useRedis()
-    const [[post]]: any = await db.query(
-      'SELECT id, visibility FROM t_post WHERE raw_video_key=? AND deleted=0 LIMIT 1',
-      [inputKey]
-    )
-    if (post?.visibility === 1) {
-      await redis.zadd(RedisKey.feedHot(), Date.now(), String(post.id))
-      await redis.zremrangebyrank(RedisKey.feedHot(), 0, -1001)
-    }
+    // 转码完成进入待审核，管理员审核通过后才推入 Feed
+    console.log(`[MPS] ✅ 转码完成，进入待审核: ${inputKey} → video=${videoUrl} cover=${coverUrl}`)
 
     console.log(`[MPS] ✅ 完成: ${inputKey} → video=${videoUrl} cover=${coverUrl}`)
 

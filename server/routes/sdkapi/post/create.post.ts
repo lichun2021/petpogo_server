@@ -16,8 +16,10 @@ export default defineEventHandler(async (event) => {
   const resolvedVideoUrl = videoUrl
     || (rawVideoKey ? `${config.public.ossCdnBaseUrl}/${rawVideoKey}` : null)
 
-  // 视频已有可用 URL 就直接发布（status=1），否则占位等待转码
-  const status = (mediaType === 2 && rawVideoKey && !resolvedVideoUrl) ? 2 : 1
+  // status=0: 视频转码中（MPS 处理）
+  // status=2: 待审核（所有新帖子默认，含 MPS 完成后的视频）
+  const isProcessing = mediaType === 2 && rawVideoKey && !resolvedVideoUrl
+  const status = isProcessing ? 0 : 2
 
   await db.query(
     `INSERT INTO t_post(id,user_id,content,media_type,media_urls,video_url,cover_url,raw_video_key,location,longitude,latitude,visibility,status,created_at)
@@ -29,11 +31,7 @@ export default defineEventHandler(async (event) => {
      visibility ?? 1, status]
   )
 
-  // 写入 Redis Feed（仅公开图文帖直接入 Feed，视频等转码完成后入）
-  if (status === 1 && (visibility ?? 1) === 1) {
-    await redis.zadd(RedisKey.feedHot(), Date.now(), String(id))
-    await redis.zremrangebyrank(RedisKey.feedHot(), 0, -1001) // 只保留最新 1000
-  }
+  // 审核通过（status=1）后由管理员操作推入 Feed，新帖子不直接入 Feed
 
   return { id: String(id), status }
 })

@@ -9,8 +9,8 @@
         :color="statusColor"
         variant="subtle"
       />
-      <UButton v-if="post?.status !== 1" label="通过" color="green" size="sm" :loading="acting" @click="setStatus(1)" />
-      <UButton v-if="post?.status !== 3" label="标记违规" color="red"   size="sm" variant="outline" :loading="acting" @click="setStatus(3)" />
+      <UButton v-if="post?.status !== 1 && post?.status !== 0" label="通过" color="green" size="sm" :loading="acting" @click="setStatus(1)" />
+      <UButton v-if="post?.status !== 3 && post?.status !== 0" label="标记违规" color="red"   size="sm" variant="outline" :loading="acting" @click="setStatus(3)" />
       <UButton label="删除帖子" color="red" variant="ghost" size="sm" :loading="deleting" @click="deletePost" />
     </div>
 
@@ -136,10 +136,10 @@ const { data: post, pending, refresh } = await useFetch<any>(`/api/admin/posts/$
 
 const statusLabel = computed(() => {
   if (!post.value) return ''
-  return { 1: '已通过', 2: '待审核', 3: '已违规' }[post.value.status as 1|2|3] || ''
+  return ({ 0: '转码中', 1: '已通过', 2: '待审核', 3: '已违规' } as any)[post.value.status] || ''
 })
 const statusColor = computed(() => {
-  return { 1: 'green', 2: 'yellow', 3: 'red' }[post.value?.status as 1|2|3] || 'gray'
+  return ({ 0: 'gray', 1: 'green', 2: 'yellow', 3: 'red' } as any)[post.value?.status] || 'gray'
 })
 
 async function setStatus(status: number) {
