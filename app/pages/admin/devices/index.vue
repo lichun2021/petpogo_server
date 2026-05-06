@@ -12,48 +12,63 @@
       </div>
     </div>
 
-    <!-- 页签 -->
-    <UTabs v-model="activeTab" :items="tabs" color="amber" @update:model-value="onTabChange">
-      <template #content="{ item }">
-        <div class="pt-3">
-          <div class="bg-white rounded-2xl border overflow-hidden" style="border-color: #f0e6d8; box-shadow: 0 1px 4px rgba(0,0,0,0.04)">
-            <UTable
-              :data="list"
-              :columns="columns"
-              :loading="loading"
-              :ui="{
-                th: { base: 'text-xs text-stone-500 font-medium py-3 px-4 bg-amber-50/50 border-b border-orange-100' },
-                td: { base: 'text-sm py-3 px-4 border-b border-stone-100' },
-                tr: { base: 'hover:bg-amber-50/30 transition-colors' }
-              }"
-            >
-              <template #mac-cell="{ row }">
-                <div class="flex items-center gap-2">
-                  <span :class="['w-2 h-2 rounded-full flex-shrink-0', row.original.online_status ? 'bg-green-400' : 'bg-stone-300']" />
-                  <div>
-                    <p class="text-stone-800 font-mono text-xs font-medium">{{ row.original.mac }}</p>
-                    <p class="text-xs text-stone-400">{{ row.original.name || '未命名' }}</p>
-                  </div>
+    <!-- 状态筛选 -->
+    <div class="flex gap-2">
+      <button
+        v-for="(tab, i) in tabs" :key="tab.key"
+        :class="[
+          'px-4 py-1.5 rounded-full text-sm font-medium transition-all',
+          activeTab === i
+            ? 'bg-amber-500 text-white shadow-sm'
+            : 'bg-white border text-stone-500 hover:text-stone-700 hover:border-amber-300'
+        ]"
+        style="border-color: #f0e6d8"
+        @click="activeTab = i; page = 1; loadList()"
+      >{{ tab.label }}</button>
+    </div>
+
+    <!-- 表格 -->
+    <div class="bg-white rounded-2xl border overflow-hidden" style="border-color: #f0e6d8; box-shadow: 0 1px 4px rgba(0,0,0,0.04)">
+      <div v-if="loading" class="flex justify-center py-10">
+        <UIcon name="i-heroicons-arrow-path" class="w-5 h-5 text-stone-400 animate-spin" />
+      </div>
+      <div v-else-if="!list.length" class="py-10 text-center text-sm text-stone-400">暂无设备数据</div>
+      <table v-else class="w-full text-sm">
+        <thead>
+          <tr class="bg-amber-50/50 border-b border-orange-100">
+            <th class="text-left text-xs text-stone-500 font-medium py-3 px-4">设备信息</th>
+            <th class="text-left text-xs text-stone-500 font-medium py-3 px-4">状态</th>
+            <th class="text-left text-xs text-stone-500 font-medium py-3 px-4">最后位置</th>
+            <th class="text-left text-xs text-stone-500 font-medium py-3 px-4">最后上线</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr
+            v-for="row in list" :key="row.mac"
+            class="border-b border-stone-100 hover:bg-amber-50/30 transition-colors"
+          >
+            <td class="py-3 px-4">
+              <div class="flex items-center gap-2">
+                <span :class="['w-2 h-2 rounded-full flex-shrink-0', row.online_status ? 'bg-green-400' : 'bg-stone-300']" />
+                <div>
+                  <p class="text-stone-800 font-mono text-xs font-medium">{{ row.mac }}</p>
+                  <p class="text-xs text-stone-400">{{ row.name || '未命名' }}</p>
                 </div>
-              </template>
-              <template #online_status-cell="{ row }">
-                <UBadge :label="row.original.online_status ? '在线' : '离线'" :color="row.original.online_status ? 'green' : 'gray'" variant="subtle" size="xs" />
-              </template>
-              <template #address-cell="{ row }">
-                <span class="text-stone-400 text-xs truncate max-w-48 block">{{ row.original.address || '-' }}</span>
-              </template>
-              <template #last_online_at-cell="{ row }">
-                <span class="text-stone-400 text-xs">{{ formatDate(row.original.last_online_at) }}</span>
-              </template>
-            </UTable>
-            <div v-if="!list.length && !loading" class="py-10 text-center text-sm text-stone-400">暂无数据</div>
-            <div v-if="total > pageSize" class="flex justify-center py-4 border-t border-stone-100">
-              <UPagination v-model="page" :page-count="pageSize" :total="total" @update:model-value="loadList" />
-            </div>
-          </div>
-        </div>
-      </template>
-    </UTabs>
+              </div>
+            </td>
+            <td class="py-3 px-4">
+              <UBadge :label="row.online_status ? '在线' : '离线'" :color="row.online_status ? 'green' : 'gray'" variant="subtle" size="xs" />
+            </td>
+            <td class="py-3 px-4 text-xs text-stone-400 truncate max-w-48">{{ row.address || '-' }}</td>
+            <td class="py-3 px-4 text-xs text-stone-400">{{ formatDate(row.last_online_at) }}</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <div v-if="total > pageSize" class="flex justify-center py-4 border-t border-stone-100">
+        <UPagination v-model="page" :page-count="pageSize" :total="total" @update:model-value="loadList" />
+      </div>
+    </div>
   </div>
 </template>
 
@@ -76,15 +91,6 @@ const loading   = ref(false)
 
 const onlineNum = computed(() => list.value.filter(d => d.online_status).length)
 
-const columns = [
-  { accessorKey: 'mac',            header: '设备信息' },
-  { accessorKey: 'online_status',  header: '状态' },
-  { accessorKey: 'address',        header: '最后位置' },
-  { accessorKey: 'last_online_at', header: '最后上线' },
-]
-
-function onTabChange() { page.value = 1; loadList() }
-
 async function loadList() {
   loading.value = true
   try {
@@ -98,6 +104,8 @@ async function loadList() {
 }
 
 function reset() { search.value = ''; activeTab.value = 0; page.value = 1; loadList() }
-function formatDate(s: string) { return s ? new Date(s).toLocaleString('zh-CN', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }) : '-' }
+function formatDate(s: string) {
+  return s ? new Date(s).toLocaleString('zh-CN', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }) : '-'
+}
 onMounted(loadList)
 </script>

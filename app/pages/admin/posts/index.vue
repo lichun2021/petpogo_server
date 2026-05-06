@@ -7,77 +7,88 @@
       <span>有 <strong>{{ pendingCount }}</strong> 条帖子待审核</span>
     </div>
 
-    <!-- 页签 -->
-    <UTabs v-model="activeTab" :items="tabs" color="amber" @update:model-value="onTabChange">
-      <template #content="{ item }">
-        <div class="pt-3 space-y-3">
-          <!-- 类型过滤 + 总数 -->
+    <!-- 状态筛选 -->
+    <div class="flex items-center gap-2 flex-wrap">
+      <button
+        v-for="(tab, i) in tabs" :key="tab.key"
+        :class="[
+          'px-4 py-1.5 rounded-full text-sm font-medium transition-all',
+          activeTab === i
+            ? 'bg-amber-500 text-white shadow-sm'
+            : 'bg-white border text-stone-500 hover:text-stone-700 hover:border-amber-300'
+        ]"
+        style="border-color: #f0e6d8"
+        @click="activeTab = i; page = 1; mediaType = ''; loadList()"
+      >{{ tab.label }}</button>
+
+      <span class="text-stone-300">|</span>
+
+      <!-- 类型过滤 -->
+      <button
+        v-for="t in typeOpts" :key="t.value"
+        :class="[
+          'px-3 py-1 rounded-full text-xs font-medium transition-all',
+          mediaType === t.value
+            ? 'bg-stone-700 text-white'
+            : 'bg-white border text-stone-400 hover:text-stone-600'
+        ]"
+        style="border-color: #f0e6d8"
+        @click="mediaType = t.value; page = 1; loadList()"
+      >{{ t.label }}</button>
+
+      <span class="ml-auto text-xs text-stone-400">共 {{ total }} 条</span>
+    </div>
+
+    <!-- 帖子网格 -->
+    <div v-if="loading" class="flex justify-center py-10">
+      <UIcon name="i-heroicons-arrow-path" class="w-5 h-5 text-stone-400 animate-spin" />
+    </div>
+    <div v-else-if="!list.length" class="py-10 text-center text-sm text-stone-400">暂无数据</div>
+    <div v-else class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
+      <div
+        v-for="p in list" :key="p.id"
+        class="bg-white rounded-xl border p-4 hover:border-amber-300 hover:shadow-sm transition-all cursor-pointer"
+        style="border-color: #f0e6d8"
+        @click="navigateTo(`/admin/posts/${p.id}`)"
+      >
+        <!-- 用户信息 -->
+        <div class="flex items-center gap-2 mb-2">
+          <UAvatar :src="p.user_avatar" :alt="p.nickname" size="xs" />
+          <span class="text-xs text-stone-600 font-medium">{{ p.nickname }}</span>
+          <UBadge
+            :label="p.media_type === 0 ? '文字' : p.media_type === 1 ? '图片' : '视频'"
+            :color="p.media_type === 0 ? 'gray' : p.media_type === 1 ? 'blue' : 'purple'"
+            variant="subtle" size="xs" class="ml-auto"
+          />
+        </div>
+        <!-- 内容 -->
+        <p class="text-sm text-stone-600 line-clamp-2 mb-2">{{ p.content || '（无文字）' }}</p>
+        <!-- 图片预览 -->
+        <div v-if="p.media_urls?.length" class="grid grid-cols-3 gap-1 mb-3 rounded-lg overflow-hidden">
+          <img v-for="(url, i) in p.media_urls.slice(0, 3)" :key="i" :src="url" class="w-full aspect-square object-cover" />
+        </div>
+        <!-- 状态 + 操作 -->
+        <div class="flex items-center justify-between pt-2 border-t border-stone-100">
           <div class="flex items-center gap-2">
-            <span class="text-xs text-stone-400">类型：</span>
-            <UButton
-              v-for="t in typeOpts" :key="t.value"
-              :label="t.label"
-              size="xs"
-              :color="mediaType === t.value ? 'amber' : 'gray'"
-              :variant="mediaType === t.value ? 'solid' : 'outline'"
-              @click="mediaType = t.value; page = 1; loadList()"
+            <UBadge
+              :label="({ 0: '转码中', 1: '已通过', 2: '待审核', 3: '已违规' } as any)[p.status] || '-'"
+              :color="({ 0: 'gray', 1: 'green', 2: 'yellow', 3: 'red' } as any)[p.status] || 'gray'"
+              variant="subtle" size="xs"
             />
-            <span class="ml-auto text-xs text-stone-400">共 {{ total }} 条</span>
+            <span class="text-xs text-stone-400">{{ formatDate(p.created_at) }}</span>
           </div>
-
-          <!-- 帖子网格 -->
-          <div v-if="loading" class="flex justify-center py-10">
-            <UIcon name="i-heroicons-arrow-path" class="w-5 h-5 text-stone-400 animate-spin" />
-          </div>
-          <div v-else-if="!list.length" class="py-10 text-center text-sm text-stone-400">暂无数据</div>
-          <div v-else class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
-            <div
-              v-for="p in list" :key="p.id"
-              class="bg-white rounded-xl border p-4 hover:border-amber-300 hover:shadow-sm transition-all cursor-pointer"
-              style="border-color: #f0e6d8"
-              @click="navigateTo(`/admin/posts/${p.id}`)"
-            >
-              <!-- 用户信息 -->
-              <div class="flex items-center gap-2 mb-2">
-                <UAvatar :src="p.user_avatar" :alt="p.nickname" size="xs" />
-                <span class="text-xs text-stone-600 font-medium">{{ p.nickname }}</span>
-                <UBadge
-                  :label="p.media_type === 0 ? '文字' : p.media_type === 1 ? '图片' : '视频'"
-                  :color="p.media_type === 0 ? 'gray' : p.media_type === 1 ? 'blue' : 'purple'"
-                  variant="subtle" size="xs" class="ml-auto"
-                />
-              </div>
-              <!-- 内容 -->
-              <p class="text-sm text-stone-600 line-clamp-2 mb-2">{{ p.content || '（无文字）' }}</p>
-              <!-- 图片预览 -->
-              <div v-if="p.media_urls?.length" class="grid grid-cols-3 gap-1 mb-3 rounded-lg overflow-hidden">
-                <img v-for="(url, i) in p.media_urls.slice(0, 3)" :key="i" :src="url" class="w-full aspect-square object-cover" />
-              </div>
-              <!-- 状态 + 操作 -->
-              <div class="flex items-center justify-between pt-2 border-t border-stone-100">
-                <div class="flex items-center gap-2">
-                  <UBadge
-                    :label="{ 0: '转码中', 1: '已通过', 2: '待审核', 3: '已违规' }[p.status] || '-'"
-                    :color="{ 0: 'gray', 1: 'green', 2: 'yellow', 3: 'red' }[p.status] || 'gray'"
-                    variant="subtle" size="xs"
-                  />
-                  <span class="text-xs text-stone-400">{{ formatDate(p.created_at) }}</span>
-                </div>
-                <div class="flex gap-1">
-                  <UButton v-if="p.status !== 1" label="通过" color="green" variant="subtle" size="xs" :loading="p._loading" @click="updateStatus(p, 1)" />
-                  <UButton v-if="p.status !== 3" label="违规" color="red"   variant="subtle" size="xs" :loading="p._loading" @click="updateStatus(p, 3)" />
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <!-- 分页 -->
-          <div v-if="total > pageSize" class="flex justify-center pt-2">
-            <UPagination v-model="page" :page-count="pageSize" :total="total" @update:model-value="loadList" />
+          <div class="flex gap-1" @click.stop>
+            <UButton v-if="p.status !== 1 && p.status !== 0" label="通过" color="green" variant="subtle" size="xs" :loading="p._loading" @click="updateStatus(p, 1)" />
+            <UButton v-if="p.status !== 3 && p.status !== 0" label="违规" color="red"   variant="subtle" size="xs" :loading="p._loading" @click="updateStatus(p, 3)" />
           </div>
         </div>
-      </template>
-    </UTabs>
+      </div>
+    </div>
+
+    <!-- 分页 -->
+    <div v-if="total > pageSize" class="flex justify-center pt-2">
+      <UPagination v-model="page" :page-count="pageSize" :total="total" @update:model-value="loadList" />
+    </div>
   </div>
 </template>
 
@@ -85,11 +96,11 @@
 definePageMeta({ layout: 'admin' })
 
 const tabs = [
+  { label: '全部',   key: ''  },
   { label: '待审核', key: '2' },
   { label: '已通过', key: '1' },
   { label: '已违规', key: '3' },
   { label: '转码中', key: '0' },
-  { label: '全部',   key: ''  },
 ]
 
 const typeOpts = [
@@ -99,7 +110,7 @@ const typeOpts = [
   { label: '文字', value: '0' },
 ]
 
-const activeTab    = ref(4)  // 默认显示全部
+const activeTab    = ref(0)
 const mediaType    = ref('')
 const page         = ref(1)
 const pageSize     = 12
@@ -107,8 +118,6 @@ const list         = ref<any[]>([])
 const total        = ref(0)
 const pendingCount = ref(0)
 const loading      = ref(false)
-
-function onTabChange() { page.value = 1; mediaType.value = ''; loadList() }
 
 async function loadList() {
   loading.value = true

@@ -8,58 +8,71 @@
       <UBadge :label="`共 ${total} 人`" color="amber" variant="subtle" size="xs" class="ml-auto" />
     </div>
 
-    <!-- 页签 -->
-    <UTabs v-model="activeTab" :items="tabs" color="amber" @update:model-value="onTabChange">
-      <template #content="{ item }">
-        <div class="pt-3">
-          <!-- 表格 -->
-          <div class="bg-white rounded-2xl border overflow-hidden" style="border-color: #f0e6d8; box-shadow: 0 1px 4px rgba(0,0,0,0.04)">
-            <UTable
-              :data="list"
-              :columns="columns"
-              :loading="loading"
-              :ui="{
-                th: { base: 'text-xs text-stone-500 font-medium py-3 px-4 bg-amber-50/50 border-b border-orange-100' },
-                td: { base: 'text-sm py-3 px-4 border-b border-stone-100' },
-                tr: { base: 'hover:bg-amber-50/30 transition-colors' }
-              }"
-            >
-              <template #avatar-cell="{ row }">
-                <UAvatar :src="row.original.avatar" :alt="row.original.nickname || row.original.phone" size="sm" />
-              </template>
-              <template #nickname-cell="{ row }">
-                <div>
-                  <p class="text-stone-800 font-medium">{{ row.original.nickname || '未设置' }}</p>
-                  <p class="text-xs text-stone-400">{{ row.original.phone }}</p>
-                </div>
-              </template>
-              <template #status-cell="{ row }">
-                <UBadge :label="row.original.status === 1 ? '正常' : '禁用'" :color="row.original.status === 1 ? 'green' : 'red'" variant="subtle" size="xs" />
-              </template>
-              <template #created_at-cell="{ row }">
-                <span class="text-stone-400 text-xs">{{ formatDate(row.original.created_at) }}</span>
-              </template>
-              <template #actions-cell="{ row }">
-                <UButton
-                  :label="row.original.status === 1 ? '禁用' : '启用'"
-                  :color="row.original.status === 1 ? 'red' : 'green'"
-                  variant="subtle" size="xs"
-                  :loading="row.original._loading"
-                  @click="toggleStatus(row.original)"
-                />
-              </template>
-            </UTable>
+    <!-- 状态筛选 Tab 条 -->
+    <div class="flex gap-2">
+      <button
+        v-for="(tab, i) in tabs" :key="tab.key"
+        :class="[
+          'px-4 py-1.5 rounded-full text-sm font-medium transition-all',
+          activeTab === i
+            ? 'bg-amber-500 text-white shadow-sm'
+            : 'bg-white border text-stone-500 hover:text-stone-700 hover:border-amber-300'
+        ]"
+        style="border-color: #f0e6d8"
+        @click="activeTab = i; page = 1; loadList()"
+      >{{ tab.label }}</button>
+    </div>
 
-            <div v-if="!list.length && !loading" class="py-10 text-center text-sm text-stone-400">暂无数据</div>
+    <!-- 表格 -->
+    <div class="bg-white rounded-2xl border overflow-hidden" style="border-color: #f0e6d8; box-shadow: 0 1px 4px rgba(0,0,0,0.04)">
+      <div v-if="loading" class="flex justify-center py-10">
+        <UIcon name="i-heroicons-arrow-path" class="w-5 h-5 text-stone-400 animate-spin" />
+      </div>
+      <div v-else-if="!list.length" class="py-10 text-center text-sm text-stone-400">暂无数据</div>
+      <table v-else class="w-full text-sm">
+        <thead>
+          <tr class="bg-amber-50/50 border-b border-orange-100">
+            <th class="text-left text-xs text-stone-500 font-medium py-3 px-4 w-10"></th>
+            <th class="text-left text-xs text-stone-500 font-medium py-3 px-4">用户信息</th>
+            <th class="text-left text-xs text-stone-500 font-medium py-3 px-4">状态</th>
+            <th class="text-left text-xs text-stone-500 font-medium py-3 px-4">注册时间</th>
+            <th class="text-left text-xs text-stone-500 font-medium py-3 px-4">操作</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr
+            v-for="row in list" :key="row.id"
+            class="border-b border-stone-100 hover:bg-amber-50/30 transition-colors"
+          >
+            <td class="py-3 px-4">
+              <UAvatar :src="row.avatar" :alt="row.nickname || row.phone" size="sm" />
+            </td>
+            <td class="py-3 px-4">
+              <p class="text-stone-800 font-medium">{{ row.nickname || '未设置' }}</p>
+              <p class="text-xs text-stone-400">{{ row.phone }}</p>
+            </td>
+            <td class="py-3 px-4">
+              <UBadge :label="row.status === 1 ? '正常' : '禁用'" :color="row.status === 1 ? 'green' : 'red'" variant="subtle" size="xs" />
+            </td>
+            <td class="py-3 px-4 text-xs text-stone-400">{{ formatDate(row.created_at) }}</td>
+            <td class="py-3 px-4">
+              <UButton
+                :label="row.status === 1 ? '禁用' : '启用'"
+                :color="row.status === 1 ? 'red' : 'green'"
+                variant="subtle" size="xs"
+                :loading="row._loading"
+                @click="toggleStatus(row)"
+              />
+            </td>
+          </tr>
+        </tbody>
+      </table>
 
-            <!-- 分页 -->
-            <div v-if="total > pageSize" class="flex justify-center py-4 border-t border-stone-100">
-              <UPagination v-model="page" :page-count="pageSize" :total="total" @update:model-value="loadList" />
-            </div>
-          </div>
-        </div>
-      </template>
-    </UTabs>
+      <!-- 分页 -->
+      <div v-if="total > pageSize" class="flex justify-center py-4 border-t border-stone-100">
+        <UPagination v-model="page" :page-count="pageSize" :total="total" @update:model-value="loadList" />
+      </div>
+    </div>
   </div>
 </template>
 
@@ -79,16 +92,6 @@ const pageSize  = 20
 const list      = ref<any[]>([])
 const total     = ref(0)
 const loading   = ref(false)
-
-const columns = [
-  { accessorKey: 'avatar',     header: '' },
-  { accessorKey: 'nickname',   header: '用户信息' },
-  { accessorKey: 'status',     header: '状态' },
-  { accessorKey: 'created_at', header: '注册时间' },
-  { accessorKey: 'actions',    header: '操作' },
-]
-
-function onTabChange(idx: number) { page.value = 1; loadList() }
 
 async function loadList() {
   loading.value = true
