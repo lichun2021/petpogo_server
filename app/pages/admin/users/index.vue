@@ -15,7 +15,7 @@
           <!-- 表格 -->
           <div class="bg-white rounded-2xl border overflow-hidden" style="border-color: #f0e6d8; box-shadow: 0 1px 4px rgba(0,0,0,0.04)">
             <UTable
-              :rows="list"
+              :data="list"
               :columns="columns"
               :loading="loading"
               :ui="{
@@ -24,28 +24,28 @@
                 tr: { base: 'hover:bg-amber-50/30 transition-colors' }
               }"
             >
-              <template #avatar-data="{ row }">
-                <UAvatar :src="row.avatar" :alt="row.nickname || row.phone" size="sm" />
+              <template #avatar-cell="{ row }">
+                <UAvatar :src="row.original.avatar" :alt="row.original.nickname || row.original.phone" size="sm" />
               </template>
-              <template #nickname-data="{ row }">
+              <template #nickname-cell="{ row }">
                 <div>
-                  <p class="text-stone-800 font-medium">{{ row.nickname || '未设置' }}</p>
-                  <p class="text-xs text-stone-400">{{ row.phone }}</p>
+                  <p class="text-stone-800 font-medium">{{ row.original.nickname || '未设置' }}</p>
+                  <p class="text-xs text-stone-400">{{ row.original.phone }}</p>
                 </div>
               </template>
-              <template #status-data="{ row }">
-                <UBadge :label="row.status === 1 ? '正常' : '禁用'" :color="row.status === 1 ? 'green' : 'red'" variant="subtle" size="xs" />
+              <template #status-cell="{ row }">
+                <UBadge :label="row.original.status === 1 ? '正常' : '禁用'" :color="row.original.status === 1 ? 'green' : 'red'" variant="subtle" size="xs" />
               </template>
-              <template #created_at-data="{ row }">
-                <span class="text-stone-400 text-xs">{{ formatDate(row.created_at) }}</span>
+              <template #created_at-cell="{ row }">
+                <span class="text-stone-400 text-xs">{{ formatDate(row.original.created_at) }}</span>
               </template>
-              <template #actions-data="{ row }">
+              <template #actions-cell="{ row }">
                 <UButton
-                  :label="row.status === 1 ? '禁用' : '启用'"
-                  :color="row.status === 1 ? 'red' : 'green'"
+                  :label="row.original.status === 1 ? '禁用' : '启用'"
+                  :color="row.original.status === 1 ? 'red' : 'green'"
                   variant="subtle" size="xs"
-                  :loading="row._loading"
-                  @click="toggleStatus(row)"
+                  :loading="row.original._loading"
+                  @click="toggleStatus(row.original)"
                 />
               </template>
             </UTable>
@@ -81,11 +81,11 @@ const total     = ref(0)
 const loading   = ref(false)
 
 const columns = [
-  { key: 'avatar',     label: '' },
-  { key: 'nickname',   label: '用户信息' },
-  { key: 'status',     label: '状态' },
-  { key: 'created_at', label: '注册时间' },
-  { key: 'actions',    label: '操作' },
+  { accessorKey: 'avatar',     header: '' },
+  { accessorKey: 'nickname',   header: '用户信息' },
+  { accessorKey: 'status',     header: '状态' },
+  { accessorKey: 'created_at', header: '注册时间' },
+  { accessorKey: 'actions',    header: '操作' },
 ]
 
 function onTabChange(idx: number) { page.value = 1; loadList() }

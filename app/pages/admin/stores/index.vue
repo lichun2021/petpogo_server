@@ -22,7 +22,7 @@
 
             <UTable
               v-else
-              :rows="list"
+              :data="list"
               :columns="columns"
               :loading="loading"
               :ui="{
@@ -31,27 +31,27 @@
                 tr: { base: 'hover:bg-amber-50/30 transition-colors' }
               }"
             >
-              <template #name-data="{ row }">
+              <template #name-cell="{ row }">
                 <div>
-                  <p class="text-stone-800 font-medium">{{ row.name }}</p>
-                  <p class="text-xs text-stone-400 truncate max-w-60">{{ row.address }}</p>
+                  <p class="text-stone-800 font-medium">{{ row.original.name }}</p>
+                  <p class="text-xs text-stone-400 truncate max-w-60">{{ row.original.address }}</p>
                 </div>
               </template>
-              <template #category-data="{ row }">
-                <UBadge :label="row.category || '其他'" color="blue" variant="subtle" size="xs" />
+              <template #category-cell="{ row }">
+                <UBadge :label="row.original.category || '其他'" color="blue" variant="subtle" size="xs" />
               </template>
-              <template #rating-data="{ row }">
+              <template #rating-cell="{ row }">
                 <div class="flex items-center gap-1">
                   <UIcon name="i-heroicons-star-solid" class="w-3.5 h-3.5 text-amber-400" />
-                  <span class="text-stone-700 text-xs">{{ row.rating || '-' }}</span>
+                  <span class="text-stone-700 text-xs">{{ row.original.rating || '-' }}</span>
                 </div>
               </template>
-              <template #is_hot-data="{ row }">
-                <UIcon v-if="row.is_hot" name="i-heroicons-fire-solid" class="w-4 h-4 text-orange-400" />
+              <template #is_hot-cell="{ row }">
+                <UIcon v-if="row.original.is_hot" name="i-heroicons-fire-solid" class="w-4 h-4 text-orange-400" />
                 <span v-else class="text-stone-300 text-xs">—</span>
               </template>
-              <template #status-data="{ row }">
-                <UBadge :label="row.status === 1 ? '营业中' : '已关闭'" :color="row.status === 1 ? 'green' : 'gray'" variant="subtle" size="xs" />
+              <template #status-cell="{ row }">
+                <UBadge :label="row.original.status === 1 ? '营业中' : '已关闭'" :color="row.original.status === 1 ? 'green' : 'gray'" variant="subtle" size="xs" />
               </template>
             </UTable>
 
@@ -85,11 +85,11 @@ const total     = ref(0)
 const loading   = ref(false)
 
 const columns = [
-  { key: 'name',     label: '门店信息' },
-  { key: 'category', label: '分类' },
-  { key: 'rating',   label: '评分' },
-  { key: 'is_hot',   label: '热门' },
-  { key: 'status',   label: '状态' },
+  { accessorKey: 'name',     header: '门店信息' },
+  { accessorKey: 'category', header: '分类' },
+  { accessorKey: 'rating',   header: '评分' },
+  { accessorKey: 'is_hot',   header: '热门' },
+  { accessorKey: 'status',   header: '状态' },
 ]
 
 function onTabChange() { page.value = 1; loadList() }

@@ -18,7 +18,7 @@
         <div class="pt-3">
           <div class="bg-white rounded-2xl border overflow-hidden" style="border-color: #f0e6d8; box-shadow: 0 1px 4px rgba(0,0,0,0.04)">
             <UTable
-              :rows="list"
+              :data="list"
               :columns="columns"
               :loading="loading"
               :ui="{
@@ -27,23 +27,23 @@
                 tr: { base: 'hover:bg-amber-50/30 transition-colors' }
               }"
             >
-              <template #mac-data="{ row }">
+              <template #mac-cell="{ row }">
                 <div class="flex items-center gap-2">
-                  <span :class="['w-2 h-2 rounded-full flex-shrink-0', row.online_status ? 'bg-green-400' : 'bg-stone-300']" />
+                  <span :class="['w-2 h-2 rounded-full flex-shrink-0', row.original.online_status ? 'bg-green-400' : 'bg-stone-300']" />
                   <div>
-                    <p class="text-stone-800 font-mono text-xs font-medium">{{ row.mac }}</p>
-                    <p class="text-xs text-stone-400">{{ row.name || '未命名' }}</p>
+                    <p class="text-stone-800 font-mono text-xs font-medium">{{ row.original.mac }}</p>
+                    <p class="text-xs text-stone-400">{{ row.original.name || '未命名' }}</p>
                   </div>
                 </div>
               </template>
-              <template #online_status-data="{ row }">
-                <UBadge :label="row.online_status ? '在线' : '离线'" :color="row.online_status ? 'green' : 'gray'" variant="subtle" size="xs" />
+              <template #online_status-cell="{ row }">
+                <UBadge :label="row.original.online_status ? '在线' : '离线'" :color="row.original.online_status ? 'green' : 'gray'" variant="subtle" size="xs" />
               </template>
-              <template #address-data="{ row }">
-                <span class="text-stone-400 text-xs truncate max-w-48 block">{{ row.address || '-' }}</span>
+              <template #address-cell="{ row }">
+                <span class="text-stone-400 text-xs truncate max-w-48 block">{{ row.original.address || '-' }}</span>
               </template>
-              <template #last_online_at-data="{ row }">
-                <span class="text-stone-400 text-xs">{{ formatDate(row.last_online_at) }}</span>
+              <template #last_online_at-cell="{ row }">
+                <span class="text-stone-400 text-xs">{{ formatDate(row.original.last_online_at) }}</span>
               </template>
             </UTable>
             <div v-if="!list.length && !loading" class="py-10 text-center text-sm text-stone-400">暂无数据</div>
@@ -77,10 +77,10 @@ const loading   = ref(false)
 const onlineNum = computed(() => list.value.filter(d => d.online_status).length)
 
 const columns = [
-  { key: 'mac',            label: '设备信息' },
-  { key: 'online_status',  label: '状态' },
-  { key: 'address',        label: '最后位置' },
-  { key: 'last_online_at', label: '最后上线' },
+  { accessorKey: 'mac',            header: '设备信息' },
+  { accessorKey: 'online_status',  header: '状态' },
+  { accessorKey: 'address',        header: '最后位置' },
+  { accessorKey: 'last_online_at', header: '最后上线' },
 ]
 
 function onTabChange() { page.value = 1; loadList() }
