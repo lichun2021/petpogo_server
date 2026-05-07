@@ -68,19 +68,21 @@
 const route = useRoute()
 
 const nav = [
-  { to: '/admin',         label: '数据概览', icon: 'i-heroicons-squares-2x2' },
-  { to: '/admin/users',   label: '用户管理', icon: 'i-heroicons-users' },
-  { to: '/admin/devices', label: '设备管理', icon: 'i-heroicons-cpu-chip' },
-  { to: '/admin/posts',   label: '帖子审核', icon: 'i-heroicons-photo' },
-  { to: '/admin/stores',  label: '门店管理', icon: 'i-heroicons-building-storefront' },
+  { to: '/admin',             label: '数据概览', icon: 'i-heroicons-squares-2x2' },
+  { to: '/admin/users',       label: '用户管理', icon: 'i-heroicons-users' },
+  { to: '/admin/devices',     label: '设备管理', icon: 'i-heroicons-cpu-chip' },
+  { to: '/admin/posts',       label: '帖子审核', icon: 'i-heroicons-photo' },
+  { to: '/admin/stores',      label: '门店管理', icon: 'i-heroicons-building-storefront' },
+  { to: '/admin/ai-analysis', label: 'AI 识别记录', icon: 'i-heroicons-cpu-chip' },
 ]
 
 const titleMap: Record<string, string> = {
-  '/admin':         '数据概览',
-  '/admin/users':   '用户管理',
-  '/admin/devices': '设备管理',
-  '/admin/posts':   '帖子审核',
-  '/admin/stores':  '门店管理',
+  '/admin':             '数据概览',
+  '/admin/users':       '用户管理',
+  '/admin/devices':     '设备管理',
+  '/admin/posts':       '帖子审核',
+  '/admin/stores':      '门店管理',
+  '/admin/ai-analysis': 'AI 识别记录',
 }
 
 function isActive(to: string) {
