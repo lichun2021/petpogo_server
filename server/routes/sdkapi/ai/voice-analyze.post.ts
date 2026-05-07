@@ -50,10 +50,18 @@ export default defineEventHandler(async (event) => {
 
   if (!aiResult?.success) {
     const reason = aiResult?.error ?? aiResult?.message ?? aiResult?.detail ?? 'AI 分析失败，请检查音频文件格式（支持 WAV / MP3）'
+    const quotaInfo = await getAiUsageInfo(user.userId)
     throw createError({
       statusCode: 422,
       message: reason,
-      data: { aiRaw: aiResult },
+      data: {
+        aiRaw: aiResult,
+        _quota: {
+          used:      quotaInfo.used,
+          limit:     quotaInfo.limit,
+          remaining: quotaInfo.remaining,
+        },
+      },
     })
   }
 
