@@ -13,7 +13,9 @@ export default defineEventHandler(async (event) => {
   const user = await requireAuth(event)
 
   // ── 1. 检查配额 ─────────────────────────────────
+  console.log('[AI图片] Step1: 检查配额, userId=', user.userId)
   const quotaBefore = await checkAiQuota(user.userId)
+  console.log('[AI图片] Step1 完成: quota=', JSON.stringify(quotaBefore))
   if (!quotaBefore.allowed) {
     throw createError({
       statusCode: 429,
@@ -23,31 +25,37 @@ export default defineEventHandler(async (event) => {
   }
 
   const { imageUrl, petId } = await readBody(event)
+  console.log('[AI图片] Step2: 收到 imageUrl=', imageUrl, 'petId=', petId)
   if (!imageUrl) {
     throw createError({ statusCode: 400, message: 'imageUrl 不能为空' })
   }
 
   const config = useRuntimeConfig()
   const AI_URL = config.aiServiceUrl || 'http://49.234.39.11:8002'
+  console.log('[AI图片] Step3: 准备调用AI, url=', `${AI_URL}/image/analyze-url`)
 
   // ── 2. 调用 AI 图片分析（JSON URL 方式）──────────
   // POST /image/analyze-url  Body: { "url": "https://..." }
   let aiResult: any
   try {
+    console.log('[AI图片] Step3: 发起 axios 请求...')
     const aiResp = await axios.post(
       `${AI_URL}/image/analyze-url`,
       { url: imageUrl },
       { timeout: 60000 }
     )
+    console.log('[AI图片] Step3 完成: status=', aiResp.status, 'success=', aiResp.data?.success)
     aiResult = aiResp.data
   } catch (e: any) {
     const errMsg = e.response?.data?.detail ?? e.message ?? '未知错误'
+    console.error('[AI图片] Step3 失败:', errMsg, 'code=', e.code, 'status=', e.response?.status)
     throw createError({
       statusCode: 502,
       message: `图片 AI 服务异常: ${errMsg}`,
     })
   }
 
+  console.log('[AI图片] Step4: AI结果 success=', aiResult?.success)
   if (!aiResult?.success) {
     throw createError({
       statusCode: 422,
@@ -56,7 +64,9 @@ export default defineEventHandler(async (event) => {
   }
 
   // ── 3. 成功后扣减配额 ────────────────────────────
+  console.log('[AI图片] Step5: 扣减配额')
   const quotaAfter = await incrAiUsage(user.userId)
+  console.log('[AI图片] Step5 完成: remaining=', quotaAfter.remaining)
 
   // ── 4. 保存结果到数据库 ──────────────────────────
   // 字段映射：AI返回 primary_emotion / top3_emotions / all_emotions
