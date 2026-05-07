@@ -57,9 +57,13 @@ export default defineEventHandler(async (event) => {
 
   console.log('[AI图片] Step4: AI结果 success=', aiResult?.success)
   if (!aiResult?.success) {
+    // 把 AI 返回的具体原因透传给前端
+    const reason = aiResult?.error ?? aiResult?.message ?? aiResult?.detail ?? 'AI 分析失败，请检查图片文件'
+    console.warn('[AI图片] AI拒绝分析:', reason)
     throw createError({
       statusCode: 422,
-      message: aiResult?.error ?? 'AI 分析失败，请检查图片文件',
+      message: reason,
+      data: { aiRaw: aiResult },
     })
   }
 

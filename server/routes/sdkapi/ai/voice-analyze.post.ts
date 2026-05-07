@@ -49,9 +49,11 @@ export default defineEventHandler(async (event) => {
   }
 
   if (!aiResult?.success) {
+    const reason = aiResult?.error ?? aiResult?.message ?? aiResult?.detail ?? 'AI 分析失败，请检查音频文件格式（支持 WAV / MP3）'
     throw createError({
       statusCode: 422,
-      message: aiResult?.error ?? 'AI 分析失败，请检查音频文件格式（支持 WAV / MP3）',
+      message: reason,
+      data: { aiRaw: aiResult },
     })
   }
 
