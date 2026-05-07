@@ -52,20 +52,16 @@ export default defineEventHandler(async (event) => {
   const quotaAfter = await incrAiUsage(user.userId)
 
   if (!aiResult?.success) {
-    // AI 跑了但识别失败 → 已扣次数，把原因 + 余量告知前端
     const reason = aiResult?.error ?? aiResult?.message ?? aiResult?.detail ?? 'AI 分析失败，请检查音频文件格式（支持 WAV / MP3）'
-    throw createError({
-      statusCode: 422,
-      message: reason,
-      data: {
-        aiRaw: aiResult,
-        _quota: {
-          used:      quotaAfter.used,
-          limit:     quotaAfter.limit,
-          remaining: quotaAfter.remaining,
-        },
+    return {
+      success: false,
+      reason,
+      _quota: {
+        used:      quotaAfter.used,
+        limit:     quotaAfter.limit,
+        remaining: quotaAfter.remaining,
       },
-    })
+    }
   }
 
   // ── 4. 保存结果到数据库 ──────────────────────────

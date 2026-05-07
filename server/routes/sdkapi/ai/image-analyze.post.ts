@@ -62,21 +62,18 @@ export default defineEventHandler(async (event) => {
 
   console.log('[AI图片] Step4: AI结果 success=', aiResult?.success)
   if (!aiResult?.success) {
-    // AI 跑了但不是宠物（或其他拒绝原因）→ 已扣次数，把原因 + 余量一起告知前端
+    // AI 跑了但不是宠物（或其他拒绝原因）→ 已扣次数，正常返回结果给前端
     const reason = aiResult?.error ?? aiResult?.message ?? aiResult?.detail ?? 'AI 分析失败，请检查图片文件'
     console.warn('[AI图片] AI拒绝分析:', reason)
-    throw createError({
-      statusCode: 422,
-      message: reason,
-      data: {
-        aiRaw: aiResult,
-        _quota: {
-          used:      quotaAfter.used,
-          limit:     quotaAfter.limit,
-          remaining: quotaAfter.remaining,
-        },
+    return {
+      success:  false,
+      reason,
+      _quota: {
+        used:      quotaAfter.used,
+        limit:     quotaAfter.limit,
+        remaining: quotaAfter.remaining,
       },
-    })
+    }
   }
 
 
