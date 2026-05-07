@@ -48,25 +48,25 @@ export default defineEventHandler(async (event) => {
     })
   }
 
+  // ── 3. AI 有响应即扣一次配额（不管是否识别出宠物）────────
+  const quotaAfter = await incrAiUsage(user.userId)
+
   if (!aiResult?.success) {
+    // AI 跑了但识别失败 → 已扣次数，把原因 + 余量告知前端
     const reason = aiResult?.error ?? aiResult?.message ?? aiResult?.detail ?? 'AI 分析失败，请检查音频文件格式（支持 WAV / MP3）'
-    const quotaInfo = await getAiUsageInfo(user.userId)
     throw createError({
       statusCode: 422,
       message: reason,
       data: {
         aiRaw: aiResult,
         _quota: {
-          used:      quotaInfo.used,
-          limit:     quotaInfo.limit,
-          remaining: quotaInfo.remaining,
+          used:      quotaAfter.used,
+          limit:     quotaAfter.limit,
+          remaining: quotaAfter.remaining,
         },
       },
     })
   }
-
-  // ── 3. 成功后扣减配额 ────────────────────────────
-  const quotaAfter = await incrAiUsage(user.userId)
 
   // ── 4. 保存结果到数据库 ──────────────────────────
   const db = useDb()

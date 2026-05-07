@@ -55,30 +55,30 @@ export default defineEventHandler(async (event) => {
     })
   }
 
+  // ── 3. AI 有响应即扣一次配额（不管是否识别出宠物）────────
+  console.log('[AI图片] Step5: 扣减配额')
+  const quotaAfter = await incrAiUsage(user.userId)
+  console.log('[AI图片] Step5 完成: remaining=', quotaAfter.remaining)
+
   console.log('[AI图片] Step4: AI结果 success=', aiResult?.success)
   if (!aiResult?.success) {
-    // 把 AI 返回的具体原因 + 当前配额信息一起返回给前端
+    // AI 跑了但不是宠物（或其他拒绝原因）→ 已扣次数，把原因 + 余量一起告知前端
     const reason = aiResult?.error ?? aiResult?.message ?? aiResult?.detail ?? 'AI 分析失败，请检查图片文件'
     console.warn('[AI图片] AI拒绝分析:', reason)
-    const quotaInfo = await getAiUsageInfo(user.userId)
     throw createError({
       statusCode: 422,
       message: reason,
       data: {
         aiRaw: aiResult,
         _quota: {
-          used:      quotaInfo.used,
-          limit:     quotaInfo.limit,
-          remaining: quotaInfo.remaining,
+          used:      quotaAfter.used,
+          limit:     quotaAfter.limit,
+          remaining: quotaAfter.remaining,
         },
       },
     })
   }
 
-  // ── 3. 成功后扣减配额 ────────────────────────────
-  console.log('[AI图片] Step5: 扣减配额')
-  const quotaAfter = await incrAiUsage(user.userId)
-  console.log('[AI图片] Step5 完成: remaining=', quotaAfter.remaining)
 
   // ── 4. 保存结果到数据库 ──────────────────────────
   // 字段映射：AI返回 primary_emotion / top3_emotions / all_emotions
