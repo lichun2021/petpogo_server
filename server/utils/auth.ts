@@ -49,7 +49,11 @@ export async function requireAuth(event: H3Event): Promise<JwtPayload> {
     throw createError({ statusCode: 403, message: '账号已被封禁，无法执行此操作' })
   }
 
-  event.context.user = payload
-  return payload
+  // ⚠️ 关键：用数据库返回的精确 ID 覆盖 JWT 里可能截断的 userId
+  // JWT 生成时若遇到 JS Number 精度丢失（Snowflake ID > MAX_SAFE_INTEGER），
+  // payload.userId 可能已截断。从 DB 取到的字符串（bigNumberStrings=true）才是正确值。
+  const accuratePayload = { ...payload, userId: String(user.id) }
+  event.context.user = accuratePayload
+  return accuratePayload
 }
 

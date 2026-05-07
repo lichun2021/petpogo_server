@@ -14,5 +14,15 @@ export default defineEventHandler(async (event) => {
   fields.push('updated_at=NOW()')
   params.push(user.userId)
   await db.query(`UPDATE t_user SET ${fields.join(',')} WHERE id=?`, params)
+
+  // 同步昵称 / 头像到腾讯 IM（异步，不阻塞响应）
+  if (nickname !== undefined || avatar !== undefined) {
+    imUpdateProfile(user.userId, {
+      ...(nickname !== undefined && { nickname }),
+      ...(avatar   !== undefined && { avatar }),
+    }).catch(e => console.error('IM资料同步失败:', e.message))
+  }
+
   return { success: true }
 })
+

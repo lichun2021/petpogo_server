@@ -51,6 +51,25 @@ export async function imImportAccount(userId: string, nickname: string, avatar =
   })
 }
 
+/**
+ * 更新 IM 用户资料（昵称 / 头像）
+ * 用户修改个人信息后调用，确保聊天界面显示最新昵称和头像
+ */
+export async function imUpdateProfile(userId: string, params: {
+  nickname?: string
+  avatar?:   string
+}) {
+  const profileItem: any[] = []
+  if (params.nickname) profileItem.push({ Tag: 'Tag_Profile_IM_Nick',    Value: params.nickname })
+  if (params.avatar)   profileItem.push({ Tag: 'Tag_Profile_IM_Image',   Value: params.avatar })
+  if (!profileItem.length) return
+
+  return imRequest('profile/portrait_set', {
+    From_Account: String(userId),
+    ProfileItem:  profileItem,
+  })
+}
+
 // ========== 单聊 ==========
 
 /** 发送系统单聊消息（围栏告警/互动通知等） */

@@ -12,7 +12,7 @@ export default defineEventHandler(async (event) => {
 
   // 查询用户
   const [rows]: any = await db.query(
-    'SELECT id, phone, nickname, avatar, password, status FROM t_user WHERE phone=? AND deleted=0 LIMIT 1',
+    'SELECT id, phone, nickname, avatar, password, status, vip_status, vip_expire_at FROM t_user WHERE phone=? AND deleted=0 LIMIT 1',
     [phone]
   )
   const user = rows[0]
@@ -47,13 +47,19 @@ export default defineEventHandler(async (event) => {
     await redis.setex(sigKey, 86400 * 6, userSig)
   }
 
+  // 判断 VIP 是否有效（未过期）
+  const isVip = user.vip_status === 1 &&
+    (user.vip_expire_at === null || new Date(user.vip_expire_at) > new Date())
+
   return {
     token,
     user: {
-      id:       String(user.id),
-      phone:    user.phone,
-      nickname: user.nickname,
-      avatar:   user.avatar,
+      id:        String(user.id),
+      phone:     user.phone,
+      nickname:  user.nickname,
+      avatar:    user.avatar,
+      isVip,
+      vipExpireAt: user.vip_expire_at ? new Date(user.vip_expire_at).toISOString() : null,
     },
     im: {
       sdkAppId: 1600139420,

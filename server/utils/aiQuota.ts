@@ -96,3 +96,30 @@ export async function getAiUsageInfo(userId: string | bigint): Promise<AiQuotaRe
     remaining: limit === -1 ? -1 : Math.max(0, limit - used),
   }
 }
+
+/**
+ * 仅检查配额是否充足（不消耗次数）
+ * 用于"成功才扣"流程的前置检查
+ */
+export async function checkAiQuota(userId: string | bigint): Promise<AiQuotaResult> {
+  return getAiUsageInfo(userId)
+}
+
+/**
+ * 仅扣减一次配额（不做超限检查）
+ * 用于 AI 调用成功后的计费，需配合 checkAiQuota 先行校验
+ */
+export async function incrAiUsage(userId: string | bigint): Promise<AiQuotaResult> {
+  const db = useDb()
+  const today = new Date().toISOString().slice(0, 10)
+
+  await db.query(
+    `INSERT INTO t_ai_usage (user_id, use_date, used_count)
+     VALUES (?, ?, 1)
+     ON DUPLICATE KEY UPDATE used_count = used_count + 1`,
+    [userId, today]
+  )
+
+  // 返回扣后的最新状态
+  return getAiUsageInfo(userId)
+}
