@@ -2,13 +2,12 @@
 // 宠物音频情绪分析
 //
 // 请求体：
-//   audioUrl  string   OSS 音频文件 URL（必填）
+//   audioUrl  string   OSS 音频 URL（必填）
 //   petId?    string   宠物ID（可选）
 //
 // 响应：分析结果 + 剩余配额
 
 import axios from 'axios'
-import FormData from 'form-data'
 
 export default defineEventHandler(async (event) => {
   const user = await requireAuth(event)
@@ -31,38 +30,15 @@ export default defineEventHandler(async (event) => {
   const config = useRuntimeConfig()
   const AI_URL = config.aiServiceUrl || 'http://49.234.39.11:8002'
 
-  // ── 2. 从 OSS 下载音频 Buffer ────────────────────
-  let audioBuffer: Buffer
-  let contentType = 'audio/wav'
-  try {
-    const resp = await axios.get(audioUrl, {
-      responseType: 'arraybuffer',
-      timeout: 30000,
-    })
-    audioBuffer = Buffer.from(resp.data)
-    contentType = (resp.headers['content-type'] as string) || 'audio/wav'
-  } catch (e: any) {
-    throw createError({
-      statusCode: 502,
-      message: `音频下载失败: ${e.message ?? '请检查 OSS URL 是否有效'}`,
-    })
-  }
-
-  // ── 3. 构建 multipart/form-data 发给 AI 服务 ─────
-  const fileName = audioUrl.split('/').pop()?.split('?')[0] || 'audio.wav'
-
+  // ── 2. 调用 AI 音频分析（JSON URL 方式）──────────
+  // POST /voice/analyze-url  Body: { "url": "https://..." }
   let aiResult: any
   try {
-    const form = new FormData()
-    form.append('file', audioBuffer, {
-      filename: fileName,
-      contentType,
-    })
-
-    const aiResp = await axios.post(`${AI_URL}/voice/analyze`, form, {
-      headers: form.getHeaders(),
-      timeout: 120000,  // 音频分析最多等 120s（模型较重）
-    })
+    const aiResp = await axios.post(
+      `${AI_URL}/voice/analyze-url`,
+      { url: audioUrl },
+      { timeout: 120000 }  // 音频模型较重，等待 120s
+    )
     aiResult = aiResp.data
   } catch (e: any) {
     const errMsg = e.response?.data?.detail ?? e.message ?? '未知错误'
@@ -75,19 +51,19 @@ export default defineEventHandler(async (event) => {
   if (!aiResult?.success) {
     throw createError({
       statusCode: 422,
-      message: aiResult?.error ?? 'AI 分析失败，请检查音频文件格式',
+      message: aiResult?.error ?? 'AI 分析失败，请检查音频文件格式（支持 WAV / MP3）',
     })
   }
 
-  // ── 4. 成功后扣减配额 ────────────────────────────
+  // ── 3. 成功后扣减配额 ────────────────────────────
   const quotaAfter = await incrAiUsage(user.userId)
 
-  // ── 5. 保存结果到数据库 ──────────────────────────
+  // ── 4. 保存结果到数据库 ──────────────────────────
   const db = useDb()
   const id = generateId()
-
   const primary     = aiResult.primary_emotion ?? {}
-  const speciesInfo = aiResult.species          ?? {}
+  const speciesInfo = { label: aiResult.species, confidence: aiResult.species_confidence }
+  const top3        = aiResult.top3 ?? []
 
   await db.query(
     `INSERT INTO t_pet_voice_analysis
@@ -101,25 +77,25 @@ export default defineEventHandler(async (event) => {
       user.userId,
       petId || null,
       audioUrl,
-      speciesInfo.label       ?? null,
-      speciesInfo.confidence  ?? null,
-      primary.label           ?? null,
-      primary.label_zh        ?? null,
-      primary.confidence      ?? null,
-      JSON.stringify(aiResult.top3            ?? []),
+      aiResult.species            ?? null,
+      aiResult.species_confidence ?? null,
+      primary.label               ?? null,
+      primary.label_zh            ?? null,
+      primary.confidence          ?? null,
+      JSON.stringify(top3),
       JSON.stringify(aiResult.all_predictions ?? {}),
-      aiResult.advice         ?? null,
-      Math.round(aiResult.processing_time_ms  ?? 0),
+      aiResult.advice             ?? null,
+      Math.round(aiResult.processing_time_ms ?? 0),
       JSON.stringify(aiResult),
     ]
   )
 
-  // ── 6. 返回结果 ──────────────────────────────────
+  // ── 5. 返回结果 ──────────────────────────────────
   return {
     id:      String(id),
     species: speciesInfo,
     emotion: primary,
-    top3:    aiResult.top3   ?? [],
+    top3,
     advice:  aiResult.advice ?? '',
     processingMs: Math.round(aiResult.processing_time_ms ?? 0),
     _quota: {

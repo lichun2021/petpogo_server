@@ -1,5 +1,5 @@
 // POST /sdkapi/ai/image-analyze
-// 宠物图片情绪分析
+// 宠物图片情绪分析（猫 / 狗）
 //
 // 请求体：
 //   imageUrl  string   OSS 图片 URL（必填）
@@ -8,7 +8,6 @@
 // 响应：分析结果 + 剩余配额
 
 import axios from 'axios'
-import FormData from 'form-data'
 
 export default defineEventHandler(async (event) => {
   const user = await requireAuth(event)
@@ -31,39 +30,15 @@ export default defineEventHandler(async (event) => {
   const config = useRuntimeConfig()
   const AI_URL = config.aiServiceUrl || 'http://49.234.39.11:8002'
 
-  // ── 2. 从 OSS 下载图片 Buffer ────────────────────
-  let imageBuffer: Buffer
-  let contentType = 'image/jpeg'
-  try {
-    const resp = await axios.get(imageUrl, {
-      responseType: 'arraybuffer',
-      timeout: 15000,
-    })
-    imageBuffer = Buffer.from(resp.data)
-    contentType = (resp.headers['content-type'] as string) || 'image/jpeg'
-  } catch (e: any) {
-    throw createError({
-      statusCode: 502,
-      message: `图片下载失败: ${e.message ?? '请检查 OSS URL 是否有效'}`,
-    })
-  }
-
-  // ── 3. 构建 multipart/form-data 发给 AI 服务 ─────
-  // 从 URL 中提取文件名
-  const fileName = imageUrl.split('/').pop()?.split('?')[0] || 'image.jpg'
-
+  // ── 2. 调用 AI 图片分析（JSON URL 方式）──────────
+  // POST /image/analyze-url  Body: { "url": "https://..." }
   let aiResult: any
   try {
-    const form = new FormData()
-    form.append('file', imageBuffer, {
-      filename: fileName,
-      contentType,
-    })
-
-    const aiResp = await axios.post(`${AI_URL}/dog-image/analyze`, form, {
-      headers: form.getHeaders(),
-      timeout: 60000,  // AI 分析最多等 60s
-    })
+    const aiResp = await axios.post(
+      `${AI_URL}/image/analyze-url`,
+      { url: imageUrl },
+      { timeout: 60000 }
+    )
     aiResult = aiResp.data
   } catch (e: any) {
     const errMsg = e.response?.data?.detail ?? e.message ?? '未知错误'
@@ -80,13 +55,16 @@ export default defineEventHandler(async (event) => {
     })
   }
 
-  // ── 4. 成功后扣减配额 ────────────────────────────
+  // ── 3. 成功后扣减配额 ────────────────────────────
   const quotaAfter = await incrAiUsage(user.userId)
 
-  // ── 5. 保存结果到数据库 ──────────────────────────
+  // ── 4. 保存结果到数据库 ──────────────────────────
+  // 字段映射：AI返回 primary_emotion / top3_emotions / all_emotions
   const db = useDb()
   const id = generateId()
   const primary = aiResult.primary_emotion ?? {}
+  const top3    = aiResult.top3_emotions   ?? []
+  const allEmo  = aiResult.all_emotions    ?? {}
 
   await db.query(
     `INSERT INTO t_pet_image_analysis
@@ -100,25 +78,28 @@ export default defineEventHandler(async (event) => {
       user.userId,
       petId || null,
       imageUrl,
-      primary.label        ?? null,
-      primary.label_zh     ?? null,
-      primary.confidence   ?? null,
-      JSON.stringify(aiResult.top3            ?? []),
-      JSON.stringify(aiResult.all_predictions ?? {}),
-      aiResult.advice      ?? null,
-      aiResult.ensemble_size ?? null,
-      Math.round(aiResult.processing_time_ms  ?? 0),
+      primary.label       ?? null,
+      primary.label_zh    ?? null,
+      primary.confidence  ?? null,
+      JSON.stringify(top3),
+      JSON.stringify(allEmo),
+      aiResult.advice     ?? null,
+      aiResult.emotion_model_count ?? null,
+      Math.round(aiResult.processing_time_ms ?? 0),
       JSON.stringify(aiResult),
     ]
   )
 
-  // ── 6. 返回结果 ──────────────────────────────────
+  // ── 5. 返回结果 ──────────────────────────────────
   return {
-    id:          String(id),
-    emotion:     primary,
-    top3:        aiResult.top3    ?? [],
-    advice:      aiResult.advice  ?? '',
-    ensembleSize: aiResult.ensemble_size ?? 0,
+    id:           String(id),
+    species:      aiResult.species    ?? '',
+    species_zh:   aiResult.species_zh ?? '',
+    breed:        aiResult.breed      ?? null,
+    emotion:      primary,
+    top3:         top3,
+    advice:       aiResult.advice     ?? '',
+    modelCount:   aiResult.emotion_model_count ?? 0,
     processingMs: Math.round(aiResult.processing_time_ms ?? 0),
     _quota: {
       used:      quotaAfter.used,
