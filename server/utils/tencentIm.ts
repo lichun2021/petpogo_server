@@ -72,26 +72,35 @@ export async function imUpdateProfile(userId: string, params: {
 
 // ========== 单聊 ==========
 
-/** 发送系统单聊消息（围栏告警/互动通知等） */
+/** 发送系统单聊消息（围栏告警/互动通知等）
+ *
+ * @param fromUserId 可选，指定发送方账号（默认为 administrator 管理员账号）。
+ *   传入真实用户 ID 后，消息会出现在对方与该用户的私信会话中，
+ *   而不是显示 administrator 的会话。
+ */
 export async function imSendMsg(params: {
-  toUserId: string
-  msgType?: 'TIMTextElem' | 'TIMCustomElem'
-  content:  string | Record<string, any>
+  toUserId:   string
+  fromUserId?: string          // 可选：以该用户身份发送（互动通知用）
+  msgType?:   'TIMTextElem' | 'TIMCustomElem'
+  content:    string | Record<string, any>
 }) {
   const type = params.msgType || 'TIMTextElem'
+  const fromAccount = params.fromUserId ? String(params.fromUserId) : ADMIN_ID
   const msgBody = type === 'TIMTextElem'
     ? [{ MsgType: 'TIMTextElem', MsgContent: { Text: params.content } }]
     : [{ MsgType: 'TIMCustomElem', MsgContent: { Data: JSON.stringify(params.content), Desc: '' } }]
 
+  // 当以真实用户身份发送时，需要先确保该用户有管理员代发权限
+  // 腾讯 IM REST API 的 From_Account 可以是任意已注册账号，管理员有代发权限
   return imRequest('openim/sendmsg', {
-    From_Account: ADMIN_ID,
+    From_Account: fromAccount,
     To_Account:   String(params.toUserId),
     MsgRandom:    Math.floor(Math.random() * 1e9),
     MsgBody:      msgBody,
     OfflinePushInfo: {
       PushFlag: 0,
-      Title:    '宠物助手',
-      Desc:     typeof params.content === 'string' ? params.content : '您有新消息',
+      Title:    '萌宠智伴',
+      Desc:     typeof params.content === 'string' ? params.content : '您有新互动',
     },
   })
 }

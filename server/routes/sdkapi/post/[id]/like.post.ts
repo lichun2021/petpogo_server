@@ -23,15 +23,26 @@ export default defineEventHandler(async (event) => {
     await db.query('UPDATE t_post SET like_count=like_count+1 WHERE id=?', [postId])
 
     // 通知帖子作者（异步，不阻塞）
-    db.query('SELECT user_id FROM t_post WHERE id=?', [postId]).then(([[post]]: any) => {
+    // 同时查帖子作者 + 点赞者昵称，把 fromName 带入通知，前端能直接展示 "XXX 点赞了你的帖子"
+    Promise.all([
+      db.query('SELECT user_id FROM t_post WHERE id=?', [postId]),
+      db.query('SELECT nickname FROM t_user WHERE id=?', [user.userId]),
+    ]).then(([[[post]], [[liker]]]: any) => {
       if (post && String(post.user_id) !== user.userId) {
+        const fromName = liker?.nickname || '有人'
         imSendMsg({
-          toUserId: String(post.user_id),
-          msgType: 'TIMCustomElem',
-          content: { type: IM_MSG_TYPE.POST_LIKE, postId, fromUserId: user.userId },
+          toUserId:  String(post.user_id),
+          fromUserId: user.userId,               // 以点赞者身份发送，避免会话显示 administrator
+          msgType:  'TIMCustomElem',
+          content:  {
+            type:       IM_MSG_TYPE.POST_LIKE,
+            postId,
+            fromUserId: user.userId,
+            fromName,                            // ← 新增：点赞者昵称，前端直接用
+          },
         }).catch(() => {})
       }
-    })
+    }).catch(() => {})
     return { liked: true }
   }
 })
