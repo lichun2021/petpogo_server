@@ -73,6 +73,7 @@
 </template>
 
 <script setup lang="ts">
+defineOptions({ name: 'AdminDevicesList' })
 definePageMeta({ layout: 'admin' })
 
 const tabs = [

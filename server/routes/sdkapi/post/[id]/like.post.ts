@@ -15,6 +15,29 @@ export default defineEventHandler(async (event) => {
     await db.query('DELETE FROM t_like WHERE user_id=? AND target_id=? AND target_type=1', [user.userId, postId])
     await redis.decr(RedisKey.postLikes(postId))
     await db.query('UPDATE t_post SET like_count=GREATEST(like_count-1,0) WHERE id=?', [postId])
+
+    // 取消点赞也通知（显示"取消了点赞"）
+    Promise.all([
+      db.query('SELECT user_id, content FROM t_post WHERE id=?', [postId]),
+      db.query('SELECT nickname FROM t_user WHERE id=?', [user.userId]),
+    ]).then(([[[post]], [[liker]]]: any) => {
+      if (post && String(post.user_id) !== user.userId) {
+        const fromName    = liker?.nickname || '有人'
+        const postContent = String(post.content || '').slice(0, 20)
+        imSendMsg({
+          toUserId: String(post.user_id),
+          msgType:  'TIMCustomElem',
+          content:  {
+            type:        IM_MSG_TYPE.POST_LIKE,
+            action:      'unlike',           // 区分点赞/取消
+            postId,
+            fromUserId:  user.userId,
+            fromName,
+            postContent,                     // 帖子内容摘要（最多20字）
+          },
+        }).catch(() => {})
+      }
+    }).catch(() => {})
     return { liked: false }
   } else {
     // 点赞
@@ -22,23 +45,25 @@ export default defineEventHandler(async (event) => {
     await redis.incr(RedisKey.postLikes(postId))
     await db.query('UPDATE t_post SET like_count=like_count+1 WHERE id=?', [postId])
 
-    // 通知帖子作者（异步，不阻塞）
-    // 同时查帖子作者 + 点赞者昵称，把 fromName 带入通知，前端能直接展示 "XXX 点赞了你的帖子"
+    // 通知帖子作者：带帖子内容摘要 + 点赞者昵称，从 administrator 系统账号发送（不混入私聊）
     Promise.all([
-      db.query('SELECT user_id FROM t_post WHERE id=?', [postId]),
+      db.query('SELECT user_id, content FROM t_post WHERE id=?', [postId]),
       db.query('SELECT nickname FROM t_user WHERE id=?', [user.userId]),
     ]).then(([[[post]], [[liker]]]: any) => {
       if (post && String(post.user_id) !== user.userId) {
-        const fromName = liker?.nickname || '有人'
+        const fromName    = liker?.nickname || '有人'
+        const postContent = String(post.content || '').slice(0, 20)
         imSendMsg({
-          toUserId:  String(post.user_id),
-          fromUserId: user.userId,               // 以点赞者身份发送，避免会话显示 administrator
+          toUserId: String(post.user_id),
+          // 不传 fromUserId → 默认从 administrator 发送（系统通知，不进私聊列表）
           msgType:  'TIMCustomElem',
           content:  {
-            type:       IM_MSG_TYPE.POST_LIKE,
+            type:        IM_MSG_TYPE.POST_LIKE,
+            action:      'like',
             postId,
-            fromUserId: user.userId,
-            fromName,                            // ← 新增：点赞者昵称，前端直接用
+            fromUserId:  user.userId,
+            fromName,
+            postContent,                     // 帖子内容摘要（最多20字）
           },
         }).catch(() => {})
       }

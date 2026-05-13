@@ -212,6 +212,7 @@
 </template>
 
 <script setup lang="ts">
+defineOptions({ name: 'AdminAiAnalysis' })
 definePageMeta({ layout: 'admin' })
 
 const typeOpts    = [

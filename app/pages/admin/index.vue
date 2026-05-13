@@ -65,6 +65,7 @@
 </template>
 
 <script setup lang="ts">
+defineOptions({ name: 'AdminDashboard' })
 definePageMeta({ layout: 'admin' })
 
 const stats = ref([

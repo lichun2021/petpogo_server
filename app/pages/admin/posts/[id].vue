@@ -65,8 +65,36 @@
           </div>
         </div>
 
-        <!-- 右：数据 + 评论 -->
+        <!-- 右：标签 + 数据 + 评论 -->
         <div class="space-y-4">
+          <!-- 标签编辑 -->
+          <div class="bg-white rounded-2xl border p-4" style="border-color:#f0e6d8">
+            <p class="text-xs text-stone-400 mb-3 font-medium">帖子标签</p>
+            <div class="flex gap-2 flex-wrap">
+              <button
+                v-for="tg in tagOpts" :key="tg.value"
+                :class="[
+                  'flex items-center gap-1 px-3 py-1.5 rounded-full text-sm font-medium border transition-all',
+                  localTag === tg.value
+                    ? `${tg.activeCls} text-white border-transparent`
+                    : 'bg-white border-stone-200 text-stone-500 hover:border-amber-300'
+                ]"
+                @click="localTag = tg.value"
+              >
+                <span>{{ tg.emoji }}</span>{{ tg.label }}
+              </button>
+            </div>
+            <UButton
+              label="保存标签"
+              color="amber"
+              size="xs"
+              class="mt-3 w-full"
+              :loading="savingTag"
+              :disabled="localTag === (post?.tag ?? 'other')"
+              @click="saveTag"
+            />
+          </div>
+
           <!-- 数据统计 -->
           <div class="bg-white rounded-2xl border p-4" style="border-color:#f0e6d8">
             <p class="text-xs text-stone-400 mb-3 font-medium">数据统计</p>
@@ -125,14 +153,26 @@
 </template>
 
 <script setup lang="ts">
+defineOptions({ name: 'AdminPostDetail' })
 definePageMeta({ layout: 'admin' })
 
-const route  = useRoute()
-const toast  = useToast()
-const acting = ref(false)
+const route    = useRoute()
+const toast    = useToast()
+const acting   = ref(false)
 const deleting = ref(false)
+const savingTag = ref(false)
+const { closeTab } = useTabStore()
+
+const tagOpts = [
+  { label: '猫',   value: 'cat',   emoji: '🐱', activeCls: 'bg-orange-400' },
+  { label: '狗',   value: 'dog',   emoji: '🐶', activeCls: 'bg-amber-500'  },
+  { label: '其他', value: 'other', emoji: '🐾', activeCls: 'bg-stone-400'  },
+]
 
 const { data: post, pending, refresh } = await useFetch<any>(`/api/admin/posts/${route.params.id}`)
+
+const localTag = ref<string>('other')
+watch(() => post.value?.tag, (v) => { localTag.value = v ?? 'other' }, { immediate: true })
 
 const statusLabel = computed(() => {
   if (!post.value) return ''
@@ -152,12 +192,24 @@ async function setStatus(status: number) {
   finally { acting.value = false }
 }
 
+async function saveTag() {
+  savingTag.value = true
+  try {
+    await $fetch(`/api/admin/posts/${route.params.id}/tag`, { method: 'PUT', body: { tag: localTag.value } })
+    if (post.value) post.value.tag = localTag.value
+    const label = ({ cat: '猫', dog: '狗', other: '其他' } as any)[localTag.value]
+    toast.add({ title: `标签已更新为「${label}」`, color: 'green' })
+  } catch { toast.add({ title: '操作失败', color: 'red' }) }
+  finally { savingTag.value = false }
+}
+
 async function deletePost() {
   if (!confirm('确定要删除这条帖子吗？')) return
   deleting.value = true
   try {
     await $fetch(`/api/admin/posts/${route.params.id}/status`, { method: 'PUT', body: { status: 3 } })
     toast.add({ title: '已删除', color: 'green' })
+    closeTab(route.path)
     navigateTo('/admin/posts')
   } catch { toast.add({ title: '操作失败', color: 'red' }) }
   finally { deleting.value = false }

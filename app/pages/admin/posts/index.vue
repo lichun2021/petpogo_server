@@ -31,6 +31,23 @@
         @click="mediaType = t.value; page = 1; loadList()"
       >{{ t.label }}</button>
 
+      <span class="text-stone-300">|</span>
+
+      <!-- 标签筛选 -->
+      <button
+        v-for="tg in tagOpts" :key="tg.value"
+        :class="[
+          'px-3 py-1 rounded-full text-xs font-medium transition-all flex items-center gap-1',
+          activeTag === tg.value
+            ? `${tg.activeCls} text-white`
+            : 'bg-white border text-stone-400 hover:text-stone-600'
+        ]"
+        style="border-color: #f0e6d8"
+        @click="activeTag = tg.value; page = 1; loadList()"
+      >
+        <span>{{ tg.emoji }}</span>{{ tg.label }}
+      </button>
+
       <span class="ml-auto text-xs text-stone-400">共 {{ total }} 条</span>
     </div>
 
@@ -43,10 +60,11 @@
 
       <div v-else>
         <!-- 表头 -->
-        <div class="grid grid-cols-[80px_1fr_120px_100px_140px] gap-3 px-4 py-2 bg-amber-50/50 border-b border-orange-100 text-xs text-stone-500 font-medium">
+        <div class="grid grid-cols-[80px_1fr_120px_80px_100px_140px] gap-3 px-4 py-2 bg-amber-50/50 border-b border-orange-100 text-xs text-stone-500 font-medium">
           <span>封面</span>
           <span>内容</span>
           <span>用户</span>
+          <span>标签</span>
           <span>状态</span>
           <span>操作</span>
         </div>
@@ -54,8 +72,8 @@
         <!-- 行 -->
         <div
           v-for="p in list" :key="p.id"
-          class="grid grid-cols-[80px_1fr_120px_100px_140px] gap-3 px-4 py-3 border-b border-stone-100 hover:bg-amber-50/20 transition-colors items-center cursor-pointer"
-          @click="navigateTo(`/admin/posts/${p.id}`)"
+          class="grid grid-cols-[80px_1fr_120px_80px_100px_140px] gap-3 px-4 py-3 border-b border-stone-100 hover:bg-amber-50/20 transition-colors items-center cursor-pointer"
+          @click="openTab(`/admin/posts/${p.id}`)"
         >
           <!-- 封面 -->
           <div class="w-16 h-12 rounded-lg overflow-hidden bg-stone-100 flex-shrink-0 relative">
@@ -90,6 +108,17 @@
           <div class="flex items-center gap-1.5 min-w-0">
             <UAvatar :src="p.user_avatar" :alt="p.nickname" size="xs" />
             <span class="text-xs text-stone-600 truncate">{{ p.nickname }}</span>
+          </div>
+
+          <!-- 标签 -->
+          <div @click.stop>
+            <span
+              :class="tagBadgeCls(p.tag)"
+              class="inline-flex items-center gap-0.5 px-2 py-0.5 rounded-full text-xs font-medium cursor-pointer hover:opacity-80 transition-opacity"
+              @click="openTagModal(p)"
+            >
+              {{ tagEmoji(p.tag) }}{{ tagLabel(p.tag) }}
+            </span>
           </div>
 
           <!-- 状态 -->
@@ -163,10 +192,50 @@
         </div>
       </div>
     </div>
+
+    <!-- 标签修改弹窗 -->
+    <div v-if="tagModal.show"
+      class="fixed inset-0 z-50 flex items-center justify-center"
+      style="background: rgba(0,0,0,0.4)"
+      @click.self="tagModal.show = false"
+    >
+      <div class="bg-white rounded-2xl shadow-xl w-72 p-5">
+        <h3 class="font-semibold text-stone-800 mb-1">修改帖子标签</h3>
+        <p class="text-xs text-stone-400 mb-4">为帖子选择合适的分类标签</p>
+
+        <div class="space-y-2 mb-5">
+          <label
+            v-for="tg in tagOpts.filter(t => t.value !== '')" :key="tg.value"
+            :class="[
+              'flex items-center gap-3 px-3 py-2.5 rounded-xl border cursor-pointer transition-all',
+              tagModal.tag === tg.value
+                ? 'border-amber-300 bg-amber-50'
+                : 'border-stone-200 hover:border-stone-300'
+            ]"
+          >
+            <input type="radio" v-model="tagModal.tag" :value="tg.value" class="accent-amber-500" />
+            <span class="text-lg">{{ tg.emoji }}</span>
+            <span class="text-sm font-medium text-stone-700">{{ tg.label }}</span>
+          </label>
+        </div>
+
+        <div class="flex gap-2">
+          <UButton label="取消" color="gray" variant="outline" class="flex-1" @click="tagModal.show = false" />
+          <UButton
+            label="保存"
+            color="amber"
+            class="flex-1"
+            :loading="tagModal.loading"
+            @click="confirmTag"
+          />
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
 <script setup lang="ts">
+defineOptions({ name: 'AdminPostsList' })
 definePageMeta({ layout: 'admin' })
 
 const tabs = [
@@ -184,13 +253,23 @@ const typeOpts = [
   { label: '文字', value: '0' },
 ]
 
+const tagOpts = [
+  { label: '全部', value: '',      emoji: '📋', activeCls: 'bg-stone-500' },
+  { label: '猫',   value: 'cat',   emoji: '🐱', activeCls: 'bg-orange-400' },
+  { label: '狗',   value: 'dog',   emoji: '🐶', activeCls: 'bg-amber-500'  },
+  { label: '其他', value: 'other', emoji: '🐾', activeCls: 'bg-stone-400'  },
+]
+
 const statusLabel: Record<number, string> = { 0: '转码中', 1: '已通过', 2: '待审核', 3: '已违规' }
 const statusColor: Record<number, string> = { 0: 'gray',   1: 'green',  2: 'yellow', 3: 'red'   }
 
 const rejectReasons = ['内容违规', '版权问题', '违规广告', '涉嫌诈骗', '色情低俗', '虚假信息', '其他']
 
+const { openTab } = useTabStore()
+
 const activeTab    = ref(0)
 const mediaType    = ref('')
+const activeTag    = ref('')
 const page         = ref(1)
 const pageSize     = 20
 const list         = ref<any[]>([])
@@ -205,6 +284,28 @@ const rejectModal = reactive({
   loading: false,
 })
 
+const tagModal = reactive({
+  show:    false,
+  post:    null as any,
+  tag:     'other',
+  loading: false,
+})
+
+// 标签展示辅助
+function tagLabel(tag: string) {
+  return ({ cat: '猫', dog: '狗', other: '其他' } as any)[tag] ?? '其他'
+}
+function tagEmoji(tag: string) {
+  return ({ cat: '🐱', dog: '🐶', other: '🐾' } as any)[tag] ?? '🐾'
+}
+function tagBadgeCls(tag: string) {
+  return ({
+    cat:   'bg-orange-100 text-orange-600',
+    dog:   'bg-amber-100  text-amber-600',
+    other: 'bg-stone-100  text-stone-500',
+  } as any)[tag] ?? 'bg-stone-100 text-stone-500'
+}
+
 function getCover(p: any): string {
   if (p.cover_url) return p.cover_url
   if (p.media_urls?.length) return p.media_urls[0]
@@ -215,7 +316,13 @@ async function loadList() {
   loading.value = true
   try {
     const d = await $fetch<any>('/api/admin/posts', {
-      query: { page: page.value, size: pageSize, status: tabs[activeTab.value]?.key, mediaType: mediaType.value }
+      query: {
+        page: page.value,
+        size: pageSize,
+        status: tabs[activeTab.value]?.key,
+        mediaType: mediaType.value,
+        tag: activeTag.value,
+      }
     })
     list.value         = d.list
     total.value        = d.total
@@ -256,6 +363,26 @@ async function confirmReject() {
     toast.add({ title: `已标记违规：${rejectModal.reason}`, color: 'red' })
   } catch { toast.add({ title: '操作失败', color: 'red' }) }
   finally { rejectModal.loading = false }
+}
+
+function openTagModal(p: any) {
+  tagModal.post = p
+  tagModal.tag  = p.tag || 'other'
+  tagModal.show = true
+}
+
+async function confirmTag() {
+  tagModal.loading = true
+  try {
+    await $fetch(`/api/admin/posts/${tagModal.post.id}/tag`, {
+      method: 'PUT',
+      body:   { tag: tagModal.tag }
+    })
+    tagModal.post.tag = tagModal.tag
+    tagModal.show     = false
+    toast.add({ title: `标签已更新为「${tagLabel(tagModal.tag)}」`, color: 'green' })
+  } catch { toast.add({ title: '操作失败', color: 'red' }) }
+  finally { tagModal.loading = false }
 }
 
 function formatDate(s: string) {

@@ -82,6 +82,7 @@
 </template>
 
 <script setup lang="ts">
+defineOptions({ name: 'AdminStoresList' })
 definePageMeta({ layout: 'admin' })
 
 const tabs = [

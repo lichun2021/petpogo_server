@@ -16,16 +16,30 @@ export default defineEventHandler(async (event) => {
   await redis.incr(RedisKey.postComments(postId))
   await db.query('UPDATE t_post SET comment_count=comment_count+1 WHERE id=?', [postId])
 
-  // 通知帖主（异步）
-  db.query('SELECT user_id FROM t_post WHERE id=?', [postId]).then(([[post]]: any) => {
+  // 通知帖主：带帖子内容摘要 + 评论者昵称，从 administrator 系统账号发送（不混入私聊）
+  Promise.all([
+    db.query('SELECT user_id, content AS postContent FROM t_post WHERE id=?', [postId]),
+    db.query('SELECT nickname FROM t_user WHERE id=?', [user.userId]),
+  ]).then(([[[post]], [[commenter]]]: any) => {
     if (post && String(post.user_id) !== user.userId) {
+      const fromName    = commenter?.nickname || '有人'
+      const postContent = String(post.postContent || '').slice(0, 20)
       imSendMsg({
         toUserId: String(post.user_id),
-        msgType: 'TIMCustomElem',
-        content: { type: IM_MSG_TYPE.POST_COMMENT, postId, commentId: String(id), fromUserId: user.userId },
+        // 不传 fromUserId → 默认从 administrator 发送（系统通知，不进私聊列表）
+        msgType:  'TIMCustomElem',
+        content:  {
+          type:        IM_MSG_TYPE.POST_COMMENT,
+          postId,
+          commentId:   String(id),
+          fromUserId:  user.userId,
+          fromName,
+          postContent,          // 帖子内容摘要（最多20字）
+          commentText: content, // 评论内容（完整，供前端展示）
+        },
       }).catch(() => {})
     }
-  })
+  }).catch(() => {})
 
   return { id: String(id), content }
 })

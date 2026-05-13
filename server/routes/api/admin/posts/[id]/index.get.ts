@@ -5,7 +5,7 @@ export default defineEventHandler(async (event) => {
 
   const [[post]]: any = await db.query(
     `SELECT p.id, p.content, p.media_type, p.media_urls, p.video_url, p.cover_url,
-            p.like_count, p.comment_count, p.view_count, p.status, p.visibility,
+            p.like_count, p.comment_count, p.view_count, p.status, p.visibility, p.tag,
             p.created_at, p.raw_video_key,
             p.user_id,
             COALESCE(u.nickname, '宠友') AS nickname,

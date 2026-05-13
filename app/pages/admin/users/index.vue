@@ -77,6 +77,7 @@
 </template>
 
 <script setup lang="ts">
+defineOptions({ name: 'AdminUsersList' })
 definePageMeta({ layout: 'admin' })
 
 const tabs = [
