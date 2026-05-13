@@ -54,16 +54,16 @@ export default defineEventHandler(async (event) => {
   return {
     token,
     user: {
-      id:        String(user.id),
-      phone:     user.phone,
-      nickname:  user.nickname,
-      avatar:    user.avatar,
+      id: String(user.id),
+      phone: user.phone,
+      nickname: user.nickname,
+      avatar: user.avatar,
       isVip,
       vipExpireAt: user.vip_expire_at ? new Date(user.vip_expire_at).toISOString() : null,
     },
     im: {
       sdkAppId: 1600139420,
-      userId:   String(user.id),
+      userId: String(user.id),
       userSig,
     },
   }

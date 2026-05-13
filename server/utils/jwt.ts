@@ -7,8 +7,8 @@ const getSecret = () => {
 
 export interface JwtPayload {
   userId: string
-  phone:  string
-  role?:  string
+  phone: string
+  role?: string
 }
 
 export async function signJwt(payload: JwtPayload): Promise<string> {
