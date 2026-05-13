@@ -1,5 +1,6 @@
 -- PetPogo 数据库初始化脚本
 -- MySQL 8.0+，支持 JSON / SPATIAL / 分区
+-- 包含：基础表 + VIP字段 + AI分析表 + 帖子标签
 
 CREATE DATABASE IF NOT EXISTS petpogo CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 USE petpogo;
@@ -155,11 +156,13 @@ CREATE TABLE IF NOT EXISTS t_post (
   view_count     INT          DEFAULT 0,
   status         TINYINT      DEFAULT 1  COMMENT '1正常 2处理中 3违规',
   visibility     TINYINT      DEFAULT 1  COMMENT '1公开 2仅自己',
+  tag            VARCHAR(20)  NOT NULL DEFAULT 'other' COMMENT '帖子标签 cat/dog/other',
   created_at     DATETIME     DEFAULT CURRENT_TIMESTAMP,
   deleted        TINYINT      DEFAULT 0,
   INDEX idx_user (user_id),
   INDEX idx_created (created_at),
-  INDEX idx_status (status)
+  INDEX idx_status (status),
+  INDEX idx_tag (tag)
 ) ENGINE=InnoDB;
 
 CREATE TABLE IF NOT EXISTS t_post_comment (
@@ -193,6 +196,55 @@ CREATE TABLE IF NOT EXISTS t_follow (
   UNIQUE KEY uk_follow (follower_id, following_id),
   INDEX idx_following (following_id)
 ) ENGINE=InnoDB;
+
+-- ===========================
+-- AI 分析结果模块
+-- ===========================
+
+-- 音频情绪分析结果表
+-- 对应 AI 接口：POST /voice/analyze
+CREATE TABLE IF NOT EXISTS t_pet_voice_analysis (
+  id              BIGINT        PRIMARY KEY AUTO_INCREMENT,
+  user_id         BIGINT        NOT NULL                   COMMENT '用户ID',
+  pet_id          BIGINT                                   COMMENT '宠物ID（可空）',
+  audio_url       VARCHAR(500)  NOT NULL                   COMMENT 'OSS音频URL',
+  species         VARCHAR(20)                              COMMENT '识别物种 cat/dog',
+  species_conf    DECIMAL(5,4)                             COMMENT '物种置信度',
+  emotion         VARCHAR(50)                              COMMENT '主情绪标签(英文)',
+  emotion_zh      VARCHAR(50)                              COMMENT '主情绪标签(中文)',
+  emotion_conf    DECIMAL(5,4)                             COMMENT '主情绪置信度',
+  top3            JSON                                     COMMENT 'top3情绪 [{label,label_zh,confidence}]',
+  all_predictions JSON                                     COMMENT '全部情绪预测分值',
+  advice          TEXT                                     COMMENT 'AI建议文字',
+  processing_ms   INT                                      COMMENT 'AI处理耗时(ms)',
+  raw_result      JSON                                     COMMENT 'AI原始响应（备查）',
+  created_at      DATETIME      DEFAULT CURRENT_TIMESTAMP,
+  INDEX idx_user   (user_id),
+  INDEX idx_pet    (pet_id),
+  INDEX idx_created(created_at)
+) ENGINE=InnoDB COMMENT='宠物音频情绪分析记录';
+
+-- 图片情绪分析结果表
+-- 对应 AI 接口：POST /dog-image/analyze
+CREATE TABLE IF NOT EXISTS t_pet_image_analysis (
+  id              BIGINT        PRIMARY KEY AUTO_INCREMENT,
+  user_id         BIGINT        NOT NULL                   COMMENT '用户ID',
+  pet_id          BIGINT                                   COMMENT '宠物ID（可空）',
+  image_url       VARCHAR(500)  NOT NULL                   COMMENT 'OSS图片URL',
+  emotion         VARCHAR(50)                              COMMENT '主情绪标签(英文)',
+  emotion_zh      VARCHAR(50)                              COMMENT '主情绪标签(中文)',
+  emotion_conf    DECIMAL(5,4)                             COMMENT '主情绪置信度',
+  top3            JSON                                     COMMENT 'top3情绪 [{label,label_zh,confidence}]',
+  all_predictions JSON                                     COMMENT '全部13类情绪预测分值',
+  advice          TEXT                                     COMMENT 'AI建议文字',
+  ensemble_size   TINYINT                                  COMMENT '集成模型数量',
+  processing_ms   INT                                      COMMENT 'AI处理耗时(ms)',
+  raw_result      JSON                                     COMMENT 'AI原始响应（备查）',
+  created_at      DATETIME      DEFAULT CURRENT_TIMESTAMP,
+  INDEX idx_user   (user_id),
+  INDEX idx_pet    (pet_id),
+  INDEX idx_created(created_at)
+) ENGINE=InnoDB COMMENT='宠物图片情绪分析记录';
 
 -- ===========================
 -- 门店 / 商品模块
