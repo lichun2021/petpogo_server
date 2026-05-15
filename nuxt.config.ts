@@ -74,6 +74,11 @@ export default defineNuxtConfig({
     uclMapMarkName: process.env.UCL_MAP_MARK_NAME || 'position',
     appApiSecret: process.env.APP_API_SECRET || '1q21ee182efd1gf1g@#$',
     aiServiceUrl: process.env.AI_SERVICE_URL || 'http://127.0.0.1:8000',
+    // 对方后台（iPet 宠物/硬件管理系统）
+    peerBackendUrl: process.env.PEER_BACKEND_URL || '',
+    peerBackendPublicUrl: process.env.PEER_BACKEND_PUBLIC_URL || process.env.PEER_BACKEND_URL || 'http://49.234.39.11:8006',
+    peerBackendMerchantId: process.env.PEER_BACKEND_MERCHANT_ID || '1',
+    peerBackendSecret: process.env.PEER_BACKEND_SECRET || '',
     public: {
       ossCdnBaseUrl: process.env.OSS_CDN_BASE_URL || 'https://pet-20260430.oss-cn-shanghai.aliyuncs.com',
       tencentImSdkAppId: '1600139420',

@@ -1,7 +1,28 @@
 import type { H3Event } from 'h3'
-import { verifyJwt, type JwtPayload } from './jwt'
+import { tokenSessionKey } from './peerBackend'
 
-export async function requireAuth(event: H3Event): Promise<JwtPayload> {
+export interface SessionUser {
+  userId: string
+  phone: string
+  role?: string
+}
+
+/**
+ * requireAuth
+ * ──────────────────────────────────────────────────────────────
+ * 验证 App 请求的合法性。
+ *
+ * 流程：
+ *  1. 从 Authorization 头提取 Bearer Token（即对方后台颁发的 Token）
+ *  2. 用 Token 的 SHA-256 哈希在 Redis 中查询对应的用户 Session
+ *  3. Session 不存在 → Token 过期或未登录
+ *  4. 将用户信息注入 event.context.user，供后续 handler 使用
+ *
+ * 注意：我们不再自签 JWT，Token 完全由对方后台颁发和管理。
+ *       本后台通过 Redis 缓存 Token → 用户信息 的映射来快速鉴权。
+ * ──────────────────────────────────────────────────────────────
+ */
+export async function requireAuth(event: H3Event): Promise<SessionUser> {
   const authHeader = getHeader(event, 'Authorization') || getHeader(event, 'authorization')
   const token = authHeader?.replace('Bearer ', '').trim()
 
@@ -9,51 +30,38 @@ export async function requireAuth(event: H3Event): Promise<JwtPayload> {
     throw createError({ statusCode: 401, message: '未登录，请先登录' })
   }
 
-  let payload: JwtPayload
-  try {
-    payload = await verifyJwt(token)
-  } catch {
-    throw createError({ statusCode: 401, message: 'Token 无效或已过期' })
-  }
-
-  // 校验 Redis 会话是否存在
+  // 从 Redis 查询 Token 对应的 Session（登录时写入，刷新 Token 时更新）
   const redis = useRedis()
-  const sessionExists = await redis.exists(RedisKey.session(payload.userId))
-  if (!sessionExists) {
-    throw createError({ statusCode: 401, message: '会话已过期，请重新登录' })
+  const sessionKey = tokenSessionKey(token)
+  const raw = await redis.get(sessionKey)
+
+  if (!raw) {
+    throw createError({ statusCode: 401, message: 'Token 已过期，请重新登录' })
   }
 
-  // 校验用户是否存在且未被封号
-  // 注意：历史 JWT 可能因 BigInt 精度丢失导致 userId 尾数偏差，使用 phone 兜底
-  const db = useDb()
-  let [[user]]: any = await db.query(
-    'SELECT id, status FROM t_user WHERE id=? AND deleted=0 LIMIT 1',
-    [payload.userId]
-  )
-  if (!user && payload.phone) {
-    // 用手机号兜底查找（修正旧 JWT 精度问题）
-    const [[userByPhone]]: any = await db.query(
-      'SELECT id, status FROM t_user WHERE phone=? AND deleted=0 LIMIT 1',
-      [payload.phone]
-    )
-    user = userByPhone
-    if (user) {
-      // 修正本次请求的 userId，使后续写库操作使用正确 ID
-      payload.userId = String(user.id)
-    }
+  let user: SessionUser
+  try {
+    user = JSON.parse(raw) as SessionUser
+  } catch {
+    throw createError({ statusCode: 401, message: 'Session 数据异常，请重新登录' })
   }
-  if (!user) {
+
+  // 校验用户是否存在且未被封号（本后台 DB 二次校验）
+  const db = useDb()
+  const [[dbUser]]: any = await db.query(
+    'SELECT id, status FROM t_user WHERE id=? AND deleted=0 LIMIT 1',
+    [user.userId]
+  )
+
+  if (!dbUser) {
     throw createError({ statusCode: 403, message: '账号不存在' })
   }
-  if (user.status === 2) {
+  if (dbUser.status === 2) {
     throw createError({ statusCode: 403, message: '账号已被封禁，无法执行此操作' })
   }
 
-  // ⚠️ 关键：用数据库返回的精确 ID 覆盖 JWT 里可能截断的 userId
-  // JWT 生成时若遇到 JS Number 精度丢失（Snowflake ID > MAX_SAFE_INTEGER），
-  // payload.userId 可能已截断。从 DB 取到的字符串（bigNumberStrings=true）才是正确值。
-  const accuratePayload = { ...payload, userId: String(user.id) }
-  event.context.user = accuratePayload
-  return accuratePayload
+  // 用 DB 中的精确 ID 覆盖（防止 Snowflake ID 精度问题）
+  const accurateUser: SessionUser = { ...user, userId: String(dbUser.id) }
+  event.context.user = accurateUser
+  return accurateUser
 }
-
