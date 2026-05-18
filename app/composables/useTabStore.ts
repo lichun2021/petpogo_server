@@ -15,6 +15,7 @@ const TAB_ICONS: Record<string, string> = {
   '/admin/posts':       'i-heroicons-photo',
   '/admin/stores':      'i-heroicons-building-storefront',
   '/admin/ai-analysis': 'i-heroicons-sparkles',
+  '/admin/music':       'i-heroicons-musical-note',
 }
 
 const TAB_TITLES: Record<string, string> = {
@@ -24,6 +25,7 @@ const TAB_TITLES: Record<string, string> = {
   '/admin/posts':       '帖子审核',
   '/admin/stores':      '门店管理',
   '/admin/ai-analysis': 'AI 识别记录',
+  '/admin/music':       '宠物音乐',
 }
 
 function resolveTitleAndIcon(path: string): { title: string; icon: string } {

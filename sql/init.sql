@@ -310,3 +310,61 @@ INSERT IGNORE INTO t_store (id, name, category, cover, address, longitude, latit
 VALUES
   (1, '爱宠动物医院', '宠物医院', '', '北京市朝阳区建国路88号', 116.4634, 39.9093, ST_GeomFromText('POINT(116.4634 39.9093)', 0), '北京', '北京', 4.8, TRUE, '09:00-21:00', 1),
   (2, '萌宠美容中心', '美容', '', '北京市海淀区中关村大街45号', 116.3176, 39.9825, ST_GeomFromText('POINT(116.3176 39.9825)', 0), '北京', '北京', 4.6, TRUE, '10:00-20:00', 1);
+
+-- ===========================
+-- 宠物音乐模块
+-- ===========================
+CREATE TABLE IF NOT EXISTS t_music_category (
+  id         INT           PRIMARY KEY AUTO_INCREMENT,
+  name       VARCHAR(50)   NOT NULL                  COMMENT '分类名称（助眠/安抚/平静…）',
+  icon_url   VARCHAR(500)  NOT NULL DEFAULT ''       COMMENT '分类图标 OSS URL',
+  sort_order INT           DEFAULT 0                 COMMENT '排序（越小越靠前）',
+  created_at DATETIME      DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE KEY uk_name (name)
+) ENGINE=InnoDB COMMENT='宠物音乐分类';
+
+CREATE TABLE IF NOT EXISTS t_music (
+  id          BIGINT        PRIMARY KEY AUTO_INCREMENT,
+  category_id INT           NOT NULL                 COMMENT '分类ID',
+  pet_type    VARCHAR(20)   NOT NULL DEFAULT 'all'   COMMENT '适用宠物类型(all/cat/dog)',
+  name        VARCHAR(100)  NOT NULL                 COMMENT '音乐名称',
+  icon_url    VARCHAR(500)  NOT NULL DEFAULT ''      COMMENT '封面图 OSS URL',
+  music_url   VARCHAR(500)  NOT NULL                 COMMENT '音频 OSS URL',
+  duration    INT           DEFAULT 0                COMMENT '时长(秒)',
+  sort_order  INT           DEFAULT 0                COMMENT '排序',
+  status      TINYINT       DEFAULT 1                COMMENT '1=正常 0=下架',
+  created_at  DATETIME      DEFAULT CURRENT_TIMESTAMP,
+  INDEX idx_cat (category_id),
+  INDEX idx_status (status)
+) ENGINE=InnoDB COMMENT='宠物音乐';
+
+-- 默认分类
+INSERT IGNORE INTO t_music_category (id, name, icon_url, sort_order) VALUES
+  (1, '助眠', '', 1),
+  (2, '安抚', '', 2),
+  (3, '平静', '', 3),
+  (4, '欢快', '', 4),
+  (5, '自然', '', 5);
+
+-- ===========================
+-- 用户歌单模块
+-- ===========================
+CREATE TABLE IF NOT EXISTS t_music_playlist (
+  id          BIGINT        PRIMARY KEY AUTO_INCREMENT,
+  user_id     BIGINT        NOT NULL                 COMMENT '用户ID',
+  name        VARCHAR(100)  NOT NULL                 COMMENT '歌单名称',
+  cover_url   VARCHAR(500)  DEFAULT ''               COMMENT '封面图（可选，默认取第一首歌的封面）',
+  sort_order  INT           DEFAULT 0,
+  created_at  DATETIME      DEFAULT CURRENT_TIMESTAMP,
+  INDEX idx_user (user_id)
+) ENGINE=InnoDB COMMENT='用户自建歌单';
+
+CREATE TABLE IF NOT EXISTS t_music_playlist_item (
+  id          BIGINT        PRIMARY KEY AUTO_INCREMENT,
+  playlist_id BIGINT        NOT NULL                 COMMENT '歌单ID',
+  music_id    BIGINT        NOT NULL                 COMMENT '音乐ID',
+  sort_order  INT           DEFAULT 0,
+  created_at  DATETIME      DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE KEY uk_playlist_music (playlist_id, music_id),
+  INDEX idx_playlist (playlist_id)
+) ENGINE=InnoDB COMMENT='歌单歌曲明细';
