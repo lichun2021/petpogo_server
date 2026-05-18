@@ -12,7 +12,7 @@ export default defineEventHandler(async (event) => {
   // 校验歌单归属
   const [pRows]: any = await db.query(
     'SELECT id FROM t_music_playlist WHERE id=? AND user_id=? LIMIT 1',
-    [playlistId, user.id]
+    [playlistId, user.userId]
   )
   if (!pRows[0]) throw createError({ statusCode: 404, message: '歌单不存在' })
 

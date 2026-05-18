@@ -12,7 +12,7 @@ export default defineEventHandler(async (event) => {
     WHERE p.user_id = ?
     GROUP BY p.id
     ORDER BY p.created_at DESC
-  `, [user.id])
+  `, [user.userId])
 
   return {
     list: rows.map((r: any) => ({

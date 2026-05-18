@@ -8,7 +8,7 @@ export default defineEventHandler(async (event) => {
   const db = useDb()
   const [result]: any = await db.query(
     'INSERT INTO t_music_playlist (user_id, name, cover_url) VALUES (?, ?, ?)',
-    [user.id, name.trim(), cover_url]
+    [user.userId, name.trim(), cover_url]   // 修复：userId 非 id
   )
   return { id: Number(result.insertId), success: true }
 })
