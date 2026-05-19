@@ -58,11 +58,9 @@ export default defineEventHandler(async (event) => {
 
   const userId = String(user.id)
 
-  // ── 同步调用对方后台（同步，对方失败则整体失败）─────────────────
-  if (isNewUser) {
-    // 新用户：先在对方后台注册，再登录拿 token
-    await peerRegister(phone)
-  }
+  // ── 同步对方后台：确保账号存在，再登录拿 token ─────────────
+  // 无论新老用户都先 ensure（幂等），防止 iPet 侧记录丢失导致 peerLogin 报「账号不存在」
+  await peerEnsureRegistered(phone)
   const peerInfo = await peerLogin(phone)
 
   // granwin_token 有效期（对方返回 expiration 秒，默认 43200 = 12小时）

@@ -49,6 +49,15 @@
       </button>
 
       <span class="ml-auto text-xs text-stone-400">共 {{ total }} 条</span>
+      <UButton
+        icon="i-heroicons-arrow-path"
+        color="stone"
+        variant="ghost"
+        size="xs"
+        title="刷新列表"
+        :loading="loading"
+        @click="loadList(true)"
+      />
     </div>
 
     <!-- 列表 -->
@@ -80,6 +89,7 @@
             <img
               v-if="getCover(p)"
               :src="getCover(p)"
+              loading="lazy"
               class="w-full h-full object-cover"
             />
             <div v-else class="w-full h-full flex items-center justify-center">
@@ -267,14 +277,20 @@ const rejectReasons = ['内容违规', '版权问题', '违规广告', '涉嫌�
 
 const { openTab } = useTabStore()
 
-const activeTab    = ref(0)
-const mediaType    = ref('')
-const activeTag    = ref('')
-const page         = ref(1)
+// ── 用 useState 缓存列表，切换 Tab 回来无需重新请求 ──────────
+const _cache = useState<{
+  list: any[]; total: number; pendingCount: number
+  activeTab: number; mediaType: string; activeTag: string; page: number
+} | null>('admin-posts-cache', () => null)
+
+const activeTab    = ref(_cache.value?.activeTab    ?? 0)
+const mediaType    = ref(_cache.value?.mediaType    ?? '')
+const activeTag    = ref(_cache.value?.activeTag    ?? '')
+const page         = ref(_cache.value?.page         ?? 1)
 const pageSize     = 20
-const list         = ref<any[]>([])
-const total        = ref(0)
-const pendingCount = ref(0)
+const list         = ref<any[]>(_cache.value?.list         ?? [])
+const total        = ref(_cache.value?.total        ?? 0)
+const pendingCount = ref(_cache.value?.pendingCount ?? 0)
 const loading      = ref(false)
 
 const rejectModal = reactive({
@@ -312,7 +328,7 @@ function getCover(p: any): string {
   return ''
 }
 
-async function loadList() {
+async function loadList(force = false) {
   loading.value = true
   try {
     const d = await $fetch<any>('/api/admin/posts', {
@@ -327,6 +343,13 @@ async function loadList() {
     list.value         = d.list
     total.value        = d.total
     pendingCount.value = d.pendingCount ?? pendingCount.value
+    // 写入缓存
+    _cache.value = {
+      list: d.list, total: d.total,
+      pendingCount: d.pendingCount ?? pendingCount.value,
+      activeTab: activeTab.value, mediaType: mediaType.value,
+      activeTag: activeTag.value, page: page.value,
+    }
   } finally { loading.value = false }
 }
 
@@ -389,5 +412,8 @@ function formatDate(s: string) {
   return s ? new Date(s).toLocaleString('zh-CN', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }) : ''
 }
 
-onMounted(loadList)
+onMounted(() => {
+  // 有缓存就不重新请求，减少接口和 OSS 封面图调用
+  if (!_cache.value) loadList()
+})
 </script>

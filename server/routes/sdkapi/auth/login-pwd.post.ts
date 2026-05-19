@@ -24,14 +24,20 @@ export default defineEventHandler(async (event) => {
   }
 
   const passwordHash = crypto.createHash('md5').update(password).digest('hex')
-  if (user.password !== passwordHash) {
+
+  // 若账号从未设置密码（password 为空/null），视同初始密码 md5(123456)
+  const DEFAULT_PWD = 'e10adc3949ba59abbe56e057f20f883e'
+  const storedPwd   = (user.password && user.password.length > 0) ? user.password : DEFAULT_PWD
+
+  if (storedPwd !== passwordHash) {
     throw createError({ statusCode: 400, message: '密码错误' })
   }
 
   const userId = String(user.id)
   const redis = useRedis()
 
-  // ── 同步调用对方后台（失败则整体失败）────────────────────────────
+  // ── 同步对方后台（确保 iPet 账号存在，再登录）───────────────────
+  await peerEnsureRegistered(phone)
   const peerInfo = await peerLogin(phone)
   const tokenTtl = peerInfo.expiration || 43200
 

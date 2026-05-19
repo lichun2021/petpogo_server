@@ -45,7 +45,12 @@ export default defineEventHandler(async (event) => {
     bucket:          config.aliOssBucket,   // 音乐/图标均上传到 CDN 桶，无需转码
   })
 
-  const uploadUrl = client.signatureUrl(key, { method: 'PUT', expires: 900 })
+  // 必须把 Content-Type 纳入签名，否则前端 PUT 时携带 Content-Type 会被 OSS 以签名不匹配拒绝（403）
+  const uploadUrl = client.signatureUrl(key, {
+    method: 'PUT',
+    expires: 900,
+    'Content-Type': mime,
+  })
 
   return {
     uploadUrl,

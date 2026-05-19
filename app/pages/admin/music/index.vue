@@ -42,7 +42,7 @@
       <button
         v-for="c in categories" :key="c.id"
         :class="[
-          'px-4 py-1.5 rounded-full text-sm font-medium transition-all flex items-center gap-1.5',
+          'group px-4 py-1.5 rounded-full text-sm font-medium transition-all flex items-center gap-1.5',
           activeCatId === c.id
             ? 'bg-amber-500 text-white shadow-sm'
             : 'bg-white border text-stone-500 hover:text-stone-700 hover:border-amber-300'
@@ -53,14 +53,40 @@
         <img v-if="c.icon_url" :src="c.icon_url" class="w-4 h-4 rounded object-cover" />
         <UIcon v-else name="i-heroicons-tag" class="w-3.5 h-3.5 opacity-60" />
         {{ c.name }}
+        <!-- 编辑分类按钮 -->
+        <UIcon
+          name="i-heroicons-pencil-square"
+          :class="[
+            'w-3.5 h-3.5 ml-0.5 transition-colors',
+            activeCatId === c.id
+              ? 'text-white/70 hover:text-white'
+              : 'text-stone-400 hover:text-amber-500'
+          ]"
+          title="编辑分类"
+          @click.stop="openCatModal(c)"
+        />
         <!-- 删除分类按钮 -->
         <span
-          class="ml-0.5 text-white/70 hover:text-red-200 leading-none"
+          :class="[
+            'ml-0.5 leading-none transition-colors',
+            activeCatId === c.id
+              ? 'text-white/70 hover:text-red-200'
+              : 'text-stone-400 hover:text-red-500'
+          ]"
           title="删除分类"
           @click.stop="deleteCat(c)"
         >×</span>
       </button>
       <span class="ml-auto text-xs text-stone-400">共 {{ musicList.length }} 首</span>
+      <UButton
+        icon="i-heroicons-arrow-path"
+        color="stone"
+        variant="ghost"
+        size="xs"
+        title="刷新"
+        :loading="loading"
+        @click="refresh"
+      />
     </div>
 
     <!-- 音乐列表 -->
@@ -73,7 +99,7 @@
       </div>
       <div v-else>
         <!-- 表头 -->
-        <div class="grid grid-cols-[56px_1fr_100px_80px_80px_80px_80px] gap-3 px-4 py-2 bg-amber-50/50 border-b border-orange-100 text-xs text-stone-500 font-medium">
+        <div class="grid grid-cols-[56px_1fr_100px_80px_80px_80px_120px] gap-3 px-4 py-2 bg-amber-50/50 border-b border-orange-100 text-xs text-stone-500 font-medium">
           <span>封面</span>
           <span>音乐名称</span>
           <span>分类</span>
@@ -85,11 +111,11 @@
         <!-- 行 -->
         <div
           v-for="m in musicList" :key="m.id"
-          class="grid grid-cols-[56px_1fr_100px_80px_80px_80px_80px] gap-3 px-4 py-3 border-b border-stone-100 hover:bg-amber-50/20 transition-colors items-center"
+          class="grid grid-cols-[56px_1fr_100px_80px_80px_80px_120px] gap-3 px-4 py-3 border-b border-stone-100 hover:bg-amber-50/20 transition-colors items-center"
         >
           <!-- 封面 -->
           <div class="w-10 h-10 rounded-lg overflow-hidden bg-stone-100 flex-shrink-0 flex items-center justify-center">
-            <img v-if="m.icon_url" :src="m.icon_url" class="w-full h-full object-cover" />
+            <img v-if="m.icon_url" :src="m.icon_url" loading="lazy" class="w-full h-full object-cover" />
             <UIcon v-else name="i-heroicons-musical-note" class="w-5 h-5 text-stone-300" />
           </div>
           <!-- 名称 + 播放链接 -->
@@ -110,14 +136,25 @@
           <!-- 状态 -->
           <UBadge :label="m.status === 1 ? '上架' : '下架'" :color="m.status === 1 ? 'green' : 'gray'" variant="subtle" size="xs" />
           <!-- 操作 -->
-          <UButton
-            icon="i-heroicons-trash"
-            color="red"
-            variant="ghost"
-            size="xs"
-            :loading="m._deleting"
-            @click="deleteMusic(m)"
-          />
+          <div class="flex items-center gap-1">
+            <UButton
+              icon="i-heroicons-pencil-square"
+              color="amber"
+              variant="ghost"
+              size="xs"
+              title="编辑"
+              @click="openMusicModal(m)"
+            />
+            <UButton
+              icon="i-heroicons-trash"
+              color="red"
+              variant="ghost"
+              size="xs"
+              title="删除"
+              :loading="m._deleting"
+              @click="deleteMusic(m)"
+            />
+          </div>
         </div>
       </div>
     </div>
@@ -126,10 +163,9 @@
     <div v-if="catModal.show"
       class="fixed inset-0 z-50 flex items-center justify-center"
       style="background: rgba(0,0,0,0.4)"
-      @click.self="catModal.show = false"
     >
       <div class="bg-white rounded-2xl shadow-xl w-96 p-6 space-y-4">
-        <h3 class="font-semibold text-stone-800">新建音乐分类</h3>
+        <h3 class="font-semibold text-stone-800">{{ catModal.editingId ? '编辑音乐分类' : '新建音乐分类' }}</h3>
 
         <div class="space-y-3">
           <div>
@@ -168,7 +204,7 @@
         <div class="flex gap-2 pt-2">
           <UButton label="取消" color="gray" variant="outline" class="flex-1" @click="catModal.show = false" />
           <UButton
-            label="创建分类"
+            :label="catModal.editingId ? '保存修改' : '创建分类'"
             color="amber"
             class="flex-1"
             :loading="catModal.saving"
@@ -183,10 +219,9 @@
     <div v-if="musicModal.show"
       class="fixed inset-0 z-50 flex items-center justify-center"
       style="background: rgba(0,0,0,0.4)"
-      @click.self="musicModal.show = false"
     >
       <div class="bg-white rounded-2xl shadow-xl w-[440px] p-6 space-y-4">
-        <h3 class="font-semibold text-stone-800">上传音乐</h3>
+        <h3 class="font-semibold text-stone-800">{{ musicModal.editingId ? '编辑音乐' : '上传音乐' }}</h3>
 
         <div class="space-y-3">
           <!-- 分类 -->
@@ -276,16 +311,40 @@
             <label class="text-xs text-stone-500 font-medium block mb-1">排序</label>
             <UInput v-model.number="musicModal.sortOrder" type="number" placeholder="0" />
           </div>
+
+          <!-- 上下架状态(仅编辑时显示) -->
+          <div v-if="musicModal.editingId">
+            <label class="text-xs text-stone-500 font-medium block mb-1">上下架状态</label>
+            <div class="flex gap-2">
+              <button
+                :class="[
+                  'flex-1 py-2 rounded-xl text-sm font-medium border-2 transition-all',
+                  musicModal.status === 1
+                    ? 'border-green-400 bg-green-50 text-green-700'
+                    : 'border-stone-200 text-stone-400 hover:border-stone-300'
+                ]"
+                @click="musicModal.status = 1"
+              >✓ 上架</button>
+              <button
+                :class="[
+                  'flex-1 py-2 rounded-xl text-sm font-medium border-2 transition-all',
+                  musicModal.status === 0
+                    ? 'border-stone-500 bg-stone-100 text-stone-700'
+                    : 'border-stone-200 text-stone-400 hover:border-stone-300'
+                ]"
+                @click="musicModal.status = 0"
+              >× 下架</button>
+            </div>
+          </div>
         </div>
 
         <div class="flex gap-2 pt-2">
           <UButton label="取消" color="gray" variant="outline" class="flex-1" @click="musicModal.show = false" />
           <UButton
-            label="保存音乐"
+            :label="musicModal.editingId ? '保存修改' : '保存音乐'"
             color="amber"
             class="flex-1"
             :loading="musicModal.saving"
-            :disabled="!musicModal.name || !musicModal.categoryId || !musicModal.iconUrl || !musicModal.musicUrl"
             @click="saveMusic"
           />
         </div>
@@ -302,10 +361,14 @@ definePageMeta({ layout: 'admin' })
 const toast = useToast()
 
 // ── 数据 ──────────────────────────────────────────────────
-const categories = ref<any[]>([])
-const musicList  = ref<any[]>([])
-const loading    = ref(false)
-const activeCatId = ref<number | null>(null)
+// ── 用 useState 缓存，切换页面时不重新请求 ──────────────
+const _catCache   = useState<any[]>('admin-music-categories', () => [])
+const _musicCache = useState<{ list: any[]; catId: number | null } | null>('admin-music-list', () => null)
+
+const categories  = ref<any[]>(_catCache.value ?? [])
+const musicList   = ref<any[]>(_musicCache.value?.list ?? [])
+const loading     = ref(false)
+const activeCatId = ref<number | null>(_musicCache.value?.catId ?? null)
 
 // ── 文件输入引用 ──────────────────────────────────────────
 const catIconInput   = ref<HTMLInputElement | null>(null)
@@ -315,6 +378,7 @@ const musicAudioInput = ref<HTMLInputElement | null>(null)
 // ── 分类弹窗 ──────────────────────────────────────────────
 const catModal = reactive({
   show:      false,
+  editingId: null as number | null, // null=新建, 有值=编辑
   name:      '',
   iconUrl:   '',
   iconPreview: '',
@@ -344,6 +408,7 @@ function petTypeCls(v: string) {
 // ── 音乐弹窗 ──────────────────────────────────────────────
 const musicModal = reactive({
   show:          false,
+  editingId:     null as number | null, // null=新建, 有值=编辑
   categoryId:    '' as number | '',
   petType:       'all',
   name:          '',
@@ -353,6 +418,7 @@ const musicModal = reactive({
   audioName:     '',
   duration:      0,
   sortOrder:     0,
+  status:        1,
   iconUploading:  false,
   audioUploading: false,
   saving:        false,
@@ -362,6 +428,7 @@ const musicModal = reactive({
 async function loadCategories() {
   const d = await $fetch<any>('/api/admin/music/categories')
   categories.value = d.list
+  _catCache.value  = d.list
 }
 
 async function loadMusic() {
@@ -370,8 +437,16 @@ async function loadMusic() {
     const d = await $fetch<any>('/api/admin/music', {
       query: activeCatId.value != null ? { categoryId: activeCatId.value } : {}
     })
-    musicList.value = d.list
+    musicList.value  = d.list
+    _musicCache.value = { list: d.list, catId: activeCatId.value }
   } finally { loading.value = false }
+}
+
+async function refresh() {
+  _catCache.value   = []
+  _musicCache.value = null
+  await loadCategories()
+  await loadMusic()
 }
 
 // ── OSS 上传工具 ───────────────────────────────────────────
@@ -381,12 +456,13 @@ async function uploadToOss(file: File, folder: 'music' | 'music-icon'): Promise<
     method: 'POST',
     body: { mimeType: file.type, folder },
   })
-  // 2. PUT 直传 OSS
-  await $fetch(sign.uploadUrl, {
+  // 2. 用原生 fetch PUT 直传 OSS（$fetch 会把 File 序列化成 JSON，必须用原生 fetch）
+  const res = await fetch(sign.uploadUrl, {
     method: 'PUT',
     body: file,
     headers: { 'Content-Type': file.type },
   })
+  if (!res.ok) throw new Error(`OSS 上传失败: ${res.status} ${res.statusText}`)
   return sign.cdnUrl
 }
 
@@ -403,23 +479,50 @@ async function onCatIconPick(e: Event) {
   } finally { catModal.uploading = false }
 }
 
-function openCatModal() {
-  Object.assign(catModal, { show: true, name: '', iconUrl: '', iconPreview: '', sortOrder: 0 })
+// 不传参 = 新建;传入分类 = 编辑
+function openCatModal(c?: any) {
+  if (c) {
+    Object.assign(catModal, {
+      show:        true,
+      editingId:   Number(c.id),
+      name:        c.name || '',
+      iconUrl:     c.icon_url || '',
+      iconPreview: c.icon_url || '',
+      sortOrder:   Number(c.sort_order) || 0,
+    })
+  } else {
+    Object.assign(catModal, {
+      show:        true,
+      editingId:   null,
+      name:        '',
+      iconUrl:     '',
+      iconPreview: '',
+      sortOrder:   0,
+    })
+  }
 }
 
 async function saveCat() {
   if (!catModal.name.trim()) return
   catModal.saving = true
   try {
-    await $fetch('/api/admin/music/categories', {
-      method: 'POST',
-      body: { name: catModal.name.trim(), icon_url: catModal.iconUrl, sort_order: catModal.sortOrder },
-    })
+    const isEdit = catModal.editingId != null
+    await $fetch(
+      isEdit ? `/api/admin/music/categories/${catModal.editingId}` : '/api/admin/music/categories',
+      {
+        method: isEdit ? 'PUT' : 'POST',
+        body: { name: catModal.name.trim(), icon_url: catModal.iconUrl, sort_order: catModal.sortOrder },
+      }
+    )
     catModal.show = false
-    toast.add({ title: `分类「${catModal.name}」已创建`, color: 'green' })
+    toast.add({
+      title: isEdit ? `分类「${catModal.name}」已更新` : `分类「${catModal.name}」已创建`,
+      color: 'green',
+    })
     await loadCategories()
+    if (isEdit) await loadMusic() // 重新加载音乐列表以更新关联的分类名
   } catch (err: any) {
-    toast.add({ title: err?.data?.message || '创建失败', color: 'red' })
+    toast.add({ title: err?.data?.message || '保存失败', color: 'red' })
   } finally { catModal.saving = false }
 }
 
@@ -437,23 +540,52 @@ async function deleteCat(c: any) {
 }
 
 // ── 音乐弹窗 ──────────────────────────────────────────────
-function openMusicModal() {
-  Object.assign(musicModal, {
-    show: true, categoryId: activeCatId.value || '', petType: 'all',
-    name: '', iconUrl: '', iconPreview: '', musicUrl: '',
-    audioName: '', duration: 0, sortOrder: 0,
-  })
+// 不传参 = 新建;传入 music 对象 = 编辑
+function openMusicModal(m?: any) {
+  if (m) {
+    Object.assign(musicModal, {
+      show:        true,
+      editingId:   Number(m.id),
+      categoryId:  Number(m.category_id),
+      petType:     m.pet_type || 'all',
+      name:        m.name || '',
+      iconUrl:     m.icon_url || '',
+      iconPreview: m.icon_url || '',
+      musicUrl:    m.music_url || '',
+      audioName:   m.music_url ? m.music_url.split('/').pop() : '',
+      duration:    Number(m.duration) || 0,
+      sortOrder:   Number(m.sort_order) || 0,
+      status:      Number(m.status) === 0 ? 0 : 1,
+    })
+  } else {
+    Object.assign(musicModal, {
+      show:        true,
+      editingId:   null,
+      categoryId:  activeCatId.value || '',
+      petType:     'all',
+      name:        '',
+      iconUrl:     '',
+      iconPreview: '',
+      musicUrl:    '',
+      audioName:   '',
+      duration:    0,
+      sortOrder:   0,
+      status:      1,
+    })
+  }
 }
 
 async function onMusicIconPick(e: Event) {
   const file = (e.target as HTMLInputElement).files?.[0]
   if (!file) return
   musicModal.iconUploading = true
+  musicModal.iconUrl = ''  // 重置,避免上传失败后旧 URL 仍生效
   try {
     musicModal.iconPreview = URL.createObjectURL(file)
     musicModal.iconUrl = await uploadToOss(file, 'music-icon')
-  } catch {
-    toast.add({ title: '封面图上传失败', color: 'red' })
+    toast.add({ title: '封面图上传成功', color: 'green' })
+  } catch (err: any) {
+    toast.add({ title: `封面图上传失败: ${err?.data?.message || err?.message || '未知错误'}`, color: 'red' })
   } finally { musicModal.iconUploading = false }
 }
 
@@ -462,34 +594,62 @@ async function onAudioPick(e: Event) {
   if (!file) return
   musicModal.audioName      = file.name
   musicModal.audioUploading = true
+  musicModal.musicUrl       = ''  // 重置,避免上传失败后旧 URL 仍生效
   try {
     musicModal.musicUrl = await uploadToOss(file, 'music')
     // 尝试读取音频时长
     const audio = new Audio(URL.createObjectURL(file))
     audio.onloadedmetadata = () => { musicModal.duration = Math.round(audio.duration) }
     toast.add({ title: '音频上传成功', color: 'green' })
-  } catch {
-    toast.add({ title: '音频上传失败', color: 'red' })
+  } catch (err: any) {
+    toast.add({ title: `音频上传失败: ${err?.data?.message || err?.message || '未知错误'}`, color: 'red' })
   } finally { musicModal.audioUploading = false }
 }
 
 async function saveMusic() {
+  // 逐项校验,告诉用户具体缺哪一项
+  if (!musicModal.categoryId) {
+    return toast.add({ title: '请选择所属分类', color: 'red' })
+  }
+  if (!musicModal.name?.trim()) {
+    return toast.add({ title: '请填写音乐名称', color: 'red' })
+  }
+  if (!musicModal.iconUrl) {
+    return toast.add({ title: '封面图未上传成功,请重新选择封面', color: 'red' })
+  }
+  if (musicModal.iconUploading) {
+    return toast.add({ title: '封面图正在上传,请稍候', color: 'amber' })
+  }
+  if (!musicModal.musicUrl) {
+    return toast.add({ title: '音频文件未上传成功,请重新选择音频', color: 'red' })
+  }
+  if (musicModal.audioUploading) {
+    return toast.add({ title: '音频正在上传,请稍候', color: 'amber' })
+  }
+
   musicModal.saving = true
   try {
-    await $fetch('/api/admin/music', {
-      method: 'POST',
-      body: {
-        category_id: musicModal.categoryId,
-        pet_type:    musicModal.petType,
-        name:        musicModal.name,
-        icon_url:    musicModal.iconUrl,
-        music_url:   musicModal.musicUrl,
-        duration:    musicModal.duration,
-        sort_order:  musicModal.sortOrder,
-      },
-    })
+    const isEdit = musicModal.editingId != null
+    const body: any = {
+      category_id: musicModal.categoryId,
+      pet_type:    musicModal.petType,
+      name:        musicModal.name.trim(),
+      icon_url:    musicModal.iconUrl,
+      music_url:   musicModal.musicUrl,
+      duration:    musicModal.duration,
+      sort_order:  musicModal.sortOrder,
+    }
+    if (isEdit) body.status = musicModal.status
+
+    await $fetch(
+      isEdit ? `/api/admin/music/${musicModal.editingId}` : '/api/admin/music',
+      { method: isEdit ? 'PUT' : 'POST', body }
+    )
     musicModal.show = false
-    toast.add({ title: `「${musicModal.name}」已上传`, color: 'green' })
+    toast.add({
+      title: isEdit ? `「${musicModal.name}」已更新` : `「${musicModal.name}」已上传`,
+      color: 'green',
+    })
     await loadMusic()
   } catch (err: any) {
     toast.add({ title: err?.data?.message || '保存失败', color: 'red' })
@@ -516,7 +676,8 @@ function formatDuration(secs: number) {
 }
 
 onMounted(async () => {
-  await loadCategories()
-  await loadMusic()
+  // 有缓存则不重新拉取，减少 OSS 封面图请求
+  if (!_catCache.value.length)  await loadCategories()
+  if (!_musicCache.value)       await loadMusic()
 })
 </script>

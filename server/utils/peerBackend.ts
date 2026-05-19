@@ -164,6 +164,29 @@ export async function peerRegister(phone: string): Promise<void> {
 }
 
 /**
+ * 1.1b 确保用户在对方后台存在（注册 or 已存在均视为成功）
+ * 解决：老用户在对方后台记录丢失时，直接 peerLogin 会报「账号不存在」
+ */
+export async function peerEnsureRegistered(phone: string): Promise<void> {
+  try {
+    await peerRegister(phone)
+  } catch (e: any) {
+    // 对方后台「账号已存在」等注册冲突错误，忽略即可
+    // 其他错误（网络/配置）才向上抛出
+    const msg: string = e?.message ?? ''
+    if (
+      msg.includes('已存在') || msg.includes('already') ||
+      msg.includes('exist')  || msg.includes('registered') ||
+      msg.includes('duplicate')
+    ) {
+      console.log(`[PeerBackend] peerEnsureRegistered: ${phone}@qq.com 已存在，跳过注册`)
+      return
+    }
+    throw e
+  }
+}
+
+/**
  * 1.2 用户登录
  * 本后台验证通过后，同步调用对方后台获取 granwin_token 及 AWS IoT 凭证。
  *

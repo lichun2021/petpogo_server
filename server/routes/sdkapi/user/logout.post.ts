@@ -2,6 +2,8 @@
 export default defineEventHandler(async (event) => {
   const user = await requireAuth(event)
   const redis = useRedis()
-  await redis.del(RedisKey.session(user.userId))
+  // Token 以 tokenSessionKey 存储（非 session:{userId}）
+  const token = (getHeader(event, 'Authorization') || '').replace('Bearer ', '').trim()
+  if (token) await redis.del(tokenSessionKey(token))
   return { success: true }
 })
