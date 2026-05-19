@@ -17,7 +17,7 @@ export default defineEventHandler(async (event) => {
   const user = rows[0]
 
   if (!user) {
-    throw createError({ statusCode: 404, message: '账号不存在，请先注册' })
+    throw createError({ statusCode: 404, message: '该手机号尚未注册，请切换为「验证码登录」完成注册' })
   }
   if (user.status === 2) {
     throw createError({ statusCode: 403, message: '账号已被禁用' })

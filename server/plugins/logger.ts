@@ -1,3 +1,18 @@
+// ── 全局注入时间戳，所有 console.log/warn/error 自动带时间 ──────────
+const _ts = () => new Date().toLocaleString('zh-CN', {
+  year: 'numeric', month: '2-digit', day: '2-digit',
+  hour: '2-digit', minute: '2-digit', second: '2-digit',
+  hour12: false,
+}).replace(/\//g, '-')
+
+const _orig = { log: console.log, warn: console.warn, error: console.error, info: console.info }
+console.log   = (...a) => _orig.log  (`[${_ts()}]`, ...a)
+console.info  = (...a) => _orig.info (`[${_ts()}]`, ...a)
+console.warn  = (...a) => _orig.warn (`[${_ts()}]`, ...a)
+console.error = (...a) => _orig.error(`[${_ts()}]`, ...a)
+
+// ─────────────────────────────────────────────────────────────────────
+
 const shouldLog = (path: string) =>
   path.startsWith('/sdkapi/') || path.startsWith('/api/')
 
@@ -23,8 +38,8 @@ export default defineNitroPlugin((nitroApp) => {
       ? ` | Query: ${JSON.stringify(getQuery(event))}`
       : ''
 
-    console.log(`\n┌─── [API 请求] ─────────────────────────────`)
-    console.log(`│ [IN] ${event.method} ${event.path}${queryStr}${bodyStr}`)
+    _orig.log(`\n┌─── [API 请求] ${_ts()} ──────────────────────`)
+    _orig.log(`│ [IN] ${event.method} ${event.path}${queryStr}${bodyStr}`)
   })
 
   nitroApp.hooks.hook('beforeResponse', async (event, { body }) => {
@@ -43,7 +58,8 @@ export default defineNitroPlugin((nitroApp) => {
       }
     }
 
-    console.log(`│ [OUT] ${status} (${duration}ms) | Response: ${resStr}`)
-    console.log(`└────────────────────────────────────────────\n`)
+    _orig.log(`│ [OUT] ${status} (${duration}ms) | Response: ${resStr}`)
+    _orig.log(`└────────────────────────────────────────────\n`)
   })
 })
+

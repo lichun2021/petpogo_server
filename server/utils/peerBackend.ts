@@ -156,34 +156,50 @@ async function peerFetch<T = any>(
  */
 export async function peerRegister(phone: string): Promise<void> {
   const { merchantId } = getPeerConfig()
-  await peerFetch('/user/register', {
-    account: `${phone}@qq.com`,
-    password: generatePeerPassword(),
-    merchantId,
-  })
+  const account = `${phone}@qq.com`
+
+  const { url } = getPeerConfig()
+  const fullUrl = `${url}/user/register`
+  const params = { account, password: generatePeerPassword(), merchantId }
+
+  console.log(`[PeerBackend] → POST ${fullUrl}`, JSON.stringify({ ...params, password: '***' }))
+
+  let res: PeerResponse
+  try {
+    res = await $fetch<PeerResponse>(fullUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams(
+        Object.fromEntries(Object.entries(params).map(([k, v]) => [k, String(v)]))
+      ).toString(),
+    })
+  } catch (err: any) {
+    const msg = err?.data?.tip || err?.data?.message || err?.message || '对方后台服务异常'
+    console.error(`[PeerBackend] POST ${fullUrl} 失败:`, msg)
+    throw createError({ statusCode: err?.statusCode || 503, message: `[iPet] ${msg}` })
+  }
+
+  // code=1 且含「已注册」→ 幂等成功，静默跳过
+  if (res.code !== 0) {
+    const tip: string = res.tip ?? ''
+    if (
+      tip.includes('已注册') || tip.includes('已存在') ||
+      tip.includes('already') || tip.includes('exist') || tip.includes('duplicate')
+    ) {
+      console.log(`[PeerBackend] /user/register: ${account} 已注册，跳过`)
+      return
+    }
+    console.error(`[PeerBackend] POST ${fullUrl} 业务错误 code=${res.code}:`, tip)
+    throw createError({ statusCode: 400, message: `[iPet] ${tip}` })
+  }
 }
 
 /**
  * 1.1b 确保用户在对方后台存在（注册 or 已存在均视为成功）
- * 解决：老用户在对方后台记录丢失时，直接 peerLogin 会报「账号不存在」
+ * peerRegister 内部已处理「已注册」情况，此处直接调用即可。
  */
 export async function peerEnsureRegistered(phone: string): Promise<void> {
-  try {
-    await peerRegister(phone)
-  } catch (e: any) {
-    // 对方后台「账号已存在」等注册冲突错误，忽略即可
-    // 其他错误（网络/配置）才向上抛出
-    const msg: string = e?.message ?? ''
-    if (
-      msg.includes('已存在') || msg.includes('already') ||
-      msg.includes('exist')  || msg.includes('registered') ||
-      msg.includes('duplicate')
-    ) {
-      console.log(`[PeerBackend] peerEnsureRegistered: ${phone}@qq.com 已存在，跳过注册`)
-      return
-    }
-    throw e
-  }
+  await peerRegister(phone)
 }
 
 /**
