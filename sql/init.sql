@@ -368,3 +368,40 @@ CREATE TABLE IF NOT EXISTS t_music_playlist_item (
   UNIQUE KEY uk_playlist_music (playlist_id, music_id),
   INDEX idx_playlist (playlist_id)
 ) ENGINE=InnoDB COMMENT='歌单歌曲明细';
+
+
+-- ===========================
+-- 系统设置模块
+-- 执行方式：mysql -u root -p petpogo < sql/add_system_settings.sql
+-- ===========================
+
+USE petpogo;
+
+CREATE TABLE IF NOT EXISTS t_system_settings (
+  id          INT          PRIMARY KEY AUTO_INCREMENT,
+  `key`       VARCHAR(100) NOT NULL UNIQUE          COMMENT '配置键（唯一）',
+  `value`     VARCHAR(2000) NOT NULL DEFAULT ''     COMMENT '配置值',
+  label       VARCHAR(100) NOT NULL DEFAULT ''      COMMENT '前端显示名称',
+  description VARCHAR(300)          DEFAULT ''      COMMENT '配置说明',
+  type        VARCHAR(20)  NOT NULL DEFAULT 'text'  COMMENT '值类型: text/boolean/number/json',
+  group_name  VARCHAR(50)  NOT NULL DEFAULT 'general' COMMENT '分组: general/sms/oss/ai',
+  sort_order  INT          DEFAULT 0                COMMENT '组内排序',
+  created_at  DATETIME     DEFAULT CURRENT_TIMESTAMP,
+  updated_at  DATETIME     ON UPDATE CURRENT_TIMESTAMP,
+  INDEX idx_group (`group_name`),
+  INDEX idx_key   (`key`)
+) ENGINE=InnoDB COMMENT='系统全局配置表';
+
+-- 默认配置项
+INSERT IGNORE INTO t_system_settings (`key`, `value`, label, description, type, group_name, sort_order) VALUES
+  -- 短信网关
+  ('sms_enabled',           '1',                           '短信网关启用',       '控制短信验证码功能是否开启，关闭后所有短信将不发送',       'boolean', 'sms', 1),
+  ('sms_provider',          'aliyun',                      '短信服务商',         '当前短信服务商: aliyun',                                 'text',    'sms', 2),
+  ('sms_daily_limit',       '5',                           '单号每日发送上限',   '同一手机号每天最多可发送多少条验证码短信，0=不限',         'number',  'sms', 3),
+  ('sms_code_expire_min',   '10',                          '验证码有效期(分钟)', '验证码有效期，超时后需重新发送',                           'number',  'sms', 4),
+  -- 通用
+  ('app_name',              '萌宠帮',                      '应用名称',           '在通知、短信签名等处展示的应用名称',                       'text',    'general', 1),
+  ('register_open',         '1',                           '开放注册',           '关闭后新用户无法注册，仅已有账号可登录',                   'boolean', 'general', 2),
+  ('ai_default_daily_limit','10',                          'AI默认每日上限',     '新注册用户默认的 AI 分析每日使用次数，-1=无限',           'number',  'general', 3),
+  -- OSS
+  ('oss_cdn_base_url',      'https://pet-20260430.oss-cn-shanghai.aliyuncs.com', 'OSS CDN 地址', '静态资源 CDN 基础地址，结尾不加 /', 'text', 'oss', 1);

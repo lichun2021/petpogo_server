@@ -147,13 +147,14 @@ const route = useRoute()
 const { tabs, activeTab, openTab, closeTab, closeOthers, closeAll, syncRoute } = useTabStore()
 
 const nav = [
-  { to: '/admin',             label: '数据概览',    icon: 'i-heroicons-squares-2x2' },
-  { to: '/admin/users',       label: '用户管理',    icon: 'i-heroicons-users' },
-  { to: '/admin/devices',     label: '设备管理',    icon: 'i-heroicons-cpu-chip' },
-  { to: '/admin/posts',       label: '帖子审核',    icon: 'i-heroicons-photo' },
-  { to: '/admin/stores',      label: '门店管理',    icon: 'i-heroicons-building-storefront' },
+  { to: '/admin',          label: '数据概览',    icon: 'i-heroicons-squares-2x2' },
+  { to: '/admin/users',    label: '用户管理',    icon: 'i-heroicons-users' },
+  { to: '/admin/devices',  label: '设备管理',    icon: 'i-heroicons-cpu-chip' },
+  { to: '/admin/posts',    label: '帖子审核',    icon: 'i-heroicons-photo' },
+  { to: '/admin/stores',   label: '门店管理',    icon: 'i-heroicons-building-storefront' },
   { to: '/admin/ai-analysis', label: 'AI 识别记录', icon: 'i-heroicons-sparkles' },
-  { to: '/admin/music',       label: '宠物音乐',    icon: 'i-heroicons-musical-note' },
+  { to: '/admin/music',    label: '宠物音乐',    icon: 'i-heroicons-musical-note' },
+  { to: '/admin/settings', label: '系统设置',    icon: 'i-heroicons-cog-6-tooth' },
 ]
 
 // KeepAlive 配置：缓存所有已打开的 tab 页面组件

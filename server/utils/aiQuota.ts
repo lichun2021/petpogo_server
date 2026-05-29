@@ -1,11 +1,10 @@
 /**
  * AI 使用量管理工具
- * - 普通用户：每日 10 次（ai_daily_limit = 10）
+ * - 普通用户：每日次数从系统设置读取（ai_default_daily_limit）
  * - VIP 用户：不限量（ai_daily_limit = -1）
  */
 
 const VIP_DAILY_LIMIT = -1   // 不限制
-const DEFAULT_DAILY_LIMIT = 10
 
 interface AiQuotaResult {
   allowed: boolean
@@ -35,7 +34,9 @@ export async function checkAndIncrAiUsage(userId: string | bigint): Promise<AiQu
   const isVip = user.vip_status === 1 &&
     (user.vip_expire_at === null || new Date(user.vip_expire_at) > new Date())
 
-  const limit: number = isVip ? VIP_DAILY_LIMIT : (user.ai_daily_limit ?? DEFAULT_DAILY_LIMIT)
+  // 默认限额从系统设置动态读取
+  const defaultLimit = await getSettingNumber('ai_default_daily_limit', 10)
+  const limit: number = isVip ? VIP_DAILY_LIMIT : (user.ai_daily_limit ?? defaultLimit)
 
   // 查今日使用量
   const [[usage]]: any = await db.query(
@@ -81,7 +82,9 @@ export async function getAiUsageInfo(userId: string | bigint): Promise<AiQuotaRe
 
   const isVip = user.vip_status === 1 &&
     (user.vip_expire_at === null || new Date(user.vip_expire_at) > new Date())
-  const limit: number = isVip ? VIP_DAILY_LIMIT : (user.ai_daily_limit ?? DEFAULT_DAILY_LIMIT)
+  // 默认限额从系统设置动态读取
+  const defaultLimit = await getSettingNumber('ai_default_daily_limit', 10)
+  const limit: number = isVip ? VIP_DAILY_LIMIT : (user.ai_daily_limit ?? defaultLimit)
 
   const [[usage]]: any = await db.query(
     `SELECT used_count FROM t_ai_usage WHERE user_id = ? AND use_date = ?`,

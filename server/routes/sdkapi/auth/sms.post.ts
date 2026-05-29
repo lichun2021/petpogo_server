@@ -17,6 +17,13 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 400, message: '手机号格式错误' })
   }
 
+  // ── 读取系统设置 ────────────────────────────────────
+  const smsEnabled   = await getSettingBool('sms_enabled', true)
+  const dailyLimit   = await getSettingNumber('sms_daily_limit', 5)
+  const codeExpireSec = (await getSettingNumber('sms_code_expire_min', 10)) * 60
+
+
+
   const redis = useRedis()
   const lockKey = RedisKey.smsLock(phone)
 
@@ -26,15 +33,26 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 429, message: `请 ${ttl} 秒后再试` })
   }
 
+  // 每日发送上限校验（dailyLimit=0 表示不限）
+  if (dailyLimit > 0) {
+    const dateStr = new Date().toISOString().slice(0, 10).replace(/-/g, '')
+    const dailyKey = `sms_count:${phone}:${dateStr}`
+    const todayCount = Number(await redis.get(dailyKey) || 0)
+    if (todayCount >= dailyLimit) {
+      throw createError({ statusCode: 429, message: `今日短信发送次数已达上限（${dailyLimit}次），请明天再试` })
+    }
+  }
+
   // 生成 6 位验证码
   const code = Math.floor(100000 + Math.random() * 900000).toString()
 
-  // 开发模式：跳过真实短信，直接打印
-  if (process.env.NODE_ENV !== 'production') {
-    console.log(`[开发模式] 手机号 ${phone} 验证码: ${code}`)
-    await redis.setex(RedisKey.smsCode(phone), 300, JSON.stringify({ code, attempts: 0 }))
+  // 开发模式 或 短信网关关闭：跳过真实短信，只打印日志
+  if (process.env.NODE_ENV !== 'production' || !smsEnabled) {
+    const reason = !smsEnabled ? '[SMS网关已关闭]' : '[开发模式]'
+    console.log(`${reason} 手机号 ${phone} 验证码: ${code}，有效期 ${codeExpireSec}s`)
+    await redis.setex(RedisKey.smsCode(phone), codeExpireSec, JSON.stringify({ code, attempts: 0 }))
     await redis.setex(lockKey, 60, '1')
-    return { success: true, dev_code: code }
+    return { success: true, ...(process.env.NODE_ENV !== 'production' ? { dev_code: code } : {}) }
   }
 
   // 生产：调阿里云 SMS
@@ -68,9 +86,17 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 500, message: `短信发送失败: ${e.message}` })
   }
 
-  await redis.setex(RedisKey.smsCode(phone), 300, JSON.stringify({ code, attempts: 0 }))
+  await redis.setex(RedisKey.smsCode(phone), codeExpireSec, JSON.stringify({ code, attempts: 0 }))
   await redis.setex(lockKey, 60, '1')
 
-  console.log(`[SMS] 发送成功 - phone: ${phone}, code: ${code}`)
+  // 每日计数 +1
+  if (dailyLimit > 0) {
+    const dateStr = new Date().toISOString().slice(0, 10).replace(/-/g, '')
+    const dailyKey = `sms_count:${phone}:${dateStr}`
+    await redis.incr(dailyKey)
+    await redis.expireat(dailyKey, Math.floor(new Date().setHours(23, 59, 59, 999) / 1000))
+  }
+
+  console.log(`[SMS] 发送成功 - phone: ${phone}, code: ${code}, 有效期 ${codeExpireSec}s`)
   return { success: true }
 })

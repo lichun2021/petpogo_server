@@ -41,13 +41,22 @@ export default defineEventHandler(async (event) => {
 
   // 不存在则自动注册
   if (!user) {
+    // 检查系统是否开放注册
+    const registerOpen = await getSettingBool('register_open', true)
+    if (!registerOpen) {
+      throw createError({ statusCode: 403, message: '当前暂不开放新用户注册，请联系客服' })
+    }
+
     isNewUser = true
     const id = generateId()
     const nickname = `宠友${phone.slice(-4)}`
     const defaultPassword = 'e10adc3949ba59abbe56e057f20f883e' // md5(123456)
+
+    // 新用户 AI 每日上限从系统设置读取
+    const aiLimit = await getSettingNumber('ai_default_daily_limit', 10)
     await db.query(
-      'INSERT INTO t_user(id, phone, password, nickname, status, created_at) VALUES(?,?,?,?,1,NOW())',
-      [id, phone, defaultPassword, nickname]
+      'INSERT INTO t_user(id, phone, password, nickname, status, ai_daily_limit, created_at) VALUES(?,?,?,?,1,?,NOW())',
+      [id, phone, defaultPassword, nickname, aiLimit]
     )
     user = { id, phone, nickname, avatar: null, vip_status: 0, vip_expire_at: null }
   }
