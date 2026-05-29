@@ -2,17 +2,21 @@ import crypto from 'node:crypto'
 
 // 密码登录
 export default defineEventHandler(async (event) => {
-  const { phone, password } = await readBody(event)
+  const { phone, password, nationNum = '86' } = await readBody(event)
 
   if (!phone || !password) {
     throw createError({ statusCode: 400, message: '手机号和密码不能为空' })
   }
 
+  // 规范化手机号
+  const dialCode = String(nationNum).replace(/^\+/, '')
+  const normalizedPhone = dialCode === '86' ? phone : `+${dialCode}${phone}`
+
   const db = useDb()
 
   const [rows]: any = await db.query(
     'SELECT id, phone, nickname, avatar, password, status, vip_status, vip_expire_at FROM t_user WHERE phone=? AND deleted=0 LIMIT 1',
-    [phone]
+    [normalizedPhone]
   )
   const user = rows[0]
 
@@ -37,8 +41,8 @@ export default defineEventHandler(async (event) => {
   const redis = useRedis()
 
   // ── 同步对方后台（确保 iPet 账号存在，再登录）───────────────────
-  await peerEnsureRegistered(phone)
-  const peerInfo = await peerLogin(phone)
+  await peerEnsureRegistered(normalizedPhone)
+  const peerInfo = await peerLogin(normalizedPhone)
   const tokenTtl = peerInfo.expiration || 43200
 
   // ── 写入 Redis Session ────────────────────────────────────────

@@ -11,11 +11,26 @@ const OpenApiConfig = (OpenApiPkg as any).Config
 
 // 发送短信验证码 (阿里云 SMS)
 export default defineEventHandler(async (event) => {
-  const { phone } = await readBody(event)
+  const { phone, nationNum = '86' } = await readBody(event)
 
-  if (!/^1[3-9]\d{9}$/.test(phone)) {
-    throw createError({ statusCode: 400, message: '手机号格式错误' })
+  // 规范化区号（去掉可能带的 +）
+  const dialCode = String(nationNum).replace(/^\+/, '')
+  const isChinese = dialCode === '86'
+
+  // 校验本机号码部分
+  if (isChinese) {
+    if (!/^1[3-9]\d{9}$/.test(phone)) {
+      throw createError({ statusCode: 400, message: '手机号格式错误（中国大陆需11位）' })
+    }
+  } else {
+    if (!/^\d{7,16}$/.test(phone)) {
+      throw createError({ statusCode: 400, message: '手机号格式错误（7-16位数字）' })
+    }
   }
+
+  // 规范化手机号（作为 Redis key / DB 唯一标识）
+  // 中国大陆：直接用本机号；境外：+区号+号码
+  const normalizedPhone = isChinese ? phone : `+${dialCode}${phone}`
 
   // ── 读取系统设置 ────────────────────────────────────
   const smsEnabled   = await getSettingBool('sms_enabled', true)
@@ -25,7 +40,7 @@ export default defineEventHandler(async (event) => {
 
 
   const redis = useRedis()
-  const lockKey = RedisKey.smsLock(phone)
+  const lockKey = RedisKey.smsLock(normalizedPhone)
 
   // 防刷：60 秒内只能发 1 次
   if (await redis.exists(lockKey)) {
@@ -36,7 +51,7 @@ export default defineEventHandler(async (event) => {
   // 每日发送上限校验（dailyLimit=0 表示不限）
   if (dailyLimit > 0) {
     const dateStr = new Date().toISOString().slice(0, 10).replace(/-/g, '')
-    const dailyKey = `sms_count:${phone}:${dateStr}`
+    const dailyKey = `sms_count:${normalizedPhone}:${dateStr}`
     const todayCount = Number(await redis.get(dailyKey) || 0)
     if (todayCount >= dailyLimit) {
       throw createError({ statusCode: 429, message: `今日短信发送次数已达上限（${dailyLimit}次），请明天再试` })
@@ -49,15 +64,17 @@ export default defineEventHandler(async (event) => {
   // 开发模式 或 短信网关关闭：跳过真实短信，只打印日志
   if (process.env.NODE_ENV !== 'production' || !smsEnabled) {
     const reason = !smsEnabled ? '[SMS网关已关闭]' : '[开发模式]'
-    console.log(`${reason} 手机号 ${phone} 验证码: ${code}，有效期 ${codeExpireSec}s`)
-    await redis.setex(RedisKey.smsCode(phone), codeExpireSec, JSON.stringify({ code, attempts: 0 }))
+    console.log(`${reason} 手机号 ${normalizedPhone} 验证码: ${code}，有效期 ${codeExpireSec}s`)
+    await redis.setex(RedisKey.smsCode(normalizedPhone), codeExpireSec, JSON.stringify({ code, attempts: 0 }))
     await redis.setex(lockKey, 60, '1')
     return { success: true, ...(process.env.NODE_ENV !== 'production' ? { dev_code: code } : {}) }
   }
 
   // 生产：调阿里云 SMS
   const config = useRuntimeConfig()
-  console.log(`[SMS] 开始发送 - phone: ${phone}, keyId: ${config.aliSmsKeyId?.substring(0, 8)}***, sign: ${config.aliSmsSign}, tpl: ${config.aliSmsTplCode}`)
+  // 阿里云格式：中国大陆直接用手机号，境外加 + 区号前缀
+  const aliyunPhone = isChinese ? phone : `+${dialCode}${phone}`
+  console.log(`[SMS] 开始发送 - phone: ${normalizedPhone}, aliyunPhone: ${aliyunPhone}, keyId: ${config.aliSmsKeyId?.substring(0, 8)}***, sign: ${config.aliSmsSign}, tpl: ${config.aliSmsTplCode}`)
 
 
   try {
@@ -68,7 +85,7 @@ export default defineEventHandler(async (event) => {
     })
     const client = new DysmsapiClient(cfg)
     const req = new SendSmsRequest({
-      phoneNumbers: phone,
+      phoneNumbers: aliyunPhone,
       signName: config.aliSmsSign,
       templateCode: config.aliSmsTplCode,
       templateParam: JSON.stringify({ code }),
@@ -86,17 +103,17 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 500, message: `短信发送失败: ${e.message}` })
   }
 
-  await redis.setex(RedisKey.smsCode(phone), codeExpireSec, JSON.stringify({ code, attempts: 0 }))
+  await redis.setex(RedisKey.smsCode(normalizedPhone), codeExpireSec, JSON.stringify({ code, attempts: 0 }))
   await redis.setex(lockKey, 60, '1')
 
   // 每日计数 +1
   if (dailyLimit > 0) {
     const dateStr = new Date().toISOString().slice(0, 10).replace(/-/g, '')
-    const dailyKey = `sms_count:${phone}:${dateStr}`
+    const dailyKey = `sms_count:${normalizedPhone}:${dateStr}`
     await redis.incr(dailyKey)
     await redis.expireat(dailyKey, Math.floor(new Date().setHours(23, 59, 59, 999) / 1000))
   }
 
-  console.log(`[SMS] 发送成功 - phone: ${phone}, code: ${code}, 有效期 ${codeExpireSec}s`)
+  console.log(`[SMS] 发送成功 - phone: ${normalizedPhone}, code: ${code}, 有效期 ${codeExpireSec}s`)
   return { success: true }
 })

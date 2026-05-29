@@ -1,14 +1,18 @@
 
 // 短信验证码登录/注册
 export default defineEventHandler(async (event) => {
-  const { phone, code } = await readBody(event)
+  const { phone, code, nationNum = '86' } = await readBody(event)
 
   if (!phone || !code) {
     throw createError({ statusCode: 400, message: '手机号和验证码不能为空' })
   }
 
+  // 规范化手机号（与 sms.post.ts 保持一致）
+  const dialCode = String(nationNum).replace(/^\+/, '')
+  const normalizedPhone = dialCode === '86' ? phone : `+${dialCode}${phone}`
+
   const redis = useRedis()
-  const smsKey = RedisKey.smsCode(phone)
+  const smsKey = RedisKey.smsCode(normalizedPhone)
   const raw = await redis.get(smsKey)
 
   if (!raw) {
@@ -31,10 +35,10 @@ export default defineEventHandler(async (event) => {
 
   const db = useDb()
 
-  // 查询用户
+  // 查询用户（用规范化手机号）
   const [rows]: any = await db.query(
     'SELECT id, phone, nickname, avatar, status, vip_status, vip_expire_at FROM t_user WHERE phone=? AND deleted=0 LIMIT 1',
-    [phone]
+    [normalizedPhone]
   )
   let user = rows[0]
   let isNewUser = false
@@ -49,16 +53,16 @@ export default defineEventHandler(async (event) => {
 
     isNewUser = true
     const id = generateId()
-    const nickname = `宠友${phone.slice(-4)}`
+    const nickname = `宠友${normalizedPhone.slice(-4)}`
     const defaultPassword = 'e10adc3949ba59abbe56e057f20f883e' // md5(123456)
 
     // 新用户 AI 每日上限从系统设置读取
     const aiLimit = await getSettingNumber('ai_default_daily_limit', 10)
     await db.query(
       'INSERT INTO t_user(id, phone, password, nickname, status, ai_daily_limit, created_at) VALUES(?,?,?,?,1,?,NOW())',
-      [id, phone, defaultPassword, nickname, aiLimit]
+      [id, normalizedPhone, defaultPassword, nickname, aiLimit]
     )
-    user = { id, phone, nickname, avatar: null, vip_status: 0, vip_expire_at: null }
+    user = { id, phone: normalizedPhone, nickname, avatar: null, vip_status: 0, vip_expire_at: null }
   }
 
   if (user.status === 2) {
@@ -68,9 +72,8 @@ export default defineEventHandler(async (event) => {
   const userId = String(user.id)
 
   // ── 同步对方后台：确保账号存在，再登录拿 token ─────────────
-  // 无论新老用户都先 ensure（幂等），防止 iPet 侧记录丢失导致 peerLogin 报「账号不存在」
-  await peerEnsureRegistered(phone)
-  const peerInfo = await peerLogin(phone)
+  await peerEnsureRegistered(normalizedPhone)
+  const peerInfo = await peerLogin(normalizedPhone)
 
   // granwin_token 有效期（对方返回 expiration 秒，默认 43200 = 12小时）
   const tokenTtl = peerInfo.expiration || 43200
