@@ -405,3 +405,39 @@ INSERT IGNORE INTO t_system_settings (`key`, `value`, label, description, type, 
   ('ai_default_daily_limit','10',                          'AI默认每日上限',     '新注册用户默认的 AI 分析每日使用次数，-1=无限',           'number',  'general', 3),
   -- OSS
   ('oss_cdn_base_url',      'https://pet-20260430.oss-cn-shanghai.aliyuncs.com', 'OSS CDN 地址', '静态资源 CDN 基础地址，结尾不加 /', 'text', 'oss', 1);
+
+CREATE TABLE IF NOT EXISTS t_feedback (
+  id         BIGINT        PRIMARY KEY AUTO_INCREMENT,
+  user_id    BIGINT        NOT NULL                    COMMENT '用户ID',
+  nickname   VARCHAR(50)   NOT NULL DEFAULT ''         COMMENT '提交时的用户昵称（冗余存储，防止改名后失真）',
+  type       TINYINT       NOT NULL DEFAULT 1          COMMENT '类型: 1建议 2投诉 3好评',
+  title      VARCHAR(100)  NOT NULL DEFAULT ''         COMMENT '标题（用户自定义或默认类型名称）',
+  content    VARCHAR(50)   NOT NULL                    COMMENT '反馈内容（最多50字）',
+  status     TINYINT       NOT NULL DEFAULT 0          COMMENT '处理状态: 0未读 1已读 2已处理',
+  created_at DATETIME      DEFAULT CURRENT_TIMESTAMP,
+  INDEX idx_user    (user_id),
+  INDEX idx_type    (type),
+  INDEX idx_status  (status),
+  INDEX idx_created (created_at)
+) ENGINE=InnoDB COMMENT='用户反馈（建议/投诉/好评）';
+
+
+CREATE TABLE IF NOT EXISTS t_media (
+  id         BIGINT        PRIMARY KEY AUTO_INCREMENT,
+  user_id    BIGINT        NOT NULL                    COMMENT '上传用户ID',
+  device_id  VARCHAR(50)   NOT NULL DEFAULT ''         COMMENT '关联设备ID（t_device.id）',
+  nickname   VARCHAR(50)   NOT NULL DEFAULT ''         COMMENT '上传时快照昵称',
+  type       TINYINT       NOT NULL DEFAULT 1          COMMENT '类型: 1图片 2视频',
+  url        VARCHAR(500)  NOT NULL                    COMMENT 'OSS CDN 完整地址',
+  thumb_url  VARCHAR(500)  NOT NULL DEFAULT ''         COMMENT '缩略图（图片=url本身，视频=OSS截帧URL）',
+  oss_key    VARCHAR(500)  NOT NULL DEFAULT ''         COMMENT 'OSS对象Key，用于后续删除',
+  file_size  INT           DEFAULT 0                   COMMENT '文件字节数',
+  duration   INT           DEFAULT NULL                COMMENT '视频时长（秒），图片为NULL',
+  status     TINYINT       NOT NULL DEFAULT 1          COMMENT '1=正常 2=已删除',
+  created_at DATETIME      DEFAULT CURRENT_TIMESTAMP,
+  INDEX idx_user    (user_id),
+  INDEX idx_type    (type),
+  INDEX idx_status  (status),
+  INDEX idx_created (created_at)
+) ENGINE=InnoDB COMMENT='用户图库（照片/视频）';
+
