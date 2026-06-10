@@ -22,8 +22,9 @@ export default defineNuxtConfig({
 
   routeRules: {
     '/': { redirect: '/admin/login' },
-    '/api/**': { cors: true },
-    '/sdkapi/**': { cors: true },
+    '/api/**':     { cors: true },
+    '/sdkapi/**':  { cors: true },
+    '/openapi/**': { cors: true },
   },
 
   vite: {
@@ -79,6 +80,8 @@ export default defineNuxtConfig({
     peerBackendPublicUrl: process.env.PEER_BACKEND_PUBLIC_URL || process.env.PEER_BACKEND_URL || 'http://49.234.39.11:8006',
     peerBackendMerchantId: process.env.PEER_BACKEND_MERCHANT_ID || '1',
     peerBackendSecret: process.env.PEER_BACKEND_SECRET || '',
+    openapiKey:    process.env.OPENAPI_KEY    || 'ce96786dcc394fddeb521d0e',
+    openapiSecret: process.env.OPENAPI_SECRET || 'bec1adf7ad77c6e38d3a7599926d9b4203b3ff34f797c2cf',
     public: {
       ossCdnBaseUrl: process.env.OSS_CDN_BASE_URL || 'https://pet-20260430.oss-cn-shanghai.aliyuncs.com',
       tencentImSdkAppId: '1600139420',

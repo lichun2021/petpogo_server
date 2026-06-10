@@ -156,6 +156,7 @@ const nav = [
   { to: '/admin/music',    label: '宠物音乐',    icon: 'i-heroicons-musical-note' },
   { to: '/admin/media',    label: '用户图库',    icon: 'i-heroicons-photo' },
   { to: '/admin/feedback', label: '用户反馈',    icon: 'i-heroicons-chat-bubble-left-ellipsis' },
+  { to: '/admin/push',     label: '推送测试',    icon: 'i-heroicons-bell' },
   { to: '/admin/settings', label: '系统设置',    icon: 'i-heroicons-cog-6-tooth' },
 ]
 
