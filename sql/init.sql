@@ -441,3 +441,138 @@ CREATE TABLE IF NOT EXISTS t_media (
   INDEX idx_created (created_at)
 ) ENGINE=InnoDB COMMENT='用户图库（照片/视频）';
 
+-- 打招呼事件表（2026-06-11）
+-- 用户主动打招呼：App发送招呼音 → 设备播放 → 录制宠物响应 → AI情绪分析
+CREATE TABLE IF NOT EXISTS t_greeting_event (
+  id            BIGINT        PRIMARY KEY AUTO_INCREMENT,
+  user_id       BIGINT        NOT NULL    COMMENT '用户ID（发起打招呼的用户）',
+  device_id     VARCHAR(50)   NOT NULL    COMMENT '设备MAC地址',
+  resource_url     TEXT          COMMENT '招呼音频URL（用户发给设备的音频）',
+  response_url  TEXT          COMMENT '宠物响应资源URL（设备录制的视频/音频）',
+  cover_url     VARCHAR(500)  COMMENT '响应视频封面URL',
+  ai_result     JSON          COMMENT 'AI情绪分析结果（JSON）',
+  status        TINYINT       DEFAULT 1   COMMENT '1正常 0已删除',
+  created_at    DATETIME      DEFAULT CURRENT_TIMESTAMP,
+  INDEX idx_user_id   (user_id),
+  INDEX idx_device_id (device_id),
+  INDEX idx_created_at(created_at)
+) ENGINE=InnoDB COMMENT='用户打招呼事件表';
+
+
+-- 自动抓拍事件表（2026-06-11）
+-- 由设备触发：定时抓拍 / 移动检测 / 计划任务
+CREATE TABLE IF NOT EXISTS t_capture_event (
+  id            BIGINT        PRIMARY KEY AUTO_INCREMENT,
+  user_id       BIGINT        NOT NULL    COMMENT '用户ID',
+  device_id     VARCHAR(50)   NOT NULL    COMMENT '设备MAC地址',
+  event_type    VARCHAR(50)   NOT NULL    DEFAULT 'auto_capture'
+                              COMMENT '事件类型: auto_capture / motion / scheduled',
+  resource_url  TEXT          COMMENT '资源URL（视频/音频/图片，OSS直链）',
+  cover_url     VARCHAR(500)  COMMENT '封面/缩略图URL',
+  ai_result     JSON          COMMENT 'AI情绪分析结果（JSON）',
+  status        TINYINT       DEFAULT 1   COMMENT '1正常 0已删除',
+  created_at    DATETIME      DEFAULT CURRENT_TIMESTAMP,
+  INDEX idx_user_id   (user_id),
+  INDEX idx_device_id (device_id),
+  INDEX idx_event_type(event_type),
+  INDEX idx_created_at(created_at)
+) ENGINE=InnoDB COMMENT='设备自动抓拍事件表';
+
+
+
+-- ===========================
+-- 预设情绪声音表（后台管理）
+-- ===========================
+-- 每种情绪可配置多条默认声音，后台可自由增删改
+CREATE TABLE IF NOT EXISTS t_sound_preset (
+  id          BIGINT        PRIMARY KEY AUTO_INCREMENT,
+  pet_type VARCHAR(10) NOT NULL DEFAULT 'cat' COMMENT '宠物类型: cat/dog' 
+  emotion     VARCHAR(50)   NOT NULL    COMMENT '情绪类型: happy/sad/excited/calm/angry/scared/neutral',
+  name        VARCHAR(100)  NOT NULL    COMMENT '声音名称',
+  url         TEXT          NOT NULL    COMMENT '声音OSS直链',
+  sort_order  INT           DEFAULT 0   COMMENT '排序（越小越靠前）',
+  status      TINYINT       DEFAULT 1   COMMENT '1启用 0禁用',
+  created_at  DATETIME      DEFAULT CURRENT_TIMESTAMP,
+  updated_at  DATETIME      ON UPDATE CURRENT_TIMESTAMP,
+  INDEX idx_emotion    (emotion),
+  INDEX idx_status     (status),
+  INDEX idx_sort_order (sort_order)
+) ENGINE=InnoDB COMMENT='预设情绪声音表（后台管理）';
+
+-- ===========================
+-- 用户自定义声音表
+-- ===========================
+-- 用户自己上传的声音，可选关联情绪
+CREATE TABLE IF NOT EXISTS t_sound_user (
+  id          BIGINT        PRIMARY KEY AUTO_INCREMENT,
+  user_id     BIGINT        NOT NULL    COMMENT '用户ID',
+  pet_type    VARCHAR(10)   NOT NULL    DEFAULT 'cat' COMMENT '宠物类型: cat/dog',
+  emotion     VARCHAR(50)   COMMENT '对应情绪类型（可不填）',
+  name        VARCHAR(100)  NOT NULL    COMMENT '声音名称',
+  url         TEXT          NOT NULL    COMMENT '声音OSS直链',
+  duration    INT           COMMENT '时长（秒）',
+  status      TINYINT       DEFAULT 1   COMMENT '1正常 0已删除',
+  created_at  DATETIME      DEFAULT CURRENT_TIMESTAMP,
+  INDEX idx_user_id  (user_id),
+  INDEX idx_pet_type (pet_type),
+  INDEX idx_emotion  (emotion),
+  INDEX idx_status   (status)
+) ENGINE=InnoDB COMMENT='用户自定义声音表';
+
+-- 情绪类型配置表（后台管理）
+CREATE TABLE IF NOT EXISTS t_sound_emotion (
+  id          BIGINT        PRIMARY KEY AUTO_INCREMENT,
+  pet_type    VARCHAR(10)   NOT NULL    DEFAULT 'cat' COMMENT '宠物类型: cat/dog',
+  value       VARCHAR(50)   NOT NULL    COMMENT '情绪标识（英文key，如 happy）',
+  label       VARCHAR(50)   NOT NULL    COMMENT '情绪中文名（如 开心）',
+  emoji       VARCHAR(10)   DEFAULT '🎵' COMMENT '情绪表情符号',
+  color       VARCHAR(20)   DEFAULT '#f59e0b' COMMENT '主色（hex）',
+  active_bg   VARCHAR(20)   DEFAULT '#fef3c7' COMMENT '选中背景色（hex）',
+  text_color  VARCHAR(20)   DEFAULT '#92400e' COMMENT '文字颜色（hex）',
+  sort_order  INT           DEFAULT 0   COMMENT '排序',
+  url         TEXT          COMMENT '声音OSS直链（后台上传）',
+  status      TINYINT       DEFAULT 1   COMMENT '1启用 0禁用',
+  created_at  DATETIME      DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE INDEX uk_pet_value (pet_type, value),
+  INDEX idx_pet_type   (pet_type),
+  INDEX idx_status     (status),
+  INDEX idx_sort_order (sort_order)
+) ENGINE=InnoDB COMMENT='情绪类型配置表';
+
+-- 预置初始情绪数据
+INSERT IGNORE INTO t_sound_emotion (pet_type, value, label, emoji, color, active_bg, text_color, sort_order) VALUES
+  ('cat', 'happy',   '开心', '😄', '#f59e0b', '#fef3c7', '#92400e', 1),
+  ('cat', 'excited', '兴奋', '🎉', '#ec4899', '#fce7f3', '#9d174d', 2),
+  ('cat', 'calm',    '平静', '😌', '#3b82f6', '#dbeafe', '#1e40af', 3),
+  ('cat', 'sad',     '悲伤', '😢', '#6366f1', '#e0e7ff', '#3730a3', 4),
+  ('cat', 'angry',   '生气', '😠', '#ef4444', '#fee2e2', '#991b1b', 5),
+  ('cat', 'scared',  '害怕', '😨', '#8b5cf6', '#ede9fe', '#5b21b6', 6),
+  ('cat', 'neutral', '普通', '😐', '#6b7280', '#f3f4f6', '#374151', 7),
+  ('dog', 'happy',   '开心', '🐶', '#f59e0b', '#fef3c7', '#92400e', 1),
+  ('dog', 'excited', '兴奋', '🐕', '#ec4899', '#fce7f3', '#9d174d', 2),
+  ('dog', 'calm',    '平静', '😌', '#3b82f6', '#dbeafe', '#1e40af', 3),
+  ('dog', 'sad',     '悲伤', '😢', '#6366f1', '#e0e7ff', '#3730a3', 4),
+  ('dog', 'angry',   '生气', '😠', '#ef4444', '#fee2e2', '#991b1b', 5),
+  ('dog', 'scared',  '害怕', '😨', '#8b5cf6', '#ede9fe', '#5b21b6', 6),
+  ('dog', 'neutral', '普通', '😐', '#6b7280', '#f3f4f6', '#374151', 7);
+
+-- 为预设声音表增加宠物类型字段
+ALTER TABLE t_sound_preset ADD COLUMN IF NOT EXISTS pet_type VARCHAR(10) NOT NULL DEFAULT 'cat' COMMENT '宠物类型: cat/dog' AFTER emotion;
+ALTER TABLE t_sound_preset ADD INDEX IF NOT EXISTS idx_pet_type (pet_type);
+
+-- 为情绪类型表增加宠物类型字段
+ALTER TABLE t_sound_emotion ADD COLUMN IF NOT EXISTS pet_type VARCHAR(10) NOT NULL DEFAULT 'cat' COMMENT '宠物类型: cat/dog' AFTER id;
+ALTER TABLE t_sound_emotion DROP INDEX IF EXISTS value;
+ALTER TABLE t_sound_emotion ADD UNIQUE INDEX IF NOT EXISTS uk_pet_value (pet_type, value);
+ALTER TABLE t_sound_emotion ADD INDEX IF NOT EXISTS idx_pet_type (pet_type);
+
+-- 更新已有预置数据：默认都是 cat
+-- 再插入 dog 版本
+INSERT IGNORE INTO t_sound_emotion (pet_type, value, label, emoji, color, active_bg, text_color, sort_order) VALUES
+  ('dog', 'happy',   '开心', '🐶', '#f59e0b', '#fef3c7', '#92400e', 1),
+  ('dog', 'excited', '兴奋', '🐕', '#ec4899', '#fce7f3', '#9d174d', 2),
+  ('dog', 'calm',    '平静', '😌', '#3b82f6', '#dbeafe', '#1e40af', 3),
+  ('dog', 'sad',     '悲伤', '😢', '#6366f1', '#e0e7ff', '#3730a3', 4),
+  ('dog', 'angry',   '生气', '😠', '#ef4444', '#fee2e2', '#991b1b', 5),
+  ('dog', 'scared',  '害怕', '😨', '#8b5cf6', '#ede9fe', '#5b21b6', 6),
+  ('dog', 'neutral', '普通', '😐', '#6b7280', '#f3f4f6', '#374151', 7);

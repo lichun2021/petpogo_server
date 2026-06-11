@@ -154,6 +154,7 @@ const nav = [
   { to: '/admin/stores',   label: '门店管理',    icon: 'i-heroicons-building-storefront' },
   { to: '/admin/ai-analysis', label: 'AI 识别记录', icon: 'i-heroicons-sparkles' },
   { to: '/admin/music',    label: '宠物音乐',    icon: 'i-heroicons-musical-note' },
+  { to: '/admin/sound',    label: '情绪声音',    icon: 'i-heroicons-speaker-wave' },
   { to: '/admin/media',    label: '用户图库',    icon: 'i-heroicons-photo' },
   { to: '/admin/feedback', label: '用户反馈',    icon: 'i-heroicons-chat-bubble-left-ellipsis' },
   { to: '/admin/push',     label: '推送测试',    icon: 'i-heroicons-bell' },

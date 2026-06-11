@@ -22,7 +22,7 @@ export default defineEventHandler(async (event) => {
     `SELECT COUNT(*) AS total FROM t_greeting_event g WHERE ${where}`, params
   )
   const [rows]: any = await db.query(
-    `SELECT g.id, g.device_id, g.greet_url, g.response_url, g.cover_url, g.ai_result, g.created_at
+    `SELECT g.id, g.device_id, g.resource_url, g.response_url, g.cover_url, g.ai_result, g.created_at
      FROM t_greeting_event g WHERE ${where} ORDER BY g.created_at DESC LIMIT ? OFFSET ?`,
     [...params, pageSize, offset]
   )

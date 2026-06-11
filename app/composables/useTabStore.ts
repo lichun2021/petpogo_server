@@ -16,6 +16,11 @@ const TAB_ICONS: Record<string, string> = {
   '/admin/stores':      'i-heroicons-building-storefront',
   '/admin/ai-analysis': 'i-heroicons-sparkles',
   '/admin/music':       'i-heroicons-musical-note',
+  '/admin/sound':       'i-heroicons-speaker-wave',
+  '/admin/media':       'i-heroicons-photo',
+  '/admin/feedback':    'i-heroicons-chat-bubble-left-ellipsis',
+  '/admin/push':        'i-heroicons-bell',
+  '/admin/settings':    'i-heroicons-cog-6-tooth',
 }
 
 const TAB_TITLES: Record<string, string> = {
@@ -26,6 +31,11 @@ const TAB_TITLES: Record<string, string> = {
   '/admin/stores':      '门店管理',
   '/admin/ai-analysis': 'AI 识别记录',
   '/admin/music':       '宠物音乐',
+  '/admin/sound':       '情绪声音',
+  '/admin/media':       '用户图库',
+  '/admin/feedback':    '用户反馈',
+  '/admin/push':        '推送测试',
+  '/admin/settings':    '系统设置',
 }
 
 function resolveTitleAndIcon(path: string): { title: string; icon: string } {
