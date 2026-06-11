@@ -576,3 +576,6 @@ INSERT IGNORE INTO t_sound_emotion (pet_type, value, label, emoji, color, active
   ('dog', 'angry',   '生气', '😠', '#ef4444', '#fee2e2', '#991b1b', 5),
   ('dog', 'scared',  '害怕', '😨', '#8b5cf6', '#ede9fe', '#5b21b6', 6),
   ('dog', 'neutral', '普通', '😐', '#6b7280', '#f3f4f6', '#374151', 7);
+
+-- 同一物种下情绪标签唯一（一个物种只能有一个 happy）
+ALTER TABLE t_sound_preset ADD UNIQUE INDEX IF NOT EXISTS uk_pet_emotion (pet_type, emotion);
