@@ -113,7 +113,7 @@ export default defineEventHandler(async (event) => {
   const { title, content } = pushConfig[type] ?? pushConfig.auto_capture
 
   jpushSend({
-    audience: { type: 'alias', alias: [String(dbUser.id)] },
+    audience: { type: 'alias', alias: [String(alias).trim()] },
     title,
     content,
     extras: pushExtras,
