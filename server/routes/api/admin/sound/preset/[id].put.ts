@@ -22,10 +22,18 @@ export default defineEventHandler(async (event) => {
 
   const db = useDb()
   params.push(id)
-  const [result]: any = await db.query(
-    `UPDATE t_sound_preset SET ${fields.join(', ')} WHERE id = ?`, params
-  )
-
-  if (result.affectedRows === 0) throw createError({ statusCode: 404, message: '记录不存在' })
-  return { success: true }
+  try {
+    const [result]: any = await db.query(
+      `UPDATE t_sound_preset SET ${fields.join(', ')} WHERE id = ?`, params
+    )
+    if (result.affectedRows === 0) throw createError({ statusCode: 404, message: '记录不存在' })
+    return { success: true }
+  } catch (err: any) {
+    if (err?.code === 'ER_DUP_ENTRY' || err?.errno === 1062) {
+      const pt = String(petType ?? '').trim()
+      const ptLabel = pt === 'dog' ? '狗狗' : '猫咪'
+      throw createError({ statusCode: 409, message: `${ptLabel}已存在「${emotion}」情绪的声音，每种物种每个情绪只能有一条预设` })
+    }
+    throw err
+  }
 })
