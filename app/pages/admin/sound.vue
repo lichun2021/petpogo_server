@@ -302,7 +302,7 @@ async function uploadSound(event: Event, item: any) {
   const file = (event.target as HTMLInputElement).files?.[0]; if (!file) return
   uploadingId.value = item.id
   try {
-    const sign: any = await $fetch('/api/admin/sound/emotion/upload-sign', {
+    const sign: any = await $fetch('/api/admin/sound/preset/upload-sign', {
       method:'POST', body:{ mimeType: file.type }, headers:authHeader()
     })
     await $fetch(sign.uploadUrl, { method:'PUT', body:file, headers:{ 'Content-Type': file.type } })
@@ -337,7 +337,7 @@ async function uploadInModal(event: Event) {
   const file = (event.target as HTMLInputElement).files?.[0]; if (!file) return
   modalUploading.value = true
   try {
-    const sign: any = await $fetch('/api/admin/sound/emotion/upload-sign', {
+    const sign: any = await $fetch('/api/admin/sound/preset/upload-sign', {
       method:'POST', body:{ mimeType: file.type }, headers:authHeader()
     })
     await $fetch(sign.uploadUrl, { method:'PUT', body:file, headers:{ 'Content-Type': file.type } })
