@@ -1,7 +1,7 @@
 // GET /sdkapi/sound/preset/list — App：获取声音列表
 //
-// 逻辑：用户自己上传的声音优先显示；若用户无自定义声音，则退回预设声音。
-// 始终返回合并列表，source 字段区分来源。
+// 逻辑：用户自己的声音（source=user）优先，同情绪的预设被替换掉。
+// 用户没有对应情绪的录音时，使用预设声音补齐。
 //
 // 查询参数:
 //   pet_type  string  宠物类型 cat/dog（默认 cat）
@@ -46,13 +46,18 @@ export default defineEventHandler(async (event) => {
     presetParams
   )
 
-  // ── 3. 合并：用户声音在前，预设补后 ───────────────────────────
-  const userList   = (userRows   as any[]).map(r => ({ ...r, source: 'user' }))
-  const presetList = (presetRows as any[]).map(r => ({ ...r, source: 'preset' }))
+  // ── 3. 合并：用户声音覆盖同情绪的预设 ─────────────────────────
+  // 用户已有录音的情绪集合
+  const userList    = (userRows   as any[]).map(r => ({ ...r, source: 'user' }))
+  const userEmotionSet = new Set(userList.map((r: any) => String(r.emotion)))
 
-  const merged = userList.length > 0
-    ? [...userList, ...presetList]
-    : presetList
+  // 预设中排除用户已有录音的情绪（避免重复）
+  const presetList = (presetRows as any[])
+    .filter(r => !userEmotionSet.has(String(r.emotion)))
+    .map(r => ({ ...r, source: 'preset' }))
+
+  // 用户声音在前，预设补充没有用户录音的情绪
+  const merged = [...userList, ...presetList]
 
   const total = merged.length
   const list  = merged.slice(offset, offset + pageSize)
