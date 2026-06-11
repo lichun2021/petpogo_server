@@ -1,17 +1,18 @@
 // GET /openapi/sound/list — 设备端查声音列表（OpenAPI 鉴权）
 //
 // 设备通过 alias 查对应用户的声音列表（用户自定义在前，预设补后）
+// 预设声音直接来自 t_sound_preset
 //
 // 查询参数:
 //   alias     string  用户 alias（手机号@qq.com，必填）
 //   pet_type  string  宠物类型 cat/dog（必填，默认 cat）
-//   emotion   string  按情绪类型筛选（可选）
+//   emotion   string  按情绪标签筛选（可选）
 
 export default defineEventHandler(async (event) => {
-  const query    = getQuery(event)
-  const alias    = query.alias    ? String(query.alias).trim()    : ''
-  const petType  = query.pet_type ? String(query.pet_type).trim() : 'cat'
-  const emotion  = query.emotion  ? String(query.emotion).trim()  : null
+  const query   = getQuery(event)
+  const alias   = query.alias    ? String(query.alias).trim()    : ''
+  const petType = query.pet_type ? String(query.pet_type).trim() : 'cat'
+  const emotion = query.emotion  ? String(query.emotion).trim()  : null
 
   if (!alias) throw createError({ statusCode: 400, message: 'alias 不能为空（手机号@qq.com）' })
 
@@ -35,14 +36,13 @@ export default defineEventHandler(async (event) => {
     userParams
   )
 
-  // ── 预设声音（从 t_sound_emotion 读取，每种情绪一条，URL 不为空） ──
-  const presetConditions = ['pet_type = ?', 'status = 1', 'url IS NOT NULL']
+  // ── 预设声音（来自 t_sound_preset） ──────────────────────────
+  const presetConditions = ['pet_type = ?', 'status = 1']
   const presetParams: any[] = [petType]
-  if (emotion) { presetConditions.push('value = ?'); presetParams.push(emotion) }
+  if (emotion) { presetConditions.push('emotion = ?'); presetParams.push(emotion) }
 
   const [presetRows]: any = await db.query(
-    `SELECT id, value AS emotion, pet_type, label AS name, url, NULL AS duration
-     FROM t_sound_emotion
+    `SELECT id, emotion, pet_type, name, url, NULL AS duration FROM t_sound_preset
      WHERE ${presetConditions.join(' AND ')} ORDER BY sort_order ASC`,
     presetParams
   )
