@@ -14,7 +14,7 @@ console.error = (...a) => _orig.error(`[${_ts()}]`, ...a)
 // ─────────────────────────────────────────────────────────────────────
 
 const shouldLog = (path: string) =>
-  path.startsWith('/sdkapi/') || path.startsWith('/api/')
+  path.startsWith('/sdkapi/') || path.startsWith('/api/') || path.startsWith('/openapi/')
 
 export default defineNitroPlugin((nitroApp) => {
   nitroApp.hooks.hook('request', async (event) => {

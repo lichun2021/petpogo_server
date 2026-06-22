@@ -16,6 +16,8 @@ export default defineEventHandler((event) => {
   const timestamp = getHeader(event, 'x-timestamp') || ''
   const signature = getHeader(event, 'x-signature') || ''
 
+  console.log(`[OpenAPI] ${event.method} ${path} | key=${apiKey || '(empty)'} ts=${timestamp || '(empty)'} sig=${signature ? signature.substring(0, 8) + '...' : '(empty)'}`)
+
   if (!apiKey || !timestamp || !signature) {
     throw createError({
       statusCode: 401,

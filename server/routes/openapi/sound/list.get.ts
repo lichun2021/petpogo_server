@@ -9,17 +9,20 @@
 //   emotion   string  按情绪标签筛选（可选）
 
 export default defineEventHandler(async (event) => {
-  const query   = getQuery(event)
-  const alias   = query.alias    ? String(query.alias).trim()    : ''
+  const query = getQuery(event)
+  const alias = query.alias ? String(query.alias).trim() : ''
   const petType = query.pet_type ? String(query.pet_type).trim() : 'cat'
-  const emotion = query.emotion  ? String(query.emotion).trim()  : null
+  const emotion = query.emotion ? String(query.emotion).trim() : null
 
   if (!alias) throw createError({ statusCode: 400, message: 'alias 不能为空（手机号@qq.com）' })
+
+  // alias 自动补全 @qq.com（兴容设备只传手机号的情况）
+  const normalizedAlias = alias.includes('@') ? alias : `${alias}@qq.com`
 
   const db = useDb()
 
   // 通过 alias 反查 user_id
-  const phone = alias.split('@')[0].trim()
+  const phone = normalizedAlias.split('@')[0].trim()
   const [[dbUser]]: any = await db.query(
     'SELECT id FROM t_user WHERE phone = ? AND deleted = 0 LIMIT 1', [phone]
   )
@@ -47,7 +50,7 @@ export default defineEventHandler(async (event) => {
     presetParams
   )
 
-  const userList   = (userRows   as any[]).map(r => ({ ...r, source: 'user' }))
+  const userList = (userRows as any[]).map(r => ({ ...r, source: 'user' }))
   const presetList = (presetRows as any[]).map(r => ({ ...r, source: 'preset' }))
 
   // 用户有自定义 → 用户在前 + 预设补后；否则只返回预设

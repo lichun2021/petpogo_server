@@ -32,11 +32,16 @@ export default defineEventHandler(async (event) => {
     responseUrl,
   } = body ?? {}
 
+  console.log(`[OpenAPI/Capture] 收到请求 alias=${alias} deviceId=${deviceId} eventType=${eventType}`)
+
   if (!alias?.trim())    throw createError({ statusCode: 400, message: 'alias 不能为空（手机号@qq.com）' })
   if (!deviceId?.trim()) throw createError({ statusCode: 400, message: 'deviceId 不能为空' })
 
+  // alias 自动补全 @qq.com（兼容设备只传手机号的情况）
+  const normalizedAlias = String(alias).trim().includes('@') ? String(alias).trim() : `${String(alias).trim()}@qq.com`
+
   const db = useDb()
-  const phone = String(alias).split('@')[0].trim()
+  const phone = normalizedAlias.split('@')[0].trim()
   const [[dbUser]]: any = await db.query(
     'SELECT id FROM t_user WHERE phone = ? AND deleted = 0 LIMIT 1', [phone]
   )
@@ -113,7 +118,7 @@ export default defineEventHandler(async (event) => {
   const { title, content } = pushConfig[type] ?? pushConfig.auto_capture
 
   jpushSend({
-    audience: { type: 'alias', alias: [String(alias).trim()] },
+    audience: { type: 'alias', alias: [normalizedAlias] },
     title,
     content,
     extras: pushExtras,

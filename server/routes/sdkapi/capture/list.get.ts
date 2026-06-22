@@ -20,9 +20,14 @@ export default defineEventHandler(async (event) => {
   const where  = conditions.join(' AND ')
   const offset = (page - 1) * pageSize
 
+  console.log(`[Capture/List] userId=${user.userId} phone=${user.phone} deviceMac=${deviceMac} eventType=${eventType} page=${page}`)
+
   const [[{ total }]]: any = await db.query(
     `SELECT COUNT(*) AS total FROM t_capture_event e WHERE ${where}`, params
   )
+
+  console.log(`[Capture/List] total=${total} WHERE=${where} params=${JSON.stringify(params)}`)
+
   const [rows]: any = await db.query(
     `SELECT e.id, e.device_id, e.event_type, e.resource_url, e.cover_url, e.ai_result, e.created_at
      FROM t_capture_event e WHERE ${where} ORDER BY e.created_at DESC LIMIT ? OFFSET ?`,
