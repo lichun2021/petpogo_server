@@ -188,6 +188,28 @@ CREATE TABLE IF NOT EXISTS t_like (
   UNIQUE KEY uk_like (user_id, target_id, target_type)
 ) ENGINE=InnoDB;
 
+CREATE TABLE IF NOT EXISTS t_pet_circle_post (
+  id             BIGINT       PRIMARY KEY AUTO_INCREMENT,
+  owner_user_id  BIGINT       NOT NULL COMMENT '宠物主人用户ID',
+  pet_id         VARCHAR(80)  NOT NULL COMMENT '宠物ID，可来自 PeerApi',
+  pet_name       VARCHAR(80)  NOT NULL DEFAULT '',
+  pet_avatar     VARCHAR(500) NOT NULL DEFAULT '',
+  content        TEXT         NOT NULL,
+  media_type     TINYINT      NOT NULL DEFAULT 0 COMMENT '0文字 1图片 2视频',
+  media_urls     JSON         NULL COMMENT '图片或视频地址列表',
+  cover_url      VARCHAR(500) NOT NULL DEFAULT '',
+  event_type     VARCHAR(40)  NOT NULL DEFAULT 'ai_daily',
+  source_id      VARCHAR(120) NULL COMMENT 'AI/设备侧幂等来源ID',
+  source_time    DATETIME     NULL,
+  status         TINYINT      NOT NULL DEFAULT 1 COMMENT '1正常 0删除',
+  created_at     DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at     DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  UNIQUE KEY uk_source (owner_user_id, pet_id, event_type, source_id),
+  INDEX idx_owner_pet_time (owner_user_id, pet_id, status, created_at),
+  INDEX idx_pet_time (pet_id, status, created_at),
+  INDEX idx_source_time (source_time)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='萌宠圈自动动态';
+
 CREATE TABLE IF NOT EXISTS t_follow (
   id           BIGINT    PRIMARY KEY,
   follower_id  BIGINT    NOT NULL,
@@ -478,6 +500,30 @@ CREATE TABLE IF NOT EXISTS t_capture_event (
   INDEX idx_created_at(created_at)
 ) ENGINE=InnoDB COMMENT='设备自动抓拍事件表';
 
+
+
+-- ===========================
+-- 业务分享链接（App 分享到微信/H5）
+-- ===========================
+CREATE TABLE IF NOT EXISTS t_share_link (
+  id            BIGINT       PRIMARY KEY AUTO_INCREMENT,
+  code          VARCHAR(32)  NOT NULL COMMENT '分享短码',
+  user_id       BIGINT       NOT NULL COMMENT '创建分享的用户ID',
+  share_type    VARCHAR(32)  NOT NULL COMMENT 'pet/device/location/capture/greeting',
+  target_id     VARCHAR(80)  NOT NULL COMMENT '业务对象ID或设备MAC',
+  title         VARCHAR(120) NOT NULL DEFAULT '',
+  description   VARCHAR(300) NOT NULL DEFAULT '',
+  image_url     VARCHAR(500) NOT NULL DEFAULT '',
+  payload       JSON         NULL COMMENT '只放公开展示所需摘要，不放敏感权限',
+  expire_at     DATETIME     NOT NULL,
+  status        TINYINT      NOT NULL DEFAULT 1 COMMENT '1正常 0失效',
+  created_at    DATETIME     DEFAULT CURRENT_TIMESTAMP,
+  updated_at    DATETIME     DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  UNIQUE KEY uk_code (code),
+  INDEX idx_user (user_id),
+  INDEX idx_type_target (share_type, target_id),
+  INDEX idx_expire (expire_at)
+) ENGINE=InnoDB COMMENT='App业务分享链接';
 
 
 -- ===========================
