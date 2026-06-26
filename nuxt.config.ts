@@ -75,6 +75,7 @@ export default defineNuxtConfig({
     uclMapMarkName: process.env.UCL_MAP_MARK_NAME || 'position',
     appApiSecret: process.env.APP_API_SECRET || '1q21ee182efd1gf1g@#$',
     aiServiceUrl: process.env.AI_SERVICE_URL || 'http://127.0.0.1:8000',
+    siteBaseUrl: process.env.SITE_BASE_URL || 'https://www.jxpetai.com',
     // 对方后台（iPet 宠物/硬件管理系统）
     peerBackendUrl: process.env.PEER_BACKEND_URL || '',
     peerBackendPublicUrl: process.env.PEER_BACKEND_PUBLIC_URL || process.env.PEER_BACKEND_URL || 'http://49.234.39.11:8006',

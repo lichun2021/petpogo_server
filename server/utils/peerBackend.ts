@@ -5,7 +5,7 @@
  *
  * 基础URL:   PEER_BACKEND_URL (内部通信)
  * 公网URL:   PEER_BACKEND_PUBLIC_URL (前端直连宠物/设备接口用)
- * 认证方式:  token Header (对方颁发的 granwin_token)
+ * 认证方式:  token Header (对方颁发的 ipet_token)
  * 内容类型:  application/x-www-form-urlencoded
  *
  * 账号映射规则:
@@ -38,13 +38,13 @@ export interface PeerProof {
 
 /** 对方后台登录/刷新成功后的完整响应 info */
 export interface PeerAuthInfo {
-  granwin_token: string
+  ipet_token: string
   refresh_token: string
   endpoint: string       // AWS IoT endpoint，前端直连设备需要
   region: string
   merchantId: number
   account: string
-  expiration: number     // granwin_token 有效期（秒），通常 43200 = 12小时
+  expiration: number     // ipet_token 有效期（秒），通常 43200 = 12小时
   pool: PeerPool
   proof: PeerProof
 }
@@ -204,10 +204,10 @@ export async function peerEnsureRegistered(phone: string): Promise<void> {
 
 /**
  * 1.2 用户登录
- * 本后台验证通过后，同步调用对方后台获取 granwin_token 及 AWS IoT 凭证。
+ * 本后台验证通过后，同步调用对方后台获取 ipet_token 及 AWS IoT 凭证。
  *
  * @param phone 本后台手机号
- * @returns 对方后台完整的登录信息（含 granwin_token / refresh_token / AWS凭证）
+ * @returns 对方后台完整的登录信息（含 ipet_token / refresh_token / AWS凭证）
  */
 export async function peerLogin(phone: string): Promise<PeerAuthInfo> {
   const { merchantId } = getPeerConfig()
@@ -220,7 +220,7 @@ export async function peerLogin(phone: string): Promise<PeerAuthInfo> {
 
 /**
  * 1.3 刷新 Token
- * 使用 refresh_token 换取新的 granwin_token 及 AWS IoT 凭证。
+ * 使用 refresh_token 换取新的 ipet_token 及 AWS IoT 凭证。
  *
  * @param refreshToken 登录时返回的 refresh_token
  * @returns 与登录相同结构的完整信息
@@ -236,7 +236,7 @@ export async function peerRefreshToken(refreshToken: string): Promise<PeerAuthIn
  * 本后台用户修改昵称等信息时，同步更新对方后台。
  * 字段映射：nickname → name（对方后台无 avatar/bio/birthday 字段）
  *
- * @param granwinToken 当前用户的 granwin_token（从 Redis Session 中读取）
+ * @param granwinToken 当前用户的 ipet_token（从 Redis Session 中读取）
  * @param params       要同步的字段
  */
 export async function peerSyncProfile(
@@ -253,7 +253,7 @@ export async function peerSyncProfile(
 // ── Redis Session 工具 ────────────────────────────────────────
 
 /**
- * 计算 granwin_token 的 Redis Key（SHA-256，避免 Token 明文存 Redis）
+ * 计算 ipet_token 的 Redis Key（SHA-256，避免 Token 明文存 Redis）
  */
 export function tokenSessionKey(granwinToken: string): string {
   const hash = crypto.createHash('sha256').update(granwinToken).digest('hex')

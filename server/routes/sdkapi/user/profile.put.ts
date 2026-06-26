@@ -8,10 +8,10 @@ export default defineEventHandler(async (event) => {
   const fields: string[] = []
   const params: any[] = []
   if (nickname !== undefined) { fields.push('nickname=?'); params.push(nickname) }
-  if (avatar   !== undefined) { fields.push('avatar=?');   params.push(avatar) }
-  if (gender   !== undefined) { fields.push('gender=?');   params.push(gender) }
+  if (avatar !== undefined) { fields.push('avatar=?'); params.push(avatar) }
+  if (gender !== undefined) { fields.push('gender=?'); params.push(gender) }
   if (birthday !== undefined) { fields.push('birthday=?'); params.push(birthday) }
-  if (bio      !== undefined) { fields.push('bio=?');      params.push(bio) }
+  if (bio !== undefined) { fields.push('bio=?'); params.push(bio) }
   if (!fields.length) throw createError({ statusCode: 400, message: '没有需要更新的字段' })
   fields.push('updated_at=NOW()')
   params.push(user.userId)
@@ -21,7 +21,7 @@ export default defineEventHandler(async (event) => {
   if (nickname !== undefined || avatar !== undefined) {
     imUpdateProfile(user.userId, {
       ...(nickname !== undefined && { nickname }),
-      ...(avatar   !== undefined && { avatar }),
+      ...(avatar !== undefined && { avatar }),
     }).catch((e: any) => console.error('[IM] 资料同步失败:', e.message))
   }
 
@@ -29,10 +29,10 @@ export default defineEventHandler(async (event) => {
   // 字段映射：nickname → name（对方无 avatar/bio/birthday）
   const peerParams: { name?: string; sex?: number } = {}
   if (nickname !== undefined) peerParams.name = nickname
-  if (gender   !== undefined) peerParams.sex  = gender  // 1=男 2=女，与对方一致
+  if (gender !== undefined) peerParams.sex = gender  // 1=男 2=女，与对方一致
 
   if (Object.keys(peerParams).length > 0) {
-    // 从 Authorization header 取出 granwin_token
+    // 从 Authorization header 取出 ipet_token
     const authHeader = getHeader(event, 'Authorization') || getHeader(event, 'authorization')
     const granwinToken = authHeader?.replace('Bearer ', '').trim() || ''
     peerSyncProfile(granwinToken, peerParams)

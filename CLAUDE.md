@@ -7,7 +7,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 **petpogo-server** (萌宠帮) — Nuxt 4 full-stack server providing:
 - **Admin web console** at `/admin/**` (Vue pages under `app/pages/admin/`)
 - **Admin REST API** at `/api/**` (JWT auth, password-based admin login)
-- **Mobile App REST API** at `/sdkapi/**` (signed requests + granwin_token auth)
+- **Mobile App REST API** at `/sdkapi/**` (signed requests + ipet_token auth)
 
 Single Node process, Nitro server engine (`node-server` preset), deployed via PM2.
 
@@ -36,7 +36,7 @@ Deploy SSH key is `lc.pem` in the repo root (gitignored). `.env` holds all secre
 
 The `server/middleware/signature.ts` middleware **only inspects `/sdkapi/**`**. Admin endpoints under `/api/**` are not signature-checked.
 
-- **`/sdkapi/**`** (mobile App): every request must carry `x-timestamp` (ms) and `x-signature` = `md5(timestamp + APP_API_SECRET)`. Timestamp skew > 5min is rejected. Auth (when needed) uses `Authorization: Bearer <granwin_token>` — token validated by `requireAuth(event)` in `server/utils/auth.ts`.
+- **`/sdkapi/**`** (mobile App): every request must carry `x-timestamp` (ms) and `x-signature` = `md5(timestamp + APP_API_SECRET)`. Timestamp skew > 5min is rejected. Auth (when needed) uses `Authorization: Bearer <ipet_token>` — token validated by `requireAuth(event)` in `server/utils/auth.ts`.
 - **`/api/admin/**`** (admin console): JWT auth. Admin login (`/api/admin/login`) checks against `ADMIN_USERNAME` / `ADMIN_PASSWORD` env vars (no DB user) and issues a 30-day JWT via `signJwt()`.
 
 ### Peer iPet backend integration
@@ -44,8 +44,8 @@ The `server/middleware/signature.ts` middleware **only inspects `/sdkapi/**`**. 
 This server is a **frontend-facing aggregator on top of a separate iPet hardware backend** (the "对方后台"). All HTTP calls to it live in `server/utils/peerBackend.ts`. Critical rules:
 
 - Account mapping: local phone `13800138000` → peer account `13800138000@qq.com`. Password is hardcoded to `'12345678'` for all users — peer backend is essentially trusted on our side.
-- On App login (`sdkapi/auth/login.post.ts`): we validate phone+SMS locally, then **synchronously** call `peerLogin()` to obtain `granwin_token` (the user-facing token), AWS Cognito pool, AWS IoT endpoint, and AWS temp creds. All of these are returned to the App so the App can directly talk to the peer backend for pet/device endpoints.
-- The `granwin_token` is the **only** session token. We do not sign our own JWTs for App users. We store `sha256(granwin_token) → { userId, phone }` in Redis (key prefix `peer_token:`) for fast O(1) reverse lookup in `requireAuth`.
+- On App login (`sdkapi/auth/login.post.ts`): we validate phone+SMS locally, then **synchronously** call `peerLogin()` to obtain `ipet_token` (the user-facing token), AWS Cognito pool, AWS IoT endpoint, and AWS temp creds. All of these are returned to the App so the App can directly talk to the peer backend for pet/device endpoints.
+- The `ipet_token` is the **only** session token. We do not sign our own JWTs for App users. We store `sha256(ipet_token) → { userId, phone }` in Redis (key prefix `peer_token:`) for fast O(1) reverse lookup in `requireAuth`.
 - `peerBackendPublicUrl` (default `http://49.234.39.11:8006`) is handed to the App as `peer.gatewayUrl` so the App calls peer endpoints directly, not through us.
 
 ### IDs and MySQL precision

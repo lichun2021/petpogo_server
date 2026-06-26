@@ -31,7 +31,7 @@ export default defineEventHandler(async (event) => {
 
   // 若账号从未设置密码（password 为空/null），视同初始密码 md5(123456)
   const DEFAULT_PWD = 'e10adc3949ba59abbe56e057f20f883e'
-  const storedPwd   = (user.password && user.password.length > 0) ? user.password : DEFAULT_PWD
+  const storedPwd = (user.password && user.password.length > 0) ? user.password : DEFAULT_PWD
 
   if (storedPwd !== passwordHash) {
     throw createError({ statusCode: 400, message: '密码错误' })
@@ -46,7 +46,7 @@ export default defineEventHandler(async (event) => {
   const tokenTtl = peerInfo.expiration || 43200
 
   // ── 写入 Redis Session ────────────────────────────────────────
-  const sessionKey = tokenSessionKey(peerInfo.granwin_token)
+  const sessionKey = tokenSessionKey(peerInfo.ipet_token)
   await redis.setex(sessionKey, tokenTtl, JSON.stringify({ userId, phone }))
 
   // ── 腾讯 IM ──────────────────────────────────────────────────
@@ -61,7 +61,7 @@ export default defineEventHandler(async (event) => {
     (user.vip_expire_at === null || new Date(user.vip_expire_at) > new Date())
 
   return {
-    token: peerInfo.granwin_token,
+    token: peerInfo.ipet_token,
     user: {
       id: userId,
       phone: user.phone,
@@ -77,7 +77,7 @@ export default defineEventHandler(async (event) => {
     },
     peer: {
       gatewayUrl: getPeerPublicUrl(),
-      granwinToken: peerInfo.granwin_token,
+      granwinToken: peerInfo.ipet_token,
       refreshToken: peerInfo.refresh_token,
       expiresIn: tokenTtl,
       iot: {

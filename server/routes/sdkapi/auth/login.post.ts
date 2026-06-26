@@ -75,12 +75,12 @@ export default defineEventHandler(async (event) => {
   await peerEnsureRegistered(normalizedPhone)
   const peerInfo = await peerLogin(normalizedPhone)
 
-  // granwin_token 有效期（对方返回 expiration 秒，默认 43200 = 12小时）
+  // ipet_token 有效期（对方返回 expiration 秒，默认 43200 = 12小时）
   const tokenTtl = peerInfo.expiration || 43200
 
-  // ── 将 granwin_token → 用户信息的映射写入 Redis ─────────────────
+  // ── 将 ipet_token → 用户信息的映射写入 Redis ─────────────────
   // 前端用此 token 访问本后台时，通过 Redis 反查 userId
-  const sessionKey = tokenSessionKey(peerInfo.granwin_token)
+  const sessionKey = tokenSessionKey(peerInfo.ipet_token)
   await redis.setex(sessionKey, tokenTtl, JSON.stringify({ userId, phone }))
 
   // ── 腾讯 IM UserSig（异步，不阻塞主流程）────────────────────────
@@ -102,8 +102,8 @@ export default defineEventHandler(async (event) => {
 
   return {
     // ─ 本后台相关 ────────────────────────────────────────────────
-    // token 与 granwin_token 是同一个，前端访问本后台用 Authorization: Bearer <token>
-    token: peerInfo.granwin_token,
+    // token 与 ipet_token 是同一个，前端访问本后台用 Authorization: Bearer <token>
+    token: peerInfo.ipet_token,
     user: {
       id: userId,
       phone: user.phone,
@@ -121,9 +121,9 @@ export default defineEventHandler(async (event) => {
     peer: {
       // 前端直连对方后台的公网地址
       gatewayUrl: getPeerPublicUrl(),
-      // granwin_token：前端请求对方后台时放入 token Header
-      granwinToken: peerInfo.granwin_token,
-      // refresh_token：granwin_token 过期后用于换新 token
+      // ipet_token：前端请求对方后台时放入 token Header
+      granwinToken: peerInfo.ipet_token,
+      // refresh_token：ipet_token 过期后用于换新 token
       refreshToken: peerInfo.refresh_token,
       // token 有效期（秒）
       expiresIn: tokenTtl,
