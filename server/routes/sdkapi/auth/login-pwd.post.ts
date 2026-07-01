@@ -12,6 +12,9 @@ export default defineEventHandler(async (event) => {
   const dialCode = String(nationNum).replace(/^\+/, '')
   const normalizedPhone = dialCode === '86' ? phone : `+${dialCode}${phone}`
 
+  const rateKey = RedisKey.userLoginFail(normalizedPhone)
+  await assertNotLocked(rateKey)
+
   const db = useDb()
 
   const [rows]: any = await db.query(
@@ -34,8 +37,11 @@ export default defineEventHandler(async (event) => {
   const storedPwd = (user.password && user.password.length > 0) ? user.password : DEFAULT_PWD
 
   if (storedPwd !== passwordHash) {
+    await recordLoginFailure(rateKey)
     throw createError({ statusCode: 400, message: '密码错误' })
   }
+
+  await clearLoginFailures(rateKey)
 
   const userId = String(user.id)
   const redis = useRedis()

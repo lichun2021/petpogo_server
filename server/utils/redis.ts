@@ -37,4 +37,8 @@ export const RedisKey = {
   nearbyStores:   (city: string, cat: string)=> `stores:city:${city}:${cat}`,
   imUserSig:      (userId: string)           => `im:usersig:${userId}`,
   lock:           (key: string)              => `lock:${key}`,
+  adminSession:   (adminId: string)          => `admin:session:${adminId}`,
+  adminCaptcha:   (token: string)            => `admin:captcha:${token}`,
+  adminLoginFail: (username: string)         => `admin:login_fail:${username}`,
+  userLoginFail:  (phone: string)            => `sdkapi:login_fail:${phone}`,
 }

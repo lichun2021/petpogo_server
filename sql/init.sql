@@ -571,3 +571,21 @@ ALTER TABLE t_sound_preset ADD INDEX IF NOT EXISTS idx_pet_type (pet_type);
 
 -- 同一物种下情绪标签唯一（一个物种只能有一个 happy）
 ALTER TABLE t_sound_preset ADD UNIQUE INDEX IF NOT EXISTS uk_pet_emotion (pet_type, emotion);
+
+-- ===========================
+-- 管理后台账号模块
+-- ===========================
+CREATE TABLE IF NOT EXISTS t_admin (
+  id              BIGINT       PRIMARY KEY COMMENT 'SnowflakeID',
+  username        VARCHAR(50)  UNIQUE NOT NULL,
+  password        VARCHAR(255) NOT NULL COMMENT 'scrypt格式: salt:hash',
+  nickname        VARCHAR(50),
+  role            VARCHAR(20)  DEFAULT 'admin' COMMENT 'super_admin=超级管理员 admin=普通管理员',
+  status          TINYINT      DEFAULT 1   COMMENT '1正常 2禁用',
+  last_login_at   DATETIME     NULL,
+  created_at      DATETIME     DEFAULT CURRENT_TIMESTAMP,
+  updated_at      DATETIME     ON UPDATE CURRENT_TIMESTAMP,
+  deleted         TINYINT      DEFAULT 0,
+  INDEX idx_username (username),
+  INDEX idx_status (status)
+) ENGINE=InnoDB COMMENT='后台管理员账号表';

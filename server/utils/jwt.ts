@@ -6,16 +6,16 @@ const getSecret = () => {
 }
 
 export interface JwtPayload {
-  userId: string
-  phone: string
-  role?: string
+  adminId: string
+  username: string
+  role: 'super_admin' | 'admin'
 }
 
 export async function signJwt(payload: JwtPayload): Promise<string> {
   return new SignJWT({ ...payload })
     .setProtectedHeader({ alg: 'HS256' })
     .setIssuedAt()
-    .setExpirationTime('30d')
+    .setExpirationTime('6h')
     .sign(getSecret())
 }
 
