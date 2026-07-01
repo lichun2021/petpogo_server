@@ -62,6 +62,33 @@
           </div>
         </div>
 
+        <!-- 滑动验证 -->
+        <div class="space-y-1.5">
+          <label class="block text-xs font-medium text-gray-500 uppercase tracking-wider">安全验证</label>
+          <div class="relative mx-auto select-none rounded-lg overflow-hidden" style="width:280px;height:40px;background:#faf3e8;border:1px solid #f0e0c8">
+            <!-- 进度填充 -->
+            <div class="absolute inset-y-0 left-0 pointer-events-none transition-none" :style="fillStyle" />
+            <!-- 目标标记 -->
+            <div v-if="captcha.token" class="absolute top-0 bottom-0 border-l-2 border-dashed pointer-events-none" :style="{ left: captcha.target + 'px', borderColor: '#d97706' }" />
+            <!-- 提示文字 -->
+            <div class="absolute inset-0 flex items-center justify-center text-xs pointer-events-none" :style="{ color: verified ? '#065f46' : '#a8917a' }">
+              {{ verified ? '验证通过' : (captchaLoading ? '加载中…' : '拖动滑块对准标记') }}
+            </div>
+            <!-- 滑块 -->
+            <div
+              class="absolute top-0 flex items-center justify-center rounded-lg shadow touch-none"
+              :class="verified ? 'cursor-default' : 'cursor-grab active:cursor-grabbing'"
+              :style="thumbStyle"
+              @pointerdown="startDrag"
+              @pointermove="onDrag"
+              @pointerup="endDrag"
+              @pointercancel="endDrag"
+            >
+              <UIcon :name="verified ? 'i-heroicons-check' : 'i-heroicons-chevron-double-right'" class="w-4 h-4 text-white" />
+            </div>
+          </div>
+        </div>
+
         <!-- 错误提示 -->
         <p v-if="errorMsg" class="text-xs text-red-500 flex items-center gap-1.5">
           <UIcon name="i-heroicons-exclamation-circle" class="w-4 h-4 flex-shrink-0" />
@@ -97,17 +124,85 @@ const loading  = ref(false)
 const showPwd  = ref(false)
 const errorMsg = ref('')
 
+// ── 滑动验证 ──────────────────────────────────────────
+const captcha        = reactive({ token: '', target: 0, trackWidth: 280, thumbWidth: 40 })
+const offset         = ref(0)
+const dragging       = ref(false)
+const verified       = ref(false)
+const captchaLoading = ref(false)
+let dragStartX = 0
+let dragStartOffset = 0
+
+const thumbStyle = computed(() => ({
+  left: offset.value + 'px',
+  width: captcha.thumbWidth + 'px',
+  height: '40px',
+  background: verified.value ? 'linear-gradient(135deg,#34d399,#059669)' : 'linear-gradient(135deg,#f59e0b,#ea580c)',
+}))
+const fillStyle = computed(() => ({
+  width: (offset.value + captcha.thumbWidth) + 'px',
+  background: verified.value ? 'rgba(16,185,129,0.22)' : 'rgba(245,158,11,0.16)',
+}))
+
+async function loadCaptcha() {
+  captchaLoading.value = true
+  verified.value = false
+  offset.value = 0
+  try {
+    const res: any = await $fetch('/api/admin/captcha')
+    captcha.token      = res.token
+    captcha.target     = res.target
+    captcha.trackWidth = res.trackWidth
+    captcha.thumbWidth = res.thumbWidth
+  } finally { captchaLoading.value = false }
+}
+onMounted(loadCaptcha)
+
+function startDrag(e: PointerEvent) {
+  if (verified.value) return
+  dragging.value = true
+  dragStartX = e.clientX
+  dragStartOffset = offset.value
+  ;(e.currentTarget as HTMLElement).setPointerCapture(e.pointerId)
+}
+function onDrag(e: PointerEvent) {
+  if (!dragging.value) return
+  const delta = e.clientX - dragStartX
+  const max = captcha.trackWidth - captcha.thumbWidth
+  offset.value = Math.min(max, Math.max(0, dragStartOffset + delta))
+}
+function endDrag() {
+  if (!dragging.value) return
+  dragging.value = false
+  verified.value = Math.abs(offset.value - captcha.target) <= 6
+  if (!verified.value) {
+    offset.value = 0
+    loadCaptcha()
+  }
+}
+
 async function login() {
   if (!form.username || !form.password) { errorMsg.value = '请输入账号和密码'; return }
+  if (!verified.value) { errorMsg.value = '请先完成滑动验证'; return }
   loading.value = true; errorMsg.value = ''
   try {
     const res: any = await $fetch('/api/admin/login', {
-      method: 'POST', body: { username: form.username, password: form.password }
+      method: 'POST',
+      body: {
+        username: form.username,
+        password: form.password,
+        captchaToken: captcha.token,
+        captchaOffset: offset.value,
+      },
     })
     localStorage.setItem('admin_token', res.token)
+    localStorage.setItem('admin_id', res.id)
+    localStorage.setItem('admin_role', res.role)
+    localStorage.setItem('admin_username', res.username)
     await navigateTo('/admin')
   } catch (e: any) {
     errorMsg.value = e.data?.message || '登录失败，请重试'
+    await loadCaptcha() // 验证码一次性使用，失败后需重新滑动
   } finally { loading.value = false }
 }
 </script>

@@ -21,6 +21,7 @@ const TAB_ICONS: Record<string, string> = {
   '/admin/feedback':    'i-heroicons-chat-bubble-left-ellipsis',
   '/admin/push':        'i-heroicons-bell',
   '/admin/settings':    'i-heroicons-cog-6-tooth',
+  '/admin/admins':      'i-heroicons-shield-check',
 }
 
 const TAB_TITLES: Record<string, string> = {
@@ -36,6 +37,7 @@ const TAB_TITLES: Record<string, string> = {
   '/admin/feedback':    '用户反馈',
   '/admin/push':        '推送测试',
   '/admin/settings':    '系统设置',
+  '/admin/admins':      '管理员管理',
 }
 
 function resolveTitleAndIcon(path: string): { title: string; icon: string } {

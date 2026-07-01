@@ -2,6 +2,8 @@
 // GET /api/admin/fix-video-status?dry=1  → 只看不改
 // GET /api/admin/fix-video-status        → 实际修复
 export default defineEventHandler(async (event) => {
+  requireSuperAdmin(event)
+
   const { dry = '1' } = getQuery(event)
   const db = useDb()
 

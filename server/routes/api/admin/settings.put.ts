@@ -2,6 +2,8 @@
 // Body: { key: string, value: string }  — 单条更新
 // 或    { batch: Array<{ key, value }> } — 批量更新
 export default defineEventHandler(async (event) => {
+  requireSuperAdmin(event)
+
   const db = useDb()
   const body = await readBody(event)
 

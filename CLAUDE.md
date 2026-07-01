@@ -36,8 +36,8 @@ Deploy SSH key is `lc.pem` in the repo root (gitignored). `.env` holds all secre
 
 The `server/middleware/signature.ts` middleware **only inspects `/sdkapi/**`**. Admin endpoints under `/api/**` are not signature-checked.
 
-- **`/sdkapi/**`** (mobile App): every request must carry `x-timestamp` (ms) and `x-signature` = `md5(timestamp + APP_API_SECRET)`. Timestamp skew > 5min is rejected. Auth (when needed) uses `Authorization: Bearer <ipet_token>` — token validated by `requireAuth(event)` in `server/utils/auth.ts`.
-- **`/api/admin/**`** (admin console): JWT auth. Admin login (`/api/admin/login`) checks against `ADMIN_USERNAME` / `ADMIN_PASSWORD` env vars (no DB user) and issues a 30-day JWT via `signJwt()`.
+- **`/sdkapi/**`** (mobile App): every request must carry `x-timestamp` (ms) and `x-signature` = `md5(timestamp + APP_API_SECRET)`. Timestamp skew > 5min is rejected. Auth (when needed) uses `Authorization: Bearer <ipet_token>` — token validated by `requireAuth(event)` in `server/utils/auth.ts`. `sdkapi/auth/login-pwd.post.ts` (password login) is rate-limited via `server/utils/loginRateLimit.ts`: 5 wrong passwords for the same phone locks that phone out for 15 minutes (`RedisKey.userLoginFail`).
+- **`/api/admin/**`** (admin console): JWT auth, enforced by `server/middleware/admin-auth.ts` (checks every `/api/admin/**` path except `login.post.ts` and `captcha.get.ts`). Admins live in `t_admin` (two roles: `super_admin` / `admin`), password hashed with `crypto.scrypt` (`server/utils/password.ts`). `/api/admin/login` is rate-limited the same way as App password login (`RedisKey.adminLoginFail`, 5 attempts / 15min lockout, checked before the captcha/password work), requires a solved slider captcha (`GET /api/admin/captcha` issues a single-use, 120s-TTL challenge in Redis, checked by `captchaToken`/`captchaOffset` in the login body) plus a username/password match against `t_admin`, and issues a 6h JWT via `signJwt()`. **Only one token is valid per admin at a time** — login writes `sha256(token)` to `RedisKey.adminSession(adminId)` (TTL 6h, matches the JWT), and the middleware rejects any token whose hash doesn't match the currently-stored one, so a new login silently invalidates the previous session; `POST /api/admin/logout` clears it early. On first boot with an empty `t_admin` table, `server/plugins/bootstrapAdmin.ts` seeds one `super_admin` row from the `ADMIN_USERNAME`/`ADMIN_PASSWORD` env vars — those env vars are bootstrap-only after that. Routes that need `super_admin` (managing other admins, `settings.put`, `push.post`, `fix-video-status`) call `requireSuperAdmin(event)` from `server/utils/adminAuth.ts`, which reads `event.context.admin` set by the middleware. The admin frontend's global `$fetch` is wrapped in `app/plugins/adminAuthInterceptor.client.ts` to redirect to `/admin/login` on any 401 (expired/kicked-out token).
 
 ### Peer iPet backend integration
 
@@ -101,7 +101,7 @@ All runtime config flows through `nuxt.config.ts` `runtimeConfig` (read via `use
 - `PEER_BACKEND_URL` (internal) / `PEER_BACKEND_PUBLIC_URL` (handed to App) — without these, App login dies with `503 对方后台地址未配置`
 - `APP_API_SECRET` — signature secret; mismatch = `403 Invalid signature`
 - `JWT_SECRET` — admin JWT signing
-- `ADMIN_USERNAME` / `ADMIN_PASSWORD` — admin login creds (defaults `admin` / `PetPogo@Admin2026`)
+- `ADMIN_USERNAME` / `ADMIN_PASSWORD` — bootstrap creds for the initial `t_admin` super_admin row, only used when that table is empty (defaults `admin` / `PetPogo@Admin2026`)
 - `MYSQL_*`, `REDIS_*`, `ALI_SMS_*`, `ALI_OSS_*`, `TENCENT_IM_*`, `AI_SERVICE_URL`
 
 Code, comments, and commit messages are in Chinese. Match the existing language when editing nearby strings/comments.

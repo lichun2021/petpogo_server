@@ -1,7 +1,7 @@
 // POST /api/admin/push — 管理后台推送接口（需管理员鉴权）
 
 export default defineEventHandler(async (event) => {
-
+  requireSuperAdmin(event)
 
   const body = await readBody(event)
   const { targetType, alias, title, content, extras } = body ?? {}

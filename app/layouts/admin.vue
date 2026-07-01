@@ -146,7 +146,12 @@
 const route = useRoute()
 const { tabs, activeTab, openTab, closeTab, closeOthers, closeAll, syncRoute } = useTabStore()
 
-const nav = [
+const isSuperAdmin = ref(false)
+onMounted(() => {
+  isSuperAdmin.value = localStorage.getItem('admin_role') === 'super_admin'
+})
+
+const navBase = [
   { to: '/admin',          label: '数据概览',    icon: 'i-heroicons-squares-2x2' },
   { to: '/admin/users',    label: '用户管理',    icon: 'i-heroicons-users' },
   { to: '/admin/devices',  label: '设备管理',    icon: 'i-heroicons-cpu-chip' },
@@ -160,6 +165,10 @@ const nav = [
   { to: '/admin/push',     label: '推送测试',    icon: 'i-heroicons-bell' },
   { to: '/admin/settings', label: '系统设置',    icon: 'i-heroicons-cog-6-tooth' },
 ]
+
+const nav = computed(() => isSuperAdmin.value
+  ? [...navBase, { to: '/admin/admins', label: '管理员管理', icon: 'i-heroicons-shield-check' }]
+  : navBase)
 
 // KeepAlive 配置：缓存所有已打开的 tab 页面组件
 const keepAliveOptions = computed(() => ({
@@ -219,7 +228,14 @@ function handleContextAction(key: string) {
 }
 
 function logout() {
+  const token = localStorage.getItem('admin_token')
+  if (token) {
+    $fetch('/api/admin/logout', { method: 'POST', headers: { Authorization: `Bearer ${token}` } }).catch(() => {})
+  }
   localStorage.removeItem('admin_token')
+  localStorage.removeItem('admin_id')
+  localStorage.removeItem('admin_role')
+  localStorage.removeItem('admin_username')
   navigateTo('/admin/login')
 }
 </script>
