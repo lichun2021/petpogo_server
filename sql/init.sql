@@ -1,6 +1,6 @@
 -- PetPogo 数据库初始化脚本
 -- MySQL 8.0+，支持 JSON / SPATIAL / 分区
--- 包含：基础表 + VIP字段 + AI分析表 + 帖子标签
+-- 包含：基础表 + 购买计划/积分/签到 + AI分析表 + 帖子标签
 
 CREATE DATABASE IF NOT EXISTS petpogo CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 USE petpogo;
@@ -9,39 +9,27 @@ USE petpogo;
 -- 用户模块
 -- ===========================
 CREATE TABLE IF NOT EXISTS t_user (
-  id              BIGINT       PRIMARY KEY COMMENT 'SnowflakeID',
-  phone           VARCHAR(20)  UNIQUE NOT NULL,
-  password        VARCHAR(100) COMMENT 'Login password, hashed',
-  nickname        VARCHAR(50),
-  avatar          VARCHAR(500),
-  gender          TINYINT      DEFAULT 0   COMMENT '0未知 1男 2女',
-  birthday        DATE,
-  bio             VARCHAR(200),
-  status          TINYINT      DEFAULT 1   COMMENT '1正常 2禁用',
-  vip_status      TINYINT      DEFAULT 0   COMMENT '0普通 1VIP',
-  vip_expire_at   DATETIME     NULL        COMMENT 'VIP到期时间，NULL=永久',
-  ai_daily_limit  INT          DEFAULT 10  COMMENT '每日AI调用上限，-1=无限制',
-  identity_id     VARCHAR(100) COMMENT '旧系统 AWS IoT identityId',
-  created_at      DATETIME     DEFAULT CURRENT_TIMESTAMP,
-  updated_at      DATETIME     ON UPDATE CURRENT_TIMESTAMP,
-  deleted         TINYINT      DEFAULT 0,
+  id                 BIGINT       PRIMARY KEY COMMENT 'SnowflakeID',
+  phone              VARCHAR(20)  UNIQUE NOT NULL,
+  password           VARCHAR(100) COMMENT 'Login password, hashed',
+  nickname           VARCHAR(50),
+  avatar             VARCHAR(500),
+  gender             TINYINT      DEFAULT 0   COMMENT '0未知 1男 2女',
+  birthday           DATE,
+  bio                VARCHAR(200),
+  status             TINYINT      DEFAULT 1   COMMENT '1正常 2禁用',
+  plan_type          TINYINT      DEFAULT 0   COMMENT '0=Free 1=Pro 2=ProMax',
+  plan_expire_at     DATETIME     NULL        COMMENT '当前计划到期时间，NULL=永久(Free)',
+  points_weekly      INT          DEFAULT 0   COMMENT '周积分(到期积分)，每周一按当前计划配额重置',
+  points_permanent   INT          DEFAULT 0   COMMENT '永久积分，不过期',
+  points_week_start  DATE         NULL        COMMENT '当前周积分对应的周一日期，用于惰性重置判断',
+  identity_id        VARCHAR(100) COMMENT '旧系统 AWS IoT identityId',
+  created_at         DATETIME     DEFAULT CURRENT_TIMESTAMP,
+  updated_at         DATETIME     ON UPDATE CURRENT_TIMESTAMP,
+  deleted            TINYINT      DEFAULT 0,
   INDEX idx_phone (phone),
   INDEX idx_status (status),
-  INDEX idx_vip (vip_status)
-) ENGINE=InnoDB;
-
--- ===========================
--- AI 使用量记录表（按天）
--- ===========================
-CREATE TABLE IF NOT EXISTS t_ai_usage (
-  id         BIGINT   PRIMARY KEY AUTO_INCREMENT,
-  user_id    BIGINT   NOT NULL,
-  use_date   DATE     NOT NULL  COMMENT '使用日期',
-  used_count INT      DEFAULT 0 COMMENT '当日已使用次数',
-  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-  updated_at DATETIME ON UPDATE CURRENT_TIMESTAMP,
-  UNIQUE KEY uk_user_date (user_id, use_date),
-  INDEX idx_user_id (user_id)
+  INDEX idx_plan (plan_type)
 ) ENGINE=InnoDB;
 
 
@@ -424,7 +412,6 @@ INSERT IGNORE INTO t_system_settings (`key`, `value`, label, description, type, 
   -- 通用
   ('app_name',              '萌宠帮',                      '应用名称',           '在通知、短信签名等处展示的应用名称',                       'text',    'general', 1),
   ('register_open',         '1',                           '开放注册',           '关闭后新用户无法注册，仅已有账号可登录',                   'boolean', 'general', 2),
-  ('ai_default_daily_limit','10',                          'AI默认每日上限',     '新注册用户默认的 AI 分析每日使用次数，-1=无限',           'number',  'general', 3),
   -- OSS
   ('oss_cdn_base_url',      'https://pet-20260430.oss-cn-shanghai.aliyuncs.com', 'OSS CDN 地址', '静态资源 CDN 基础地址，结尾不加 /', 'text', 'oss', 1);
 
@@ -589,3 +576,142 @@ CREATE TABLE IF NOT EXISTS t_admin (
   INDEX idx_username (username),
   INDEX idx_status (status)
 ) ENGINE=InnoDB COMMENT='后台管理员账号表';
+
+-- ===========================
+-- 迁移脚本（在已有数据库上执行，将旧的 vip_status/vip_expire_at/ai_daily_limit
+-- 迁移为 plan_type/plan_expire_at + 积分字段）：
+--
+-- ALTER TABLE t_user
+--   DROP INDEX idx_vip,
+--   ADD COLUMN plan_type TINYINT DEFAULT 0 COMMENT '0=Free 1=Pro 2=ProMax' AFTER status,
+--   CHANGE COLUMN vip_expire_at plan_expire_at DATETIME NULL COMMENT '当前计划到期时间，NULL=永久(Free)' AFTER plan_type,
+--   DROP COLUMN vip_status,
+--   DROP COLUMN ai_daily_limit,
+--   ADD COLUMN points_weekly INT DEFAULT 0 COMMENT '周积分(到期积分)，每周一按当前计划配额重置' AFTER plan_expire_at,
+--   ADD COLUMN points_permanent INT DEFAULT 0 COMMENT '永久积分，不过期' AFTER points_weekly,
+--   ADD COLUMN points_week_start DATE NULL COMMENT '当前周积分对应的周一日期，用于惰性重置判断' AFTER points_permanent,
+--   ADD INDEX idx_plan (plan_type);
+--
+-- DROP TABLE IF EXISTS t_ai_usage;
+--
+-- -- 补签功能上线时，给已有 t_plan 表追加 monthly_makeup_quota 列：
+-- ALTER TABLE t_plan ADD COLUMN monthly_makeup_quota INT DEFAULT 1 COMMENT '会员权益：每月可补签次数' AFTER permanent_points_grant;
+-- UPDATE t_plan SET monthly_makeup_quota=1 WHERE plan_type=0;
+-- UPDATE t_plan SET monthly_makeup_quota=3 WHERE plan_type=1;
+-- UPDATE t_plan SET monthly_makeup_quota=5 WHERE plan_type=2;
+--
+-- -- 补签功能上线时，给已有 t_checkin_log 表追加 is_makeup 列：
+-- ALTER TABLE t_checkin_log ADD COLUMN is_makeup TINYINT DEFAULT 0 COMMENT '0=当日正常签到 1=补签' AFTER streak_count;
+
+-- ===========================
+-- 购买计划模块（Free / Pro / ProMax）
+-- ===========================
+CREATE TABLE IF NOT EXISTS t_plan (
+  id                     BIGINT PRIMARY KEY AUTO_INCREMENT,
+  plan_type              TINYINT       NOT NULL UNIQUE COMMENT '0=Free 1=Pro 2=ProMax',
+  name                   VARCHAR(30)   NOT NULL,
+  price                  DECIMAL(10,2) DEFAULT 0,
+  duration_days          INT           NULL COMMENT '订阅周期天数，NULL=永久(仅Free)',
+  weekly_points_grant    INT           DEFAULT 0 COMMENT '到期积分：每周重置时发放的周积分额度',
+  permanent_points_grant INT           DEFAULT 0 COMMENT '永久积分：购买/续费时一次性发放',
+  monthly_makeup_quota   INT           DEFAULT 1 COMMENT '会员权益：每月可补签次数',
+  description            VARCHAR(500),
+  status                 TINYINT       DEFAULT 1,
+  sort_order             INT           DEFAULT 0,
+  created_at             DATETIME      DEFAULT CURRENT_TIMESTAMP,
+  updated_at             DATETIME      ON UPDATE CURRENT_TIMESTAMP
+) ENGINE=InnoDB COMMENT='购买计划配置表';
+
+INSERT IGNORE INTO t_plan (plan_type, name, price, duration_days, weekly_points_grant, permanent_points_grant, monthly_makeup_quota, description, sort_order) VALUES
+(0, 'Free',    0.00,  NULL, 70,  0,   1, '免费计划，每周赠送基础积分', 1),
+(1, 'Pro',     30.00, 30,   700, 100, 3, 'Pro 计划，每周赠送大量积分', 2),
+(2, 'ProMax',  98.00, 30,   2000, 300, 5, 'ProMax 计划，积分额度更高', 3);
+
+CREATE TABLE IF NOT EXISTS t_plan_order (
+  id          BIGINT PRIMARY KEY AUTO_INCREMENT,
+  user_id     BIGINT NOT NULL,
+  plan_id     BIGINT NOT NULL,
+  amount      DECIMAL(10,2),
+  status      TINYINT  DEFAULT 0 COMMENT '0待支付 1已支付(人工确认) 2已取消',
+  created_at  DATETIME DEFAULT CURRENT_TIMESTAMP,
+  paid_at     DATETIME NULL,
+  INDEX idx_user (user_id),
+  INDEX idx_status (status)
+) ENGINE=InnoDB COMMENT='计划购买订单表（占位，不接第三方支付）';
+
+-- ===========================
+-- 积分模块
+-- ===========================
+CREATE TABLE IF NOT EXISTS t_points_log (
+  id            BIGINT PRIMARY KEY AUTO_INCREMENT,
+  user_id       BIGINT NOT NULL,
+  direction     TINYINT COMMENT '1获得 2消耗',
+  points_type   TINYINT COMMENT '1周积分 2永久积分',
+  amount        INT     COMMENT '变动数量(正数)',
+  balance_after INT     COMMENT '变动后该类型余额',
+  reason        VARCHAR(100) COMMENT '如：AI图片分析消耗/每日签到奖励/连续签到奖励/购买Pro赠送',
+  ref_type      VARCHAR(30)  COMMENT 'ai_consumption/checkin/plan_order',
+  ref_id        VARCHAR(50),
+  created_at    DATETIME DEFAULT CURRENT_TIMESTAMP,
+  INDEX idx_user (user_id, created_at)
+) ENGINE=InnoDB COMMENT='积分流水表';
+
+CREATE TABLE IF NOT EXISTS t_points_consume_rule (
+  id            BIGINT PRIMARY KEY AUTO_INCREMENT,
+  consume_type  VARCHAR(50) NOT NULL UNIQUE COMMENT '消费类型标识，如 image_analyze/voice_analyze',
+  name          VARCHAR(50) COMMENT '后台展示名，如"图片情绪分析"',
+  unit_points   INT NOT NULL COMMENT '每单位消耗的积分数',
+  unit_basis    VARCHAR(20) DEFAULT 'per_call' COMMENT 'per_call=按次 per_unit=按上报数量(如每1k token)',
+  status        TINYINT DEFAULT 1,
+  sort_order    INT DEFAULT 0,
+  created_at    DATETIME DEFAULT CURRENT_TIMESTAMP,
+  updated_at    DATETIME ON UPDATE CURRENT_TIMESTAMP
+) ENGINE=InnoDB COMMENT='积分消费规则表（AI消费类型 -> 积分单价）';
+
+INSERT IGNORE INTO t_points_consume_rule (consume_type, name, unit_points, unit_basis, sort_order) VALUES
+('image_analyze', '图片情绪分析', 5, 'per_call', 1),
+('voice_analyze', '语音情绪分析', 5, 'per_call', 2);
+
+-- ===========================
+-- 签到模块
+-- ===========================
+CREATE TABLE IF NOT EXISTS t_checkin_log (
+  id            BIGINT PRIMARY KEY AUTO_INCREMENT,
+  user_id       BIGINT NOT NULL,
+  checkin_date  DATE NOT NULL,
+  streak_count  INT DEFAULT 1 COMMENT '截至当日的连续签到天数',
+  is_makeup     TINYINT DEFAULT 0 COMMENT '0=当日正常签到 1=补签',
+  created_at    DATETIME DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE KEY uk_user_date (user_id, checkin_date)
+) ENGINE=InnoDB COMMENT='签到记录表';
+
+CREATE TABLE IF NOT EXISTS t_checkin_rule (
+  id            BIGINT PRIMARY KEY AUTO_INCREMENT,
+  rule_type     TINYINT COMMENT '1每日签到奖励 2连续签到奖励',
+  streak_days   INT DEFAULT 1 COMMENT '连续天数门槛；每日签到奖励固定为1',
+  points_amount INT NOT NULL,
+  points_type   TINYINT COMMENT '1周积分 2永久积分',
+  name          VARCHAR(50) COMMENT '如"每日签到""连续3天""连续7天"',
+  status        TINYINT DEFAULT 1,
+  sort_order    INT DEFAULT 0,
+  created_at    DATETIME DEFAULT CURRENT_TIMESTAMP,
+  updated_at    DATETIME ON UPDATE CURRENT_TIMESTAMP
+) ENGINE=InnoDB COMMENT='签到奖励档位表';
+
+INSERT IGNORE INTO t_checkin_rule (rule_type, streak_days, points_amount, points_type, name, sort_order) VALUES
+(1, 1, 2,  2, '每日签到', 1),
+(2, 3, 10, 2, '连续3天',  2),
+(2, 7, 30, 2, '连续7天',  3),
+(2, 15, 80, 2, '连续15天', 4),
+(2, 30, 200, 2, '连续30天', 5);
+
+CREATE TABLE IF NOT EXISTS t_checkin_claim_log (
+  id          BIGINT PRIMARY KEY AUTO_INCREMENT,
+  user_id     BIGINT NOT NULL,
+  rule_id     BIGINT NOT NULL,
+  period_key  VARCHAR(20) COMMENT '每日奖励=日期；连续奖励=本次连续签到的起始日期',
+  claimed_at  DATETIME DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE KEY uk_user_rule_period (user_id, rule_id, period_key)
+) ENGINE=InnoDB COMMENT='签到奖励领取记录表';
+  UNIQUE KEY uk_user_rule_period (user_id, rule_id, period_key)
+) ENGINE=InnoDB COMMENT='签到奖励领取记录表';

@@ -37,7 +37,7 @@ export default defineEventHandler(async (event) => {
 
   // 查询用户（用规范化手机号）
   const [rows]: any = await db.query(
-    'SELECT id, phone, nickname, avatar, status, vip_status, vip_expire_at FROM t_user WHERE phone=? AND deleted=0 LIMIT 1',
+    'SELECT id, phone, nickname, avatar, status, plan_type, plan_expire_at FROM t_user WHERE phone=? AND deleted=0 LIMIT 1',
     [normalizedPhone]
   )
   let user = rows[0]
@@ -56,13 +56,11 @@ export default defineEventHandler(async (event) => {
     const nickname = `宠友${normalizedPhone.slice(-4)}`
     const defaultPassword = 'e10adc3949ba59abbe56e057f20f883e' // md5(123456)
 
-    // 新用户 AI 每日上限从系统设置读取
-    const aiLimit = await getSettingNumber('ai_default_daily_limit', 10)
     await db.query(
-      'INSERT INTO t_user(id, phone, password, nickname, status, ai_daily_limit, created_at) VALUES(?,?,?,?,1,?,NOW())',
-      [id, normalizedPhone, defaultPassword, nickname, aiLimit]
+      'INSERT INTO t_user(id, phone, password, nickname, status, plan_type, created_at) VALUES(?,?,?,?,1,0,NOW())',
+      [id, normalizedPhone, defaultPassword, nickname]
     )
-    user = { id, phone: normalizedPhone, nickname, avatar: null, vip_status: 0, vip_expire_at: null }
+    user = { id, phone: normalizedPhone, nickname, avatar: null, plan_type: 0, plan_expire_at: null }
   }
 
   if (user.status === 2) {
@@ -96,9 +94,8 @@ export default defineEventHandler(async (event) => {
     )
   }
 
-  // VIP 判断
-  const isVip = user.vip_status === 1 &&
-    (user.vip_expire_at === null || new Date(user.vip_expire_at) > new Date())
+  // 计划信息 + 积分余额
+  const points = await getPointsBalance(userId)
 
   return {
     // ─ 本后台相关 ────────────────────────────────────────────────
@@ -109,8 +106,9 @@ export default defineEventHandler(async (event) => {
       phone: user.phone,
       nickname: user.nickname,
       avatar: user.avatar,
-      isVip,
-      vipExpireAt: user.vip_expire_at ? new Date(user.vip_expire_at).toISOString() : null,
+      planType: user.plan_type,
+      planExpireAt: user.plan_expire_at ? new Date(user.plan_expire_at).toISOString() : null,
+      points,
     },
     im: {
       sdkAppId: 1600139420,

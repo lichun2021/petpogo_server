@@ -18,7 +18,7 @@ export default defineEventHandler(async (event) => {
   const db = useDb()
 
   const [rows]: any = await db.query(
-    'SELECT id, phone, nickname, avatar, password, status, vip_status, vip_expire_at FROM t_user WHERE phone=? AND deleted=0 LIMIT 1',
+    'SELECT id, phone, nickname, avatar, password, status, plan_type, plan_expire_at FROM t_user WHERE phone=? AND deleted=0 LIMIT 1',
     [normalizedPhone]
   )
   const user = rows[0]
@@ -63,8 +63,7 @@ export default defineEventHandler(async (event) => {
     await redis.setex(sigKey, 86400 * 6, userSig)
   }
 
-  const isVip = user.vip_status === 1 &&
-    (user.vip_expire_at === null || new Date(user.vip_expire_at) > new Date())
+  const points = await getPointsBalance(userId)
 
   return {
     token: peerInfo.ipet_token,
@@ -73,8 +72,9 @@ export default defineEventHandler(async (event) => {
       phone: user.phone,
       nickname: user.nickname,
       avatar: user.avatar,
-      isVip,
-      vipExpireAt: user.vip_expire_at ? new Date(user.vip_expire_at).toISOString() : null,
+      planType: user.plan_type,
+      planExpireAt: user.plan_expire_at ? new Date(user.plan_expire_at).toISOString() : null,
+      points,
     },
     im: {
       sdkAppId: 1600139420,

@@ -5,24 +5,13 @@
 //   imageUrl  string   OSS 图片 URL（必填）
 //   petId?    string   宠物ID（可选）
 //
-// 响应：分析结果 + 剩余配额
+// 响应：分析结果
+// 注：积分消耗由 AI 服务事后调用 POST /openapi/ai/consumption 上报，本接口不再管理积分
 
 import axios from 'axios'
 
 export default defineEventHandler(async (event) => {
   const user = await requireAuth(event)
-
-  // ── 1. 检查配额 ─────────────────────────────────
-  console.log('[AI图片] Step1: 检查配额, userId=', user.userId)
-  const quotaBefore = await checkAiQuota(user.userId)
-  console.log('[AI图片] Step1 完成: quota=', JSON.stringify(quotaBefore))
-  if (!quotaBefore.allowed) {
-    throw createError({
-      statusCode: 429,
-      message: `今日 AI 使用次数已达上限（${quotaBefore.limit} 次），升级 VIP 享无限次数`,
-      data: { used: quotaBefore.used, limit: quotaBefore.limit, remaining: 0 },
-    })
-  }
 
   const { imageUrl, petId } = await readBody(event)
   console.log('[AI图片] Step2: 收到 imageUrl=', imageUrl, 'petId=', petId)
@@ -55,24 +44,14 @@ export default defineEventHandler(async (event) => {
     })
   }
 
-  // ── 3. AI 有响应即扣一次配额（不管是否识别出宠物）────────
-  console.log('[AI图片] Step5: 扣减配额')
-  const quotaAfter = await incrAiUsage(user.userId)
-  console.log('[AI图片] Step5 完成: remaining=', quotaAfter.remaining)
-
   console.log('[AI图片] Step4: AI结果 success=', aiResult?.success)
   if (!aiResult?.success) {
-    // AI 跑了但不是宠物（或其他拒绝原因）→ 已扣次数，正常返回结果给前端
+    // AI 跑了但不是宠物（或其他拒绝原因）→ 正常返回结果给前端
     const reason = aiResult?.error ?? aiResult?.message ?? aiResult?.detail ?? 'AI 分析失败，请检查图片文件'
     console.warn('[AI图片] AI拒绝分析:', reason)
     return {
       success:  false,
       reason,
-      _quota: {
-        used:      quotaAfter.used,
-        limit:     quotaAfter.limit,
-        remaining: quotaAfter.remaining,
-      },
     }
   }
 
@@ -120,10 +99,5 @@ export default defineEventHandler(async (event) => {
     advice:       aiResult.advice     ?? '',
     modelCount:   aiResult.emotion_model_count ?? 0,
     processingMs: Math.round(aiResult.processing_time_ms ?? 0),
-    _quota: {
-      used:      quotaAfter.used,
-      limit:     quotaAfter.limit,
-      remaining: quotaAfter.remaining,
-    },
   }
 })

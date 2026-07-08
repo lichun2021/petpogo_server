@@ -1,5 +1,5 @@
 // 管理员账号密码登录（不走手机号/短信）
-const CAPTCHA_TOLERANCE = 6 // px，滑块允许的误差
+const CAPTCHA_TOLERANCE = 8 // px，滑块允许的误差（图形验证码需要更宽容）
 
 export default defineEventHandler(async (event) => {
   const { username, password, captchaToken, captchaOffset } = await readBody(event)

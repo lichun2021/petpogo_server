@@ -5,22 +5,13 @@
 //   audioUrl  string   OSS 音频 URL（必填）
 //   petId?    string   宠物ID（可选）
 //
-// 响应：分析结果 + 剩余配额
+// 响应：分析结果
+// 注：积分消耗由 AI 服务事后调用 POST /openapi/ai/consumption 上报，本接口不再管理积分
 
 import axios from 'axios'
 
 export default defineEventHandler(async (event) => {
   const user = await requireAuth(event)
-
-  // ── 1. 检查配额 ─────────────────────────────────
-  const quotaBefore = await checkAiQuota(user.userId)
-  if (!quotaBefore.allowed) {
-    throw createError({
-      statusCode: 429,
-      message: `今日 AI 使用次数已达上限（${quotaBefore.limit} 次），升级 VIP 享无限次数`,
-      data: { used: quotaBefore.used, limit: quotaBefore.limit, remaining: 0 },
-    })
-  }
 
   const { audioUrl, petId } = await readBody(event)
   if (!audioUrl) {
@@ -48,19 +39,11 @@ export default defineEventHandler(async (event) => {
     })
   }
 
-  // ── 3. AI 有响应即扣一次配额（不管是否识别出宠物）────────
-  const quotaAfter = await incrAiUsage(user.userId)
-
   if (!aiResult?.success) {
     const reason = aiResult?.error ?? aiResult?.message ?? aiResult?.detail ?? 'AI 分析失败，请检查音频文件格式（支持 WAV / MP3）'
     return {
       success: false,
       reason,
-      _quota: {
-        used:      quotaAfter.used,
-        limit:     quotaAfter.limit,
-        remaining: quotaAfter.remaining,
-      },
     }
   }
 
@@ -104,10 +87,5 @@ export default defineEventHandler(async (event) => {
     top3,
     advice:  aiResult.advice ?? '',
     processingMs: Math.round(aiResult.processing_time_ms ?? 0),
-    _quota: {
-      used:      quotaAfter.used,
-      limit:     quotaAfter.limit,
-      remaining: quotaAfter.remaining,
-    },
   }
 })

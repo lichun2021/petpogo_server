@@ -1,18 +1,23 @@
 import crypto from 'node:crypto'
 
-// GET /api/admin/captcha —— 生成登录滑块验证挑战（无需登录）
-const TRACK_WIDTH = 280
-const THUMB_WIDTH = 40
-const MARGIN = 10
+// GET /api/admin/captcha —— 生成图形滑块验证码（背景图 + 拼图块）
 const CAPTCHA_TTL = 120 // 秒，挑战有效期
 
 export default defineEventHandler(async (event) => {
   const token = crypto.randomUUID()
-  const maxTarget = TRACK_WIDTH - THUMB_WIDTH - MARGIN
-  const target = MARGIN + Math.floor(Math.random() * (maxTarget - MARGIN))
+
+  // 生成图形验证码（背景图 + 拼图块 + 目标位置）
+  const { generateSlideCaptcha } = await import('../../utils/slideCaptcha')
+  const { backgroundBase64, puzzleBase64, offsetX } = await generateSlideCaptcha()
 
   const redis = useRedis()
-  await redis.setex(RedisKey.adminCaptcha(token), CAPTCHA_TTL, String(target))
+  await redis.setex(RedisKey.adminCaptcha(token), CAPTCHA_TTL, String(offsetX))
 
-  return { token, target, trackWidth: TRACK_WIDTH, thumbWidth: THUMB_WIDTH }
+  return {
+    token,
+    backgroundImage: backgroundBase64, // 带缺口的背景图（base64）
+    puzzleImage: puzzleBase64,         // 拼图块图片（base64）
+    puzzleWidth: 50,                   // 拼图块宽度
+    trackWidth: 300,                   // 滑轨宽度（前端显示用）
+  }
 })
