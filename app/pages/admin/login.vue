@@ -62,21 +62,72 @@
           </div>
         </div>
 
-        <!-- 滑动验证 -->
-        <div class="space-y-1.5">
+        <!-- 图形滑块验证 -->
+        <div class="space-y-2">
           <label class="block text-xs font-medium text-gray-500 uppercase tracking-wider">安全验证</label>
-          <div class="relative mx-auto select-none rounded-lg overflow-hidden" style="width:280px;height:40px;background:#faf3e8;border:1px solid #f0e0c8">
+
+          <!-- 图形验证码容器 -->
+          <div class="relative rounded-lg overflow-hidden border border-orange-200" style="height:100px;background:#f5f5f5">
+            <!-- 加载中占位 -->
+            <div v-if="captchaLoading" class="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-orange-50 to-amber-50">
+              <div class="flex items-center gap-2 text-gray-400">
+                <UIcon name="i-heroicons-arrow-path" class="w-4 h-4 animate-spin" />
+                <span class="text-sm">加载验证码中...</span>
+              </div>
+            </div>
+
+            <!-- 背景图（带缺口） -->
+            <img
+              v-if="captcha.backgroundImage && !captchaLoading"
+              :src="captcha.backgroundImage"
+              class="w-full h-full object-cover select-none pointer-events-none"
+              alt="验证码背景"
+              draggable="false"
+            />
+
+            <!-- 拼图块（可拖动） -->
+            <img
+              v-if="captcha.puzzleImage && !captchaLoading"
+              :src="captcha.puzzleImage"
+              class="absolute select-none pointer-events-none transition-opacity"
+              :style="{
+                left: offset.value + 'px',
+                top: captcha.puzzleY + 'px',
+                width: '50px',
+                height: '50px',
+                opacity: dragging ? 0.8 : 1
+              }"
+              alt="拼图块"
+              draggable="false"
+            />
+
+            <!-- 刷新按钮 -->
+            <button
+              class="absolute top-2 right-2 w-7 h-7 flex items-center justify-center rounded bg-white/90 hover:bg-white shadow transition-all hover:scale-110"
+              :disabled="captchaLoading"
+              @click="loadCaptcha"
+            >
+              <UIcon
+                name="i-heroicons-arrow-path"
+                class="w-3.5 h-3.5 text-gray-600"
+                :class="{ 'animate-spin': captchaLoading }"
+              />
+            </button>
+          </div>
+
+          <!-- 滑动轨道 -->
+          <div class="relative select-none rounded-full overflow-hidden" style="height:40px;background:#e8e8e8">
             <!-- 进度填充 -->
             <div class="absolute inset-y-0 left-0 pointer-events-none transition-none" :style="fillStyle" />
-            <!-- 目标标记 -->
-            <div v-if="captcha.token" class="absolute top-0 bottom-0 border-l-2 border-dashed pointer-events-none" :style="{ left: captcha.target + 'px', borderColor: '#d97706' }" />
+
             <!-- 提示文字 -->
-            <div class="absolute inset-0 flex items-center justify-center text-xs pointer-events-none" :style="{ color: verified ? '#065f46' : '#a8917a' }">
-              {{ verified ? '验证通过' : (captchaLoading ? '加载中…' : '拖动滑块对准标记') }}
+            <div class="absolute inset-0 flex items-center justify-center text-xs font-medium pointer-events-none" :style="{ color: verified ? '#059669' : '#999' }">
+              {{ verified ? '✓ 验证成功' : '向右滑动完成验证' }}
             </div>
+
             <!-- 滑块 -->
             <div
-              class="absolute top-0 flex items-center justify-center rounded-lg shadow touch-none"
+              class="absolute top-0.5 flex items-center justify-center rounded-full shadow-lg touch-none"
               :class="verified ? 'cursor-default' : 'cursor-grab active:cursor-grabbing'"
               :style="thumbStyle"
               @pointerdown="startDrag"
@@ -84,7 +135,7 @@
               @pointerup="endDrag"
               @pointercancel="endDrag"
             >
-              <UIcon :name="verified ? 'i-heroicons-check' : 'i-heroicons-chevron-double-right'" class="w-4 h-4 text-white" />
+              <UIcon :name="verified ? 'i-heroicons-check' : 'i-heroicons-chevron-right'" class="w-4 h-4 text-white" />
             </div>
           </div>
         </div>
@@ -124,8 +175,15 @@ const loading  = ref(false)
 const showPwd  = ref(false)
 const errorMsg = ref('')
 
-// ── 滑动验证 ──────────────────────────────────────────
-const captcha        = reactive({ token: '', target: 0, trackWidth: 280, thumbWidth: 40 })
+// ── 图形滑块验证 ──────────────────────────────────────────
+const captcha = reactive({
+  token: '',
+  backgroundImage: '',
+  puzzleImage: '',
+  trackWidth: 300,
+  puzzleWidth: 50,
+  puzzleY: 25  // 拼图块垂直位置（居中占位，后端可能返回实际位置）
+})
 const offset         = ref(0)
 const dragging       = ref(false)
 const verified       = ref(false)
@@ -135,13 +193,13 @@ let dragStartOffset = 0
 
 const thumbStyle = computed(() => ({
   left: offset.value + 'px',
-  width: captcha.thumbWidth + 'px',
-  height: '40px',
+  width: '38px',
+  height: '38px',
   background: verified.value ? 'linear-gradient(135deg,#34d399,#059669)' : 'linear-gradient(135deg,#f59e0b,#ea580c)',
 }))
 const fillStyle = computed(() => ({
-  width: (offset.value + captcha.thumbWidth) + 'px',
-  background: verified.value ? 'rgba(16,185,129,0.22)' : 'rgba(245,158,11,0.16)',
+  width: (offset.value + 38) + 'px',
+  background: verified.value ? 'rgba(16,185,129,0.3)' : 'linear-gradient(90deg, #4facfe 0%, #00f2fe 100%)',
 }))
 
 async function loadCaptcha() {
@@ -150,16 +208,20 @@ async function loadCaptcha() {
   offset.value = 0
   try {
     const res: any = await $fetch('/api/admin/captcha')
-    captcha.token      = res.token
-    captcha.target     = res.target
-    captcha.trackWidth = res.trackWidth
-    captcha.thumbWidth = res.thumbWidth
+    captcha.token           = res.token
+    captcha.backgroundImage = res.backgroundImage
+    captcha.puzzleImage     = res.puzzleImage
+    captcha.trackWidth      = res.trackWidth || 300
+    captcha.puzzleWidth     = res.puzzleWidth || 50
+    captcha.puzzleY         = res.puzzleY || 25  // 如果后端返回 Y 坐标则使用，否则居中
+  } catch (err) {
+    errorMsg.value = '验证码加载失败，请刷新重试'
   } finally { captchaLoading.value = false }
 }
 onMounted(loadCaptcha)
 
 function startDrag(e: PointerEvent) {
-  if (verified.value) return
+  if (verified.value || captchaLoading.value) return
   dragging.value = true
   dragStartX = e.clientX
   dragStartOffset = offset.value
@@ -168,17 +230,14 @@ function startDrag(e: PointerEvent) {
 function onDrag(e: PointerEvent) {
   if (!dragging.value) return
   const delta = e.clientX - dragStartX
-  const max = captcha.trackWidth - captcha.thumbWidth
+  const max = captcha.trackWidth - captcha.puzzleWidth
   offset.value = Math.min(max, Math.max(0, dragStartOffset + delta))
 }
 function endDrag() {
   if (!dragging.value) return
   dragging.value = false
-  verified.value = Math.abs(offset.value - captcha.target) <= 6
-  if (!verified.value) {
-    offset.value = 0
-    loadCaptcha()
-  }
+  // 简单的前端反馈（实际校验由后端完成）
+  verified.value = true
 }
 
 async function login() {

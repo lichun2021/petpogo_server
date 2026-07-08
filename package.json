@@ -21,6 +21,7 @@
     "jose": "^5.9.3",
     "mysql2": "^3.9.4",
     "nuxt": "^4.4.4",
+    "sharp": "^0.35.3",
     "tls-sig-api-v2": "^1.0.2"
   },
   "devDependencies": {
