@@ -33,7 +33,7 @@
             <td class="py-3 px-4">
               <UBadge :label="row.direction === 1 ? '获得' : '消耗'" :color="row.direction === 1 ? 'green' : 'amber'" variant="subtle" size="xs" />
             </td>
-            <td class="py-3 px-4 text-xs text-stone-500">{{ row.points_type === 1 ? '周积分' : '永久积分' }}</td>
+            <td class="py-3 px-4 text-xs text-stone-500">{{ row.type_code || (row.points_type === 1 ? '周积分' : '永久积分') }}</td>
             <td class="py-3 px-4">{{ row.direction === 1 ? '+' : '-' }}{{ row.amount }}</td>
             <td class="py-3 px-4">{{ row.balance_after }}</td>
             <td class="py-3 px-4 text-xs text-stone-500">{{ row.reason }}</td>

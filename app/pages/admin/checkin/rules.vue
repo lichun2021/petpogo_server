@@ -33,7 +33,7 @@
             <td class="py-3 px-4">{{ row.name }}</td>
             <td class="py-3 px-4">{{ row.rule_type === 1 ? '-' : `${row.streak_days} 天` }}</td>
             <td class="py-3 px-4">{{ row.points_amount }}</td>
-            <td class="py-3 px-4 text-xs text-stone-500">{{ row.points_type === 1 ? '周积分' : '永久积分' }}</td>
+            <td class="py-3 px-4 text-xs text-stone-500">{{ typeName(row.points_type_code) }}</td>
             <td class="py-3 px-4">
               <UBadge :label="row.status === 1 ? '启用' : '停用'" :color="row.status === 1 ? 'green' : 'red'" variant="subtle" size="xs" />
             </td>
@@ -81,16 +81,15 @@
           </div>
           <div>
             <label class="text-xs text-stone-500 font-medium block mb-1">积分类型</label>
-            <div class="flex gap-2">
-              <button
-                :class="['flex-1 py-1.5 rounded-lg text-xs font-medium border transition-all', modal.pointsType === 1 ? 'bg-amber-500 text-white border-amber-500' : 'bg-white text-stone-500 border-stone-200']"
-                @click="modal.pointsType = 1"
-              >周积分</button>
-              <button
-                :class="['flex-1 py-1.5 rounded-lg text-xs font-medium border transition-all', modal.pointsType === 2 ? 'bg-amber-500 text-white border-amber-500' : 'bg-white text-stone-500 border-stone-200']"
-                @click="modal.pointsType = 2"
-              >永久积分</button>
-            </div>
+            <select
+              v-model="modal.pointsTypeCode"
+              class="w-full rounded-lg text-sm py-1.5 px-2 focus:border-amber-400 focus:ring-amber-400"
+              style="border-color: #e7e5e4"
+            >
+              <option v-for="t in pointTypes" :key="t.type_code" :value="t.type_code">
+                {{ t.name }}（{{ t.expire_days === 0 ? '永久' : `${t.expire_days}天` }}）
+              </option>
+            </select>
           </div>
           <div>
             <label class="text-xs text-stone-500 font-medium block mb-1">排序（越小越靠前）</label>
@@ -130,15 +129,27 @@
 defineOptions({ name: 'AdminCheckinRules' })
 definePageMeta({ layout: 'admin' })
 
-const toast   = useToast()
-const loading = ref(true)
-const list    = ref<any[]>([])
+const toast       = useToast()
+const loading     = ref(true)
+const list        = ref<any[]>([])
+const pointTypes  = ref<any[]>([])
+
+// 积分类型 code → 显示名（含有效期提示）
+function typeName(code: string) {
+  const t = pointTypes.value.find(p => p.type_code === code)
+  if (!t) return code
+  return `${t.name}${t.expire_days === 0 ? '(永久)' : `(${t.expire_days}天)`}`
+}
 
 async function loadList() {
   loading.value = true
   try {
-    const d = await $fetch<any>('/api/admin/checkin/rules')
-    list.value = d.list
+    const [d, pt] = await Promise.all([
+      $fetch<any>('/api/admin/checkin/rules'),
+      $fetch<any>('/api/admin/points/config'),
+    ])
+    list.value       = d.list
+    pointTypes.value = pt.list
   } finally {
     loading.value = false
   }
@@ -150,7 +161,7 @@ const modal = reactive({
   ruleType: 1,
   streakDays: 1,
   pointsAmount: 1,
-  pointsType: 2,
+  pointsTypeCode: 'checkin',
   name: '',
   sortOrder: 0,
   status: 1,
@@ -161,13 +172,13 @@ function openModal(row?: any) {
   if (row) {
     Object.assign(modal, {
       show: true, editingId: row.id, ruleType: row.rule_type, streakDays: row.streak_days,
-      pointsAmount: row.points_amount, pointsType: row.points_type, name: row.name,
+      pointsAmount: row.points_amount, pointsTypeCode: row.points_type_code || 'checkin', name: row.name,
       sortOrder: row.sort_order, status: row.status,
     })
   } else {
     Object.assign(modal, {
       show: true, editingId: null, ruleType: 1, streakDays: 1, pointsAmount: 1,
-      pointsType: 2, name: '', sortOrder: 0, status: 1,
+      pointsTypeCode: 'checkin', name: '', sortOrder: 0, status: 1,
     })
   }
 }
@@ -180,7 +191,7 @@ async function save() {
       rule_type: modal.ruleType,
       streak_days: modal.ruleType === 1 ? 1 : modal.streakDays,
       points_amount: modal.pointsAmount,
-      points_type: modal.pointsType,
+      points_type_code: modal.pointsTypeCode,
       name: modal.name.trim(),
       sort_order: modal.sortOrder,
       status: modal.status,

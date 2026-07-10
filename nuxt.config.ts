@@ -83,6 +83,8 @@ export default defineNuxtConfig({
     peerBackendSecret: process.env.PEER_BACKEND_SECRET || '',
     openapiKey:    process.env.OPENAPI_KEY    || 'ce96786dcc394fddeb521d0e',
     openapiSecret: process.env.OPENAPI_SECRET || 'bec1adf7ad77c6e38d3a7599926d9b4203b3ff34f797c2cf',
+    // 内部定时任务密钥（cron 调 /api/internal/** 时带在 header）
+    internalTaskKey: process.env.INTERNAL_TASK_KEY || 'petpogo_internal_task_2026',
     public: {
       ossCdnBaseUrl: process.env.OSS_CDN_BASE_URL || 'https://pet-20260430.oss-cn-shanghai.aliyuncs.com',
       tencentImSdkAppId: '1600139420',

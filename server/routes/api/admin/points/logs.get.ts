@@ -32,8 +32,8 @@ export default defineEventHandler(async (event) => {
   )
 
   const [rows]: any = await db.query(
-    `SELECT l.id, l.user_id, u.phone, u.nickname, l.direction, l.points_type, l.amount,
-            l.balance_after, l.reason, l.ref_type, l.ref_id, l.created_at
+    `SELECT l.id, l.user_id, u.phone, u.nickname, l.direction, l.points_type, l.type_code, l.amount,
+            l.balance_after, l.expire_at, l.reason, l.ref_type, l.ref_id, l.created_at
      FROM t_points_log l
      LEFT JOIN t_user u ON u.id = l.user_id
      ${where}

@@ -9,7 +9,7 @@ export default defineEventHandler(async (event) => {
     rule_type,
     streak_days,
     points_amount,
-    points_type,
+    points_type_code = 'checkin',
     name,
     sort_order,
     status,
@@ -20,7 +20,7 @@ export default defineEventHandler(async (event) => {
   if (!row) throw createError({ statusCode: 404, message: '档位不存在' })
 
   if (![1, 2].includes(rule_type)) throw createError({ statusCode: 400, message: 'rule_type 无效' })
-  if (![1, 2].includes(points_type)) throw createError({ statusCode: 400, message: 'points_type 无效' })
+  if (!points_type_code?.trim()) throw createError({ statusCode: 400, message: 'points_type_code 无效' })
   if (!points_amount || Number(points_amount) <= 0) throw createError({ statusCode: 400, message: 'points_amount 必须大于0' })
   if (!name?.trim()) throw createError({ statusCode: 400, message: '档位名称不能为空' })
   if (rule_type === 2 && (!streak_days || Number(streak_days) < 1)) {
@@ -31,13 +31,13 @@ export default defineEventHandler(async (event) => {
 
   await db.query(
     `UPDATE t_checkin_rule
-        SET rule_type=?, streak_days=?, points_amount=?, points_type=?, name=?, sort_order=?, status=?
+        SET rule_type=?, streak_days=?, points_amount=?, points_type_code=?, name=?, sort_order=?, status=?
       WHERE id=?`,
     [
       rule_type,
       rule_type === 1 ? 1 : Number(streak_days),
       Number(points_amount),
-      points_type,
+      points_type_code.trim(),
       name.trim(),
       Number(sort_order) || 0,
       statusVal,

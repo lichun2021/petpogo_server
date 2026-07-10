@@ -1,0 +1,8 @@
+# 1. 设置密钥（与 .env 里 INTERNAL_TASK_KEY 一致，默认 petpogo_internal_task_2026）
+#    建议改成随机串，写进 .env 的 INTERNAL_TASK_KEY
+
+# 2. 编辑 crontab
+crontab -e
+# curl -sS -X POST -H "x-task-key: petpogo_internal_task_2026" http://127.0.0.1:3000/api/internal/grant-scheduled
+# 3. 加入（每天凌晨 3:00 跑一次，日志写到 logs/grant.log）
+0 3 * * * curl -sS -X POST -H "x-task-key: petpogo_internal_task_2026" http://127.0.0.1:3000/api/internal/grant-scheduled >> /data/petpogo-server/logs/grant.log 2>&1

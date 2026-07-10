@@ -6,7 +6,7 @@ export default defineEventHandler(async (event) => {
   if (!id) throw createError({ statusCode: 400, message: 'ID 无效' })
 
   const db = useDb()
-  const [[order]]: any = await db.query('SELECT * FROM t_plan_order WHERE id=? LIMIT 1', [id])
+  const [[order]]: any = await db.query('SELECT user_id, plan_id, period, status FROM t_plan_order WHERE id=? LIMIT 1', [id])
   if (!order) throw createError({ statusCode: 404, message: '订单不存在' })
   if (order.status !== 0) throw createError({ statusCode: 400, message: '订单状态不允许确认' })
 
@@ -15,7 +15,8 @@ export default defineEventHandler(async (event) => {
     [id]
   )
 
-  await applyPlan(String(order.user_id), String(order.plan_id), '购买计划(管理员确认)')
+  const period = (order.period === 'yearly' ? 'yearly' : 'monthly') as 'monthly' | 'yearly'
+  await applyPlan(String(order.user_id), String(order.plan_id), '购买计划(管理员确认)', period)
 
   return { success: true }
 })

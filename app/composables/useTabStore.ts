@@ -22,6 +22,11 @@ const TAB_ICONS: Record<string, string> = {
   '/admin/push':        'i-heroicons-bell',
   '/admin/settings':    'i-heroicons-cog-6-tooth',
   '/admin/admins':      'i-heroicons-shield-check',
+  '/admin/plans':       'i-heroicons-credit-card',
+  '/admin/points/config': 'i-heroicons-clock',
+  '/admin/points/rules': 'i-heroicons-star',
+  '/admin/points/logs':  'i-heroicons-clipboard-document-list',
+  '/admin/checkin/rules': 'i-heroicons-calendar-days',
 }
 
 const TAB_TITLES: Record<string, string> = {
@@ -38,6 +43,12 @@ const TAB_TITLES: Record<string, string> = {
   '/admin/push':        '推送测试',
   '/admin/settings':    '系统设置',
   '/admin/admins':      '管理员管理',
+  '/admin/plans':       '购买计划',
+  '/admin/plans/orders': '购买订单',
+  '/admin/points/config': '积分类型',
+  '/admin/points/rules': '积分规则',
+  '/admin/points/logs':  '积分流水',
+  '/admin/checkin/rules': '签到奖励',
 }
 
 function resolveTitleAndIcon(path: string): { title: string; icon: string } {

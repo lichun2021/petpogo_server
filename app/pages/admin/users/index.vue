@@ -66,7 +66,7 @@
                 <span class="text-xs text-stone-400">分</span>
               </div>
               <div class="flex gap-2 mt-0.5">
-                <span class="text-[10px] text-amber-500">周 {{ row.points_weekly }}</span>
+                <span class="text-[10px] text-amber-500">期 {{ row.points_expiring }}</span>
                 <span class="text-[10px] text-stone-400">永 {{ row.points_permanent }}</span>
               </div>
             </td>
@@ -115,8 +115,8 @@
           <!-- 积分总览 -->
           <div class="flex items-center gap-3 mr-4">
             <div class="text-center">
-              <p class="text-xs text-stone-400">周积分</p>
-              <p class="text-sm font-bold text-amber-500">{{ logUser?.points_weekly ?? 0 }}</p>
+              <p class="text-xs text-stone-400">有期限</p>
+              <p class="text-sm font-bold text-amber-500">{{ logUser?.points_expiring ?? 0 }}</p>
             </div>
             <div class="w-px h-8 bg-stone-100" />
             <div class="text-center">
@@ -174,7 +174,7 @@
                 <p class="text-xs text-stone-700 font-medium leading-snug">{{ row.reason }}</p>
                 <div class="flex items-center gap-2 mt-1">
                   <span class="text-[10px] px-1.5 py-0.5 rounded bg-stone-100 text-stone-500">
-                    {{ row.points_type === 1 ? '周积分' : '永久积分' }}
+                    {{ row.type_code || (row.points_type === 1 ? '周积分' : '永久积分') }}
                   </span>
                   <span class="text-[10px] text-stone-400">余 {{ row.balance_after }}</span>
                   <span class="text-[10px] text-stone-300">{{ formatTime(row.created_at) }}</span>

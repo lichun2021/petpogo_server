@@ -15,7 +15,7 @@ export default defineEventHandler(async (event) => {
 
   const db = useDb()
   const [rows]: any = await db.query(
-    `SELECT id, direction, points_type, amount, balance_after, reason, ref_type, ref_id, created_at
+    `SELECT id, direction, points_type, type_code, amount, balance_after, expire_at, reason, ref_type, ref_id, created_at
      FROM t_points_log
      WHERE user_id = ?
      ORDER BY created_at DESC

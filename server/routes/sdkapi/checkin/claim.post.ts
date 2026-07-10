@@ -11,7 +11,7 @@ export default defineEventHandler(async (event) => {
   const db = useDb()
 
   const [[rule]]: any = await db.query(
-    `SELECT id, rule_type, streak_days, points_amount, points_type, name
+    `SELECT id, rule_type, streak_days, points_amount, points_type_code, name
      FROM t_checkin_rule WHERE id = ? AND status = 1`,
     [ruleId]
   )
@@ -50,7 +50,7 @@ export default defineEventHandler(async (event) => {
     [user.userId, ruleId, periodKey]
   )
 
-  const balance = await grantPoints(user.userId, rule.points_amount, rule.points_type, rule.name, 'checkin', String(ruleId))
+  const balance = await grantPointsBatch(user.userId, rule.points_amount, rule.points_type_code || 'checkin', rule.name, 'checkin', String(ruleId))
 
-  return { success: true, pointsAmount: rule.points_amount, pointsType: rule.points_type, balance }
+  return { success: true, pointsAmount: rule.points_amount, pointsTypeCode: rule.points_type_code || 'checkin', balance }
 })

@@ -159,6 +159,7 @@ const navBase = [
   { to: '/admin/stores',   label: '门店管理',    icon: 'i-heroicons-building-storefront' },
   { to: '/admin/ai-analysis', label: 'AI 识别记录', icon: 'i-heroicons-sparkles' },
   { to: '/admin/plans',    label: '购买计划',    icon: 'i-heroicons-credit-card' },
+  { to: '/admin/points/config', label: '积分类型', icon: 'i-heroicons-clock' },
   { to: '/admin/points/rules', label: '积分规则', icon: 'i-heroicons-star' },
   { to: '/admin/checkin/rules', label: '签到奖励', icon: 'i-heroicons-calendar-days' },
   { to: '/admin/music',    label: '宠物音乐',    icon: 'i-heroicons-musical-note' },

@@ -7,10 +7,12 @@ export default defineEventHandler(async (event) => {
 
   const {
     name,
-    price,
+    price_monthly,
+    price_yearly,
     duration_days,
-    weekly_points_grant,
-    permanent_points_grant,
+    grant_period_days,
+    period_grant_amount,
+    period_grant_type_code,
     weekly_makeup_quota,
     description,
     status,
@@ -27,15 +29,17 @@ export default defineEventHandler(async (event) => {
 
   await db.query(
     `UPDATE t_plan
-        SET name=?, price=?, duration_days=?, weekly_points_grant=?, permanent_points_grant=?,
+        SET name=?, price_monthly=?, price_yearly=?, duration_days=?, grant_period_days=?, period_grant_amount=?, period_grant_type_code=?,
             weekly_makeup_quota=?, description=?, status=?
       WHERE id=?`,
     [
       name.trim(),
-      Number(price) || 0,
+      Number(price_monthly) || 0,
+      Number(price_yearly) || 0,
       duration_days === null || duration_days === undefined || duration_days === '' ? null : Number(duration_days),
-      Number(weekly_points_grant) || 0,
-      Number(permanent_points_grant) || 0,
+      Math.max(1, Number(grant_period_days) || 7),
+      Number(period_grant_amount) || 0,
+      period_grant_type_code || null,
       Number(weekly_makeup_quota) ?? 1,
       description ?? null,
       statusVal,

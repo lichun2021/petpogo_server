@@ -18,11 +18,9 @@ CREATE TABLE IF NOT EXISTS t_user (
   birthday           DATE,
   bio                VARCHAR(200),
   status             TINYINT      DEFAULT 1   COMMENT '1正常 2禁用',
-  plan_type          TINYINT      DEFAULT 0   COMMENT '0=Free 1=Pro 2=ProMax',
-  plan_expire_at     DATETIME     NULL        COMMENT '当前计划到期时间，NULL=永久(Free)',
-  points_weekly      INT          DEFAULT 0   COMMENT '周积分(到期积分)，每周一按当前计划配额重置',
-  points_permanent   INT          DEFAULT 0   COMMENT '永久积分，不过期',
-  points_week_start  DATE         NULL        COMMENT '当前周积分对应的周一日期，用于惰性重置判断',
+  plan_type             TINYINT      DEFAULT 0   COMMENT '0=Free 1=Pro 2=ProMax',
+  plan_expire_at        DATETIME     NULL        COMMENT '当前计划到期时间，NULL=永久(Free)',
+  last_grant_at         DATETIME     NULL        COMMENT '上次周期积分发放时刻，用于定时发放判断(每周期发一次，用户离线也累计)',
   identity_id        VARCHAR(100) COMMENT '旧系统 AWS IoT identityId',
   created_at         DATETIME     DEFAULT CURRENT_TIMESTAMP,
   updated_at         DATETIME     ON UPDATE CURRENT_TIMESTAMP,
@@ -616,8 +614,11 @@ CREATE TABLE IF NOT EXISTS t_plan (
   name                   VARCHAR(30)   NOT NULL,
   price                  DECIMAL(10,2) DEFAULT 0,
   duration_days          INT           NULL COMMENT '订阅周期天数，NULL=永久(仅Free)',
-  weekly_points_grant    INT           DEFAULT 0 COMMENT '到期积分：每周重置时发放的周积分额度',
-  permanent_points_grant INT           DEFAULT 0 COMMENT '永久积分：购买/续费时一次性发放',
+  price_monthly          DECIMAL(10,2) DEFAULT 0  COMMENT '月费价格（付费计划，0=无月费档）',
+  price_yearly           DECIMAL(10,2) DEFAULT 0  COMMENT '年费价格（付费计划，0=无年费档）',
+  grant_period_days      INT           DEFAULT 7 COMMENT '周期积分发放周期（天数）：每 N 天发一次，Free=7(每周) Pro=30(每月)等',
+  period_grant_amount    INT           DEFAULT 0 COMMENT '每周期赠送的积分数量（定时累加发放，非覆盖）',
+  period_grant_type_code VARCHAR(32)   DEFAULT NULL COMMENT '每周期赠送积分所属类型(有效期由 t_points_config 决定)，NULL=跟随计划默认类型',
   weekly_makeup_quota    INT           DEFAULT 1 COMMENT '会员权益：每周可补签次数',
   description            VARCHAR(500),
   status                 TINYINT       DEFAULT 1,
@@ -626,15 +627,16 @@ CREATE TABLE IF NOT EXISTS t_plan (
   updated_at             DATETIME      ON UPDATE CURRENT_TIMESTAMP
 ) ENGINE=InnoDB COMMENT='购买计划配置表';
 
-INSERT IGNORE INTO t_plan (plan_type, name, price, duration_days, weekly_points_grant, permanent_points_grant, weekly_makeup_quota, description, sort_order) VALUES
-(0, 'Free',    0.00,  NULL, 70,  0,   1, '免费计划，每周赠送基础积分', 1),
-(1, 'Pro',     30.00, 30,   700, 100, 3, 'Pro 计划，每周赠送大量积分', 2),
-(2, 'ProMax',  98.00, 30,   2000, 300, 5, 'ProMax 计划，积分额度更高', 3);
+INSERT IGNORE INTO t_plan (plan_type, name, price_monthly, price_yearly, duration_days, grant_period_days, period_grant_amount, period_grant_type_code, weekly_makeup_quota, description, sort_order) VALUES
+(0, 'Free',    0.00,  0.00,   NULL, 7,  70,   'plan_free',  1, '免费计划，每周赠送基础积分', 1),
+(1, 'Pro',     30.00, 299.00, 30,   30, 700,  'plan_pro',   3, 'Pro 计划，每月赠送大量积分', 2),
+(2, 'ProMax',  98.00, 888.00, 30,   30, 2000, 'plan_promax',5, 'ProMax 计划，积分额度更高', 3);
 
 CREATE TABLE IF NOT EXISTS t_plan_order (
   id          BIGINT PRIMARY KEY AUTO_INCREMENT,
   user_id     BIGINT NOT NULL,
   plan_id     BIGINT NOT NULL,
+  period      VARCHAR(10) DEFAULT 'monthly' COMMENT '购买档位 monthly=月费 yearly=年费',
   amount      DECIMAL(10,2),
   status      TINYINT  DEFAULT 0 COMMENT '0待支付 1已支付(人工确认) 2已取消',
   created_at  DATETIME DEFAULT CURRENT_TIMESTAMP,
@@ -644,15 +646,65 @@ CREATE TABLE IF NOT EXISTS t_plan_order (
 ) ENGINE=InnoDB COMMENT='计划购买订单表（占位，不接第三方支付）';
 
 -- ===========================
+-- 积分类型配置表（只定义类型与有效期，数量在各业务表配）
+-- ===========================
+-- type_code: 程序内引用标识
+-- expire_days: 有效期天数，0=永不过期（只有付费计划赠送的永久积分不过期）
+CREATE TABLE IF NOT EXISTS t_points_config (
+  id          INT          PRIMARY KEY AUTO_INCREMENT,
+  type_code   VARCHAR(32)  NOT NULL UNIQUE COMMENT '类型标识（程序内引用）',
+  name        VARCHAR(64)  NOT NULL COMMENT '后台显示名',
+  expire_days INT          NOT NULL DEFAULT 0 COMMENT '有效期天数，0=永不过期',
+  sort_order  INT          NOT NULL DEFAULT 0,
+  status      TINYINT      NOT NULL DEFAULT 1,
+  updated_at  DATETIME     ON UPDATE CURRENT_TIMESTAMP
+) ENGINE=InnoDB COMMENT='积分类型配置表（只定义类型与有效期，数量在各业务表配）';
+
+INSERT IGNORE INTO t_points_config (type_code, name, expire_days, sort_order) VALUES
+  ('permanent',  '永久积分',        0,  0),
+  ('plan_free',  'Free计划积分',   7,  1),
+  ('plan_pro',   'Pro计划积分',    30, 2),
+  ('plan_promax','ProMax计划积分', 30, 3),
+  ('checkin',    '签到积分',       7,  4);
+
+-- ===========================
+-- 用户积分批次表（核心：每笔赠送一条，独立到期）
+-- ===========================
+-- 消费时按 expire_at 升序扣减（先到期先扣），expire_at IS NULL 的永久批次最后扣。
+-- 到期批次在读取余额时惰性失效（remaining 置 0），无需 cron。
+CREATE TABLE IF NOT EXISTS t_user_points_batch (
+  id            BIGINT PRIMARY KEY AUTO_INCREMENT,
+  user_id       BIGINT NOT NULL,
+  type_code     VARCHAR(32) NOT NULL COMMENT '引用 t_points_config.type_code',
+  granted_amount INT NOT NULL COMMENT '发放时的数量',
+  remaining     INT NOT NULL COMMENT '剩余可用数量',
+  expire_at     DATETIME NULL COMMENT '到期时间，NULL=永不过期',
+  reason        VARCHAR(100),
+  ref_type      VARCHAR(30) COMMENT 'checkin/plan_order/admin_adjust',
+  ref_id        VARCHAR(50),
+  created_at    DATETIME DEFAULT CURRENT_TIMESTAMP,
+  INDEX idx_user_expire (user_id, expire_at),
+  INDEX idx_user_type (user_id, type_code)
+) ENGINE=InnoDB COMMENT='用户积分批次表（每笔赠送一条，独立到期）';
+
+-- 迁移注释（生产环境已有旧表时手动执行）：
+-- DROP TABLE IF EXISTS t_points_grant_config;  -- 已被 t_points_config 替代
+-- ALTER TABLE t_user DROP COLUMN points_weekly, DROP COLUMN points_week_start;
+-- （points_permanent 列可保留做历史备份，新逻辑全部走 t_user_points_batch 求和）
+
+
+-- ===========================
 -- 积分模块
 -- ===========================
 CREATE TABLE IF NOT EXISTS t_points_log (
   id            BIGINT PRIMARY KEY AUTO_INCREMENT,
   user_id       BIGINT NOT NULL,
   direction     TINYINT COMMENT '1获得 2消耗',
-  points_type   TINYINT COMMENT '1周积分 2永久积分',
+  points_type   TINYINT COMMENT '废弃：旧 1周积分 2永久积分，向后兼容保留',
+  type_code     VARCHAR(32) COMMENT '积分类型(引用 t_points_config.type_code)',
   amount        INT     COMMENT '变动数量(正数)',
   balance_after INT     COMMENT '变动后该类型余额',
+  expire_at     DATETIME NULL COMMENT '本批次到期时间(获得记录)',
   reason        VARCHAR(100) COMMENT '如：AI图片分析消耗/每日签到奖励/连续签到奖励/购买Pro赠送',
   ref_type      VARCHAR(30)  COMMENT 'ai_consumption/checkin/plan_order',
   ref_id        VARCHAR(50),
@@ -695,7 +747,7 @@ CREATE TABLE IF NOT EXISTS t_checkin_rule (
   rule_type     TINYINT COMMENT '1每日签到奖励 2连续签到奖励',
   streak_days   INT DEFAULT 1 COMMENT '连续天数门槛；每日签到奖励固定为1',
   points_amount INT NOT NULL,
-  points_type   TINYINT COMMENT '1周积分 2永久积分',
+  points_type_code VARCHAR(32) NOT NULL DEFAULT 'checkin' COMMENT '签到积分所属类型(引用 t_points_config.type_code)',
   name          VARCHAR(50) COMMENT '如"每日签到""连续3天""连续7天"',
   status        TINYINT DEFAULT 1,
   sort_order    INT DEFAULT 0,
@@ -703,12 +755,12 @@ CREATE TABLE IF NOT EXISTS t_checkin_rule (
   updated_at    DATETIME ON UPDATE CURRENT_TIMESTAMP
 ) ENGINE=InnoDB COMMENT='签到奖励档位表';
 
-INSERT IGNORE INTO t_checkin_rule (rule_type, streak_days, points_amount, points_type, name, sort_order) VALUES
-(1, 1, 2,  2, '每日签到', 1),
-(2, 3, 10, 2, '连续3天',  2),
-(2, 7, 30, 2, '连续7天',  3),
-(2, 15, 80, 2, '连续15天', 4),
-(2, 30, 200, 2, '连续30天', 5);
+INSERT IGNORE INTO t_checkin_rule (rule_type, streak_days, points_amount, points_type_code, name, sort_order) VALUES
+(1, 1, 2,  'checkin', '每日签到', 1),
+(2, 3, 10, 'checkin', '连续3天',  2),
+(2, 7, 30, 'checkin', '连续7天',  3),
+(2, 15, 80, 'checkin', '连续15天', 4),
+(2, 30, 200,'checkin', '连续30天', 5);
 
 CREATE TABLE IF NOT EXISTS t_checkin_claim_log (
   id          BIGINT PRIMARY KEY AUTO_INCREMENT,
@@ -718,5 +770,4 @@ CREATE TABLE IF NOT EXISTS t_checkin_claim_log (
   claimed_at  DATETIME DEFAULT CURRENT_TIMESTAMP,
   UNIQUE KEY uk_user_rule_period (user_id, rule_id, period_key)
 ) ENGINE=InnoDB COMMENT='签到奖励领取记录表';
-  UNIQUE KEY uk_user_rule_period (user_id, rule_id, period_key)
 ) ENGINE=InnoDB COMMENT='签到奖励领取记录表';

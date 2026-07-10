@@ -11,7 +11,7 @@ export default defineEventHandler(async (event) => {
 
   const [rows]: any = await db.query(
     `SELECT o.id, o.user_id, u.phone, u.nickname, o.plan_id, p.name AS plan_name,
-            o.amount, o.status, o.created_at, o.paid_at
+            o.period, o.amount, o.status, o.created_at, o.paid_at
      FROM t_plan_order o
      LEFT JOIN t_user u ON u.id = o.user_id
      LEFT JOIN t_plan p ON p.id = o.plan_id

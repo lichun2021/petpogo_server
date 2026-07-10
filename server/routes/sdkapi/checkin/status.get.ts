@@ -27,7 +27,7 @@ export default defineEventHandler(async (event) => {
   const streakStartStr = streakStart.toISOString().slice(0, 10)
 
   const [rules]: any = await db.query(
-    `SELECT id, rule_type, streak_days, points_amount, points_type, name
+    `SELECT id, rule_type, streak_days, points_amount, points_type_code, name
      FROM t_checkin_rule WHERE status = 1 ORDER BY sort_order ASC`
   )
 
@@ -49,7 +49,7 @@ export default defineEventHandler(async (event) => {
       ruleType: r.rule_type,
       streakDays: r.streak_days,
       pointsAmount: r.points_amount,
-      pointsType: r.points_type,
+      pointsTypeCode: r.points_type_code,
       name: r.name,
       claimed,
       claimable: eligible && !claimed,
