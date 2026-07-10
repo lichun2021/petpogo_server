@@ -59,6 +59,7 @@
       <table v-else class="w-full text-sm">
         <thead>
           <tr class="border-b" style="border-color: #f0e6d8; background: #fdf8f3">
+            <th class="px-4 py-3 w-7"></th>
             <th class="px-4 py-3 text-left text-xs font-semibold text-stone-500">类型</th>
             <th class="px-4 py-3 text-left text-xs font-semibold text-stone-500">用户</th>
             <th class="px-4 py-3 text-left text-xs font-semibold text-stone-500">资源</th>
@@ -68,63 +69,135 @@
             <th class="px-4 py-3 text-left text-xs font-semibold text-stone-500">时间</th>
           </tr>
         </thead>
-        <tbody class="divide-y" style="divide-color: #faf6f2">
-          <tr v-for="r in list" :key="r.id" class="hover:bg-amber-50/40 transition-colors cursor-pointer" @click="openDetail(r)">
-            <!-- 类型 -->
-            <td class="px-4 py-3">
-              <span :class="['inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium',
-                r.mediaType === 'image' ? 'bg-blue-50 text-blue-600' : 'bg-purple-50 text-purple-600']">
-                {{ r.mediaType === 'image' ? '📸 图片' : '🎙️ 音频' }}
-              </span>
-            </td>
-            <!-- 用户 -->
-            <td class="px-4 py-3">
-              <div class="flex items-center gap-2">
-                <img v-if="r.user_avatar" :src="r.user_avatar" class="w-6 h-6 rounded-full object-cover" />
-                <div v-else class="w-6 h-6 rounded-full bg-amber-100 flex items-center justify-center text-xs font-bold text-amber-600">
-                  {{ (r.nickname || '?')[0] }}
+        <tbody>
+          <template v-for="r in list" :key="r.id">
+            <!-- 数据行 -->
+            <tr
+              class="border-b transition-colors cursor-pointer select-none"
+              :class="expandedId === r.id ? 'bg-amber-50/60' : 'hover:bg-amber-50/30'"
+              style="border-color: #f5ece0"
+              @click="toggleDetail(r)"
+            >
+              <!-- 展开箭头 -->
+              <td class="px-4 py-3 w-7">
+                <UIcon
+                  :name="expandedId === r.id ? 'i-heroicons-chevron-down' : 'i-heroicons-chevron-right'"
+                  class="w-3.5 h-3.5 text-stone-400 transition-transform duration-200"
+                />
+              </td>
+              <!-- 类型 -->
+              <td class="px-4 py-3">
+                <span :class="['inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium',
+                  r.mediaType === 'image' ? 'bg-blue-50 text-blue-600' : 'bg-purple-50 text-purple-600']">
+                  {{ r.mediaType === 'image' ? '📸 图片' : '🎙️ 音频' }}
+                </span>
+              </td>
+              <!-- 用户 -->
+              <td class="px-4 py-3">
+                <div class="flex items-center gap-2">
+                  <img v-if="r.user_avatar" :src="r.user_avatar" class="w-6 h-6 rounded-full object-cover" />
+                  <div v-else class="w-6 h-6 rounded-full bg-amber-100 flex items-center justify-center text-xs font-bold text-amber-600">
+                    {{ (r.nickname || '?')[0] }}
+                  </div>
+                  <span class="text-xs text-stone-600 truncate max-w-20">{{ r.nickname || r.user_id }}</span>
                 </div>
-                <span class="text-xs text-stone-600 truncate max-w-20">{{ r.nickname || r.user_id }}</span>
-              </div>
-            </td>
-            <!-- 资源缩略 -->
-            <td class="px-4 py-3">
-              <div v-if="r.mediaType === 'image'" class="flex items-center gap-2">
-                <img :src="r.image_url" class="w-10 h-10 rounded-lg object-cover border" style="border-color: #f0e6d8" />
-              </div>
-              <div v-else class="flex items-center gap-1 text-xs text-stone-400">
-                <UIcon name="i-heroicons-musical-note" class="w-4 h-4" />
-                <span class="truncate max-w-24">音频</span>
-              </div>
-            </td>
-            <!-- 识别结果 -->
-            <td class="px-4 py-3">
-              <div v-if="r.emotion_zh" class="text-xs">
-                <span class="font-semibold text-stone-700">{{ r.emotion_zh }}</span>
-                <span class="text-stone-400 ml-1">({{ r.species || '' }})</span>
-                <div class="text-stone-400 mt-0.5">
-                  置信 {{ ((r.emotion_conf || 0) * 100).toFixed(0) }}%
+              </td>
+              <!-- 资源缩略 -->
+              <td class="px-4 py-3">
+                <div v-if="r.mediaType === 'image'" class="flex items-center gap-2">
+                  <img :src="r.image_url" class="w-10 h-10 rounded-lg object-cover border" style="border-color: #f0e6d8" />
                 </div>
-              </div>
-              <span v-else class="text-xs text-stone-400">—</span>
-            </td>
-            <!-- 状态 -->
-            <td class="px-4 py-3">
-              <UBadge
-                :label="r.success ? '成功' : '非宠物'"
-                :color="r.success ? 'green' : 'red'"
-                variant="subtle" size="xs"
-              />
-            </td>
-            <!-- 耗时 -->
-            <td class="px-4 py-3 text-xs text-stone-500">
-              {{ r.processing_ms ? r.processing_ms + 'ms' : '—' }}
-            </td>
-            <!-- 时间 -->
-            <td class="px-4 py-3 text-xs text-stone-400 whitespace-nowrap">
-              {{ fmtTime(r.created_at) }}
-            </td>
-          </tr>
+                <div v-else class="flex items-center gap-1 text-xs text-stone-400">
+                  <UIcon name="i-heroicons-musical-note" class="w-4 h-4" />
+                  <span>音频</span>
+                </div>
+              </td>
+              <!-- 识别结果 -->
+              <td class="px-4 py-3">
+                <div v-if="r.emotion_zh" class="text-xs">
+                  <span class="font-semibold text-stone-700">{{ r.emotion_zh }}</span>
+                  <span class="text-stone-400 ml-1">({{ r.species || '' }})</span>
+                  <div class="text-stone-400 mt-0.5">置信 {{ ((r.emotion_conf || 0) * 100).toFixed(0) }}%</div>
+                </div>
+                <span v-else class="text-xs text-stone-400">—</span>
+              </td>
+              <!-- 状态 -->
+              <td class="px-4 py-3">
+                <UBadge :label="r.success ? '成功' : '非宠物'" :color="r.success ? 'green' : 'red'" variant="subtle" size="xs" />
+              </td>
+              <!-- 耗时 -->
+              <td class="px-4 py-3 text-xs text-stone-500">{{ r.processing_ms ? r.processing_ms + 'ms' : '—' }}</td>
+              <!-- 时间 -->
+              <td class="px-4 py-3 text-xs text-stone-400 whitespace-nowrap">{{ fmtTime(r.created_at) }}</td>
+            </tr>
+
+            <!-- 展开详情行 -->
+            <tr v-if="expandedId === r.id" style="background: #fffbf5">
+              <td colspan="8" class="px-6 py-5 border-b" style="border-color: #f0e6d8">
+                <div class="flex gap-6">
+                  <!-- 左：媒体预览 -->
+                  <div class="flex-shrink-0 w-56">
+                    <img v-if="r.mediaType === 'image'" :src="r.image_url"
+                      class="w-full rounded-xl object-cover" style="max-height: 160px" />
+                    <div v-else class="space-y-2">
+                      <audio :src="r.audio_url" controls class="w-full rounded-lg" style="accent-color: #f59e0b" />
+                      <a :href="r.audio_url" target="_blank"
+                        class="block text-[10px] text-stone-400 hover:text-amber-600 truncate transition-colors">
+                        {{ r.audio_url }}
+                      </a>
+                    </div>
+                  </div>
+                  <!-- 右：详情信息 -->
+                  <div class="flex-1 space-y-3">
+                    <!-- 基础信息 -->
+                    <div class="grid grid-cols-3 gap-3 text-xs">
+                      <div>
+                        <p class="text-stone-400 mb-0.5">用户</p>
+                        <p class="font-medium text-stone-700">{{ r.nickname || r.user_id }}</p>
+                      </div>
+                      <div>
+                        <p class="text-stone-400 mb-0.5">状态</p>
+                        <p :class="r.success ? 'text-green-600' : 'text-red-500'" class="font-medium">
+                          {{ r.success ? '识别成功' : '非宠物图片' }}
+                        </p>
+                      </div>
+                      <div v-if="r.species">
+                        <p class="text-stone-400 mb-0.5">物种</p>
+                        <p class="font-medium text-stone-700">{{ r.species }}</p>
+                      </div>
+                      <div v-if="r.emotion_zh">
+                        <p class="text-stone-400 mb-0.5">主情绪</p>
+                        <p class="font-medium text-stone-700">{{ r.emotion_zh }} ({{ ((r.emotion_conf||0)*100).toFixed(0) }}%)</p>
+                      </div>
+                      <div>
+                        <p class="text-stone-400 mb-0.5">耗时</p>
+                        <p class="font-medium text-stone-700">{{ r.processing_ms }}ms</p>
+                      </div>
+                      <div>
+                        <p class="text-stone-400 mb-0.5">时间</p>
+                        <p class="font-medium text-stone-700">{{ fmtTime(r.created_at) }}</p>
+                      </div>
+                    </div>
+                    <!-- 情绪分布 -->
+                    <div v-if="r.top3?.length">
+                      <p class="text-xs text-stone-400 mb-1.5">情绪分布</p>
+                      <div v-for="e in r.top3" :key="e.label" class="flex items-center gap-2 mb-1.5">
+                        <span class="text-xs text-stone-600 w-14 flex-shrink-0">{{ e.label_zh || e.label }}</span>
+                        <div class="flex-1 bg-stone-100 rounded-full h-1.5">
+                          <div class="bg-amber-400 h-1.5 rounded-full transition-all" :style="`width:${(e.confidence*100).toFixed(0)}%`" />
+                        </div>
+                        <span class="text-xs text-stone-400 w-8 text-right">{{ (e.confidence*100).toFixed(0) }}%</span>
+                      </div>
+                    </div>
+                    <!-- 建议 -->
+                    <div v-if="r.advice" class="p-2.5 rounded-xl text-xs text-stone-600" style="background: #fef3c7">
+                      💡 {{ r.advice }}
+                    </div>
+                  </div>
+                </div>
+              </td>
+            </tr>
+          </template>
         </tbody>
       </table>
 
@@ -143,71 +216,6 @@
       </div>
     </div>
 
-    <!-- 详情弹窗 -->
-    <UModal v-model="showModal">
-      <div class="p-6 space-y-4 max-w-lg">
-        <h3 class="font-bold text-stone-800 text-base">
-          {{ detail?.mediaType === 'image' ? '📸 图片分析详情' : '🎙️ 音频分析详情' }}
-        </h3>
-        <div v-if="detail">
-          <!-- 图片预览 -->
-          <img v-if="detail.mediaType === 'image'" :src="detail.image_url"
-            class="w-full rounded-xl object-cover max-h-64" />
-          <!-- 音频链接 -->
-          <a v-else :href="detail.audio_url" target="_blank"
-            class="block text-xs text-amber-600 underline break-all">
-            {{ detail.audio_url }}
-          </a>
-
-          <div class="mt-4 grid grid-cols-2 gap-3 text-xs">
-            <div class="space-y-1">
-              <p class="text-stone-400">用户</p>
-              <p class="font-medium text-stone-700">{{ detail.nickname || detail.user_id }}</p>
-            </div>
-            <div class="space-y-1">
-              <p class="text-stone-400">状态</p>
-              <p :class="detail.success ? 'text-green-600' : 'text-red-500'" class="font-medium">
-                {{ detail.success ? '识别成功' : '非宠物图片' }}
-              </p>
-            </div>
-            <div v-if="detail.emotion_zh" class="space-y-1">
-              <p class="text-stone-400">主情绪</p>
-              <p class="font-medium text-stone-700">{{ detail.emotion_zh }} ({{ ((detail.emotion_conf||0)*100).toFixed(0) }}%)</p>
-            </div>
-            <div v-if="detail.species" class="space-y-1">
-              <p class="text-stone-400">物种</p>
-              <p class="font-medium text-stone-700">{{ detail.species }}</p>
-            </div>
-            <div class="space-y-1">
-              <p class="text-stone-400">处理耗时</p>
-              <p class="font-medium text-stone-700">{{ detail.processing_ms }}ms</p>
-            </div>
-            <div class="space-y-1">
-              <p class="text-stone-400">时间</p>
-              <p class="font-medium text-stone-700">{{ fmtTime(detail.created_at) }}</p>
-            </div>
-          </div>
-
-          <!-- Top3 -->
-          <div v-if="detail.top3?.length" class="mt-3">
-            <p class="text-xs text-stone-400 mb-2">情绪分布</p>
-            <div v-for="e in detail.top3" :key="e.label" class="flex items-center gap-2 mb-1.5">
-              <span class="text-xs text-stone-600 w-14 flex-shrink-0">{{ e.label_zh || e.label }}</span>
-              <div class="flex-1 bg-stone-100 rounded-full h-2">
-                <div class="bg-amber-400 h-2 rounded-full" :style="`width: ${(e.confidence*100).toFixed(0)}%`"></div>
-              </div>
-              <span class="text-xs text-stone-400 w-8 text-right">{{ (e.confidence*100).toFixed(0) }}%</span>
-            </div>
-          </div>
-
-          <!-- 建议 -->
-          <div v-if="detail.advice" class="mt-3 p-3 rounded-xl text-xs text-stone-600"
-            style="background: #fef3c7">
-            💡 {{ detail.advice }}
-          </div>
-        </div>
-      </div>
-    </UModal>
   </div>
 </template>
 
@@ -233,9 +241,8 @@ const page      = ref(1)
 const size      = 20
 const total     = ref(0)
 const totalImage = ref(0)
-const totalVoice = ref(0)
-const showModal = ref(false)
-const detail    = ref<any>(null)
+const totalVoice  = ref(0)
+const expandedId  = ref<string | null>(null)
 
 const summary = computed(() => [
   { label: '图片分析总数', value: totalImage.value, emoji: '📸', bg: 'bg-blue-50' },
@@ -263,7 +270,9 @@ async function load() {
 function prevPage() { if (page.value > 1) { page.value--; load() } }
 function nextPage() { page.value++; load() }
 
-function openDetail(row: any) { detail.value = row; showModal.value = true }
+function toggleDetail(row: any) {
+  expandedId.value = expandedId.value === row.id ? null : row.id
+}
 
 function fmtTime(t: string) {
   if (!t) return '—'

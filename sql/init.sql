@@ -594,11 +594,15 @@ CREATE TABLE IF NOT EXISTS t_admin (
 --
 -- DROP TABLE IF EXISTS t_ai_usage;
 --
--- -- 补签功能上线时，给已有 t_plan 表追加 monthly_makeup_quota 列：
--- ALTER TABLE t_plan ADD COLUMN monthly_makeup_quota INT DEFAULT 1 COMMENT '会员权益：每月可补签次数' AFTER permanent_points_grant;
--- UPDATE t_plan SET monthly_makeup_quota=1 WHERE plan_type=0;
--- UPDATE t_plan SET monthly_makeup_quota=3 WHERE plan_type=1;
--- UPDATE t_plan SET monthly_makeup_quota=5 WHERE plan_type=2;
+-- -- 补签功能上线时，给已有 t_plan 表追加 weekly_makeup_quota 列：
+-- ALTER TABLE t_plan ADD COLUMN weekly_makeup_quota INT DEFAULT 1 COMMENT '会员权益：每周可补签次数' AFTER permanent_points_grant;
+-- UPDATE t_plan SET weekly_makeup_quota=1 WHERE plan_type=0;
+-- UPDATE t_plan SET weekly_makeup_quota=3 WHERE plan_type=1;
+-- UPDATE t_plan SET weekly_makeup_quota=5 WHERE plan_type=2;
+--
+-- -- 若已有 monthly_makeup_quota 列，改用以下重命名语句代替上面的 ADD COLUMN：
+-- ALTER TABLE t_plan RENAME COLUMN monthly_makeup_quota TO weekly_makeup_quota;
+-- ALTER TABLE t_plan MODIFY COLUMN weekly_makeup_quota INT DEFAULT 1 COMMENT '会员权益：每周可补签次数';
 --
 -- -- 补签功能上线时，给已有 t_checkin_log 表追加 is_makeup 列：
 -- ALTER TABLE t_checkin_log ADD COLUMN is_makeup TINYINT DEFAULT 0 COMMENT '0=当日正常签到 1=补签' AFTER streak_count;
@@ -614,7 +618,7 @@ CREATE TABLE IF NOT EXISTS t_plan (
   duration_days          INT           NULL COMMENT '订阅周期天数，NULL=永久(仅Free)',
   weekly_points_grant    INT           DEFAULT 0 COMMENT '到期积分：每周重置时发放的周积分额度',
   permanent_points_grant INT           DEFAULT 0 COMMENT '永久积分：购买/续费时一次性发放',
-  monthly_makeup_quota   INT           DEFAULT 1 COMMENT '会员权益：每月可补签次数',
+  weekly_makeup_quota    INT           DEFAULT 1 COMMENT '会员权益：每周可补签次数',
   description            VARCHAR(500),
   status                 TINYINT       DEFAULT 1,
   sort_order             INT           DEFAULT 0,
@@ -622,7 +626,7 @@ CREATE TABLE IF NOT EXISTS t_plan (
   updated_at             DATETIME      ON UPDATE CURRENT_TIMESTAMP
 ) ENGINE=InnoDB COMMENT='购买计划配置表';
 
-INSERT IGNORE INTO t_plan (plan_type, name, price, duration_days, weekly_points_grant, permanent_points_grant, monthly_makeup_quota, description, sort_order) VALUES
+INSERT IGNORE INTO t_plan (plan_type, name, price, duration_days, weekly_points_grant, permanent_points_grant, weekly_makeup_quota, description, sort_order) VALUES
 (0, 'Free',    0.00,  NULL, 70,  0,   1, '免费计划，每周赠送基础积分', 1),
 (1, 'Pro',     30.00, 30,   700, 100, 3, 'Pro 计划，每周赠送大量积分', 2),
 (2, 'ProMax',  98.00, 30,   2000, 300, 5, 'ProMax 计划，积分额度更高', 3);
@@ -669,8 +673,9 @@ CREATE TABLE IF NOT EXISTS t_points_consume_rule (
 ) ENGINE=InnoDB COMMENT='积分消费规则表（AI消费类型 -> 积分单价）';
 
 INSERT IGNORE INTO t_points_consume_rule (consume_type, name, unit_points, unit_basis, sort_order) VALUES
-('image_analyze', '图片情绪分析', 5, 'per_call', 1),
-('voice_analyze', '语音情绪分析', 5, 'per_call', 2);
+('image_analyze', '图片情绪',   5,  'per_call', 1),
+('voice_analyze', '语音情绪',   5,  'per_call', 2),
+('consult_q',     '问诊提问', 10, 'per_call', 3);
 
 -- ===========================
 -- 签到模块

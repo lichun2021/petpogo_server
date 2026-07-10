@@ -21,6 +21,8 @@ export function useDb(): mysql.Pool {
       // 开启后所有 BIGINT 字段以字符串形式返回，ID 查询/比对完全准确
       supportBigNumbers: true,
       bigNumberStrings:  true,
+      // DATE/DATETIME 列以字符串返回，避免 mysql2 将其转成 JS Date 对象产生时区偏移
+      dateStrings:       true,
     })
   }
   return _pool

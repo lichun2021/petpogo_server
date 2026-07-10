@@ -13,6 +13,7 @@ export interface PlanRow {
   duration_days: number | null
   weekly_points_grant: number
   permanent_points_grant: number
+  weekly_makeup_quota: number
   description: string | null
   status: number
   sort_order: number

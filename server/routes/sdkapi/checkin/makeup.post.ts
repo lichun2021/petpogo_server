@@ -1,21 +1,31 @@
 // POST /sdkapi/checkin/makeup
-// 补签（优先使用会员每月配额；配额用尽则返回错误，前端自行调用广告）
+// 补签（优先使用会员每周配额；配额用尽则返回错误，前端自行调用广告）
+// 每周一自动重置配额（与周积分重置周期相同）
 //
 // 请求体：
 //   date  string  YYYY-MM-DD（必填，只能补签 3 天内的缺签日期）
+
+// 本地日期格式化（避免 toISOString UTC 时区偏移）
+function localDateStr(d: Date): string {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+}
+
 export default defineEventHandler(async (event) => {
   const user = await requireAuth(event)
   const { date } = await readBody(event)
   if (!date?.trim()) throw createError({ statusCode: 400, message: 'date 不能为空' })
 
   const dateStr = String(date).trim()
-  const targetDate = new Date(dateStr)
-  if (isNaN(targetDate.getTime())) {
+  // 解析为本地时间（避免 new Date(str) 走 UTC）
+  const [ty, tm, td] = dateStr.split('-').map(Number)
+  if (!ty || !tm || !td || isNaN(ty) || isNaN(tm) || isNaN(td)) {
     throw createError({ statusCode: 400, message: 'date 格式无效，应为 YYYY-MM-DD' })
   }
+  const targetDate = new Date(ty, tm - 1, td) // 本地午夜
 
-  const today = new Date().toISOString().slice(0, 10)
-  const todayDate = new Date(today)
+  const now = new Date()
+  const today = localDateStr(now)
+  const todayDate = new Date(now.getFullYear(), now.getMonth(), now.getDate()) // 今日本地午夜
 
   if (dateStr >= today) {
     throw createError({ statusCode: 400, message: '只能补签过去的日期' })
@@ -37,34 +47,36 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 400, message: '该日期已签到，无需补签' })
   }
 
-  // 查询用户当月已使用的补签次数与配额
-  const monthStart = dateStr.slice(0, 8) + '01'
-  const lastDayOfMonth = new Date(targetDate.getFullYear(), targetDate.getMonth() + 1, 0)
-  const monthEnd = lastDayOfMonth.toISOString().slice(0, 10)
-
+  // 查询用户当前计划的每周补签配额
   const [[userRow]]: any = await db.query(
     `SELECT u.plan_type FROM t_user u WHERE u.id = ? AND u.deleted = 0`,
     [user.userId]
   )
   const planType = userRow?.plan_type ?? 0
   const [[planRow]]: any = await db.query(
-    `SELECT monthly_makeup_quota FROM t_plan WHERE plan_type = ? AND status = 1`,
+    `SELECT weekly_makeup_quota FROM t_plan WHERE plan_type = ? AND status = 1`,
     [planType]
   )
-  const monthlyQuota = planRow?.monthly_makeup_quota ?? 1
+  const weeklyQuota = planRow?.weekly_makeup_quota ?? 1
+
+  // 本周已使用的补签次数（周一为起点，与周积分重置周期相同）
+  const dayOfWeek = now.getDay() // 0=周日
+  const diffToMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1
+  const weekMonday = new Date(now.getFullYear(), now.getMonth(), now.getDate() - diffToMonday)
+  const weekStart = localDateStr(weekMonday)
 
   const [[usedCount]]: any = await db.query(
     `SELECT COUNT(*) AS cnt FROM t_checkin_log
      WHERE user_id = ? AND is_makeup = 1
-       AND checkin_date >= ? AND checkin_date <= ?`,
-    [user.userId, monthStart, monthEnd]
+       AND checkin_date >= ?`,
+    [user.userId, weekStart]
   )
   const usedMakeupCount = usedCount?.cnt ?? 0
 
-  if (usedMakeupCount >= monthlyQuota) {
+  if (usedMakeupCount >= weeklyQuota) {
     throw createError({
       statusCode: 402,
-      message: `本月补签配额已用尽（${usedMakeupCount}/${monthlyQuota}），请观看广告获得额外补签机会`,
+      message: `本周补签配额已用尽（${usedMakeupCount}/${weeklyQuota}），请观看广告获得额外补签机会`,
     })
   }
 
@@ -99,7 +111,7 @@ export default defineEventHandler(async (event) => {
     [user.userId, dateStr]
   )
 
-  let currentDate = new Date(dateStr)
+  let currentDate = targetDate // 已是本地时间
   let currentStreak = streakCount
   for (const log of futureLogs) {
     const logDate = new Date(log.checkin_date)
@@ -121,6 +133,6 @@ export default defineEventHandler(async (event) => {
     date: dateStr,
     streakCount,
     usedMakeupCount: usedMakeupCount + 1,
-    remainingQuota: monthlyQuota - usedMakeupCount - 1,
+    remainingQuota: weeklyQuota - usedMakeupCount - 1,
   }
 })

@@ -80,12 +80,12 @@ if [ "$BUILD_ONLY" = true ]; then
 fi
 
 # ── 步骤 2: 打包 ──────────────────────────────────
-log_step "步骤 2/5 · 打包 .output + 运维脚本"
+log_step "步骤 2/5 · 打包 .output + 运维脚本 + package.json"
 rm -f "$ZIP_NAME"
 # 打包 .output 目录内容 + 根目录的运维文件和环境变量文件
 (cd .output && zip -r "../$ZIP_NAME" . -q)
-# 追加 .env, ecosystem 和 shell 脚本到 zip 根目录
-zip -j "$ZIP_NAME" .env ecosystem.config.js start.sh stop.sh restart.sh -q 2>/dev/null || true
+# 追加 .env, ecosystem, package.json 和 shell 脚本到 zip 根目录
+zip -j "$ZIP_NAME" .env ecosystem.config.js package.json package-lock.json start.sh stop.sh restart.sh -q 2>/dev/null || true
 ZIP_SIZE=$(du -sh "$ZIP_NAME" | cut -f1)
 log_success "打包完成：$ZIP_NAME ($ZIP_SIZE)"
 
@@ -97,7 +97,7 @@ scp $SCP_OPTS "$ZIP_NAME" "$SSH_USER@$SSH_HOST:$REMOTE_PATH/"
 log_success "上传完成"
 
 # ── 步骤 4: 服务器解压 ────────────────────────────
-log_step "步骤 4/5 · 服务器解压"
+log_step "步骤 4/5 · 服务器解压 + 安装依赖"
 ssh $SSH_OPTS $SSH_USER@$SSH_HOST "
   set -e
   cd $REMOTE_PATH
@@ -107,9 +107,16 @@ ssh $SSH_OPTS $SSH_USER@$SSH_HOST "
   unzip -oq $ZIP_NAME -d .
   rm -f $ZIP_NAME
   echo '解压完成'
+
+  # 如果有 package.json，安装生产依赖
+  if [ -f package.json ]; then
+    echo '安装依赖（sharp 等）...'
+    npm install --include=optional --production --no-save sharp 2>&1 | tail -5
+    echo '依赖安装完成'
+  fi
 "
-[ $? -ne 0 ] && log_error "服务器解压失败"
-log_success "解压完成"
+[ $? -ne 0 ] && log_error "服务器解压或依赖安装失败"
+log_success "解压和依赖安装完成"
 
 # ── 步骤 5: 重启 PM2 ─────────────────────────────
 log_step "步骤 5/5 · 重启 PM2 ($PM2_NAME)"

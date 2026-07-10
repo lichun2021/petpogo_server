@@ -22,7 +22,7 @@ export default defineEventHandler(async (event) => {
   const currentStreak = todayRow ? todayRow.streak_count : (yesterdayRow ? yesterdayRow.streak_count : 0)
 
   // 本次连续签到的起始日期（用于连续奖励的领取记录 period_key）
-  const streakStart = new Date()
+  const streakStart = new Date(signedInToday ? Date.now() : yesterday.getTime())
   streakStart.setDate(streakStart.getDate() - (Math.max(currentStreak, 1) - 1))
   const streakStartStr = streakStart.toISOString().slice(0, 10)
 

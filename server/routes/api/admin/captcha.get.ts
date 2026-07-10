@@ -108,13 +108,13 @@ async function generateSlideCaptcha() {
   const backgroundBase64 = `data:image/png;base64,${backgroundWithHole.toString('base64')}`
   const puzzleBase64 = `data:image/png;base64,${puzzlePiece.toString('base64')}`
 
-  return { backgroundBase64, puzzleBase64, offsetX }
+  return { backgroundBase64, puzzleBase64, offsetX, offsetY }
 }
 
 export default defineEventHandler(async (event) => {
   const token = crypto.randomUUID()
 
-  const { backgroundBase64, puzzleBase64, offsetX } = await generateSlideCaptcha()
+  const { backgroundBase64, puzzleBase64, offsetX, offsetY } = await generateSlideCaptcha()
 
   const redis = useRedis()
   await redis.setex(RedisKey.adminCaptcha(token), CAPTCHA_TTL, String(offsetX))
@@ -124,6 +124,9 @@ export default defineEventHandler(async (event) => {
     backgroundImage: backgroundBase64,
     puzzleImage: puzzleBase64,
     puzzleWidth: 50,
+    puzzleY: offsetY,  // 返回拼图块的 Y 坐标
+    imageWidth: IMAGE_WIDTH,
+    imageHeight: IMAGE_HEIGHT,
     trackWidth: 300,
   }
 })

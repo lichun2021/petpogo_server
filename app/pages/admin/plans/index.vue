@@ -51,6 +51,10 @@
             <UInput v-model.number="plan.permanent_points_grant" type="number" size="sm" />
           </div>
           <div>
+            <label class="text-xs text-stone-500 font-medium block mb-1">每周补签配额（次/周，周一重置）</label>
+            <UInput v-model.number="plan.weekly_makeup_quota" type="number" size="sm" :min="0" />
+          </div>
+          <div>
             <label class="text-xs text-stone-500 font-medium block mb-1">说明</label>
             <UTextarea v-model="plan.description" size="sm" :rows="2" />
           </div>
@@ -111,6 +115,7 @@ async function savePlan(plan: any) {
         duration_days: plan.duration_days || null,
         weekly_points_grant: plan.weekly_points_grant,
         permanent_points_grant: plan.permanent_points_grant,
+        weekly_makeup_quota: plan.weekly_makeup_quota ?? 1,
         description: plan.description,
         status: plan.status,
       },

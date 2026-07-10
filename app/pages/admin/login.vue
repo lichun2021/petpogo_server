@@ -1,5 +1,5 @@
 <template>
-  <div class="min-h-screen flex items-center justify-center relative overflow-hidden bg-gradient-to-br from-amber-50 via-orange-50 to-yellow-100">
+  <div class="min-h-dvh flex items-center justify-center relative overflow-x-hidden overflow-y-auto py-5 sm:py-10 bg-gradient-to-br from-amber-50 via-orange-50 to-yellow-100">
 
     <!-- 背景光晕 -->
     <div class="absolute inset-0 pointer-events-none">
@@ -8,10 +8,10 @@
       <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-80 h-80 bg-yellow-100/50 rounded-full blur-2xl" />
     </div>
 
-    <div class="relative w-full max-w-sm px-6">
+    <div class="relative w-full max-w-md px-4 sm:px-6">
       <!-- Logo -->
-      <div class="text-center mb-10">
-        <div class="inline-flex items-center justify-center w-16 h-16 mb-5 rounded-2xl shadow-2xl shadow-amber-500/30"
+      <div class="text-center mb-5 sm:mb-8">
+        <div class="inline-flex items-center justify-center w-14 h-14 sm:w-16 sm:h-16 mb-3 sm:mb-5 rounded-2xl shadow-2xl shadow-amber-500/30"
           style="background: linear-gradient(135deg, #f59e0b, #ea580c)">
           <span class="text-3xl">🐾</span>
         </div>
@@ -20,7 +20,7 @@
       </div>
 
       <!-- 登录卡片 -->
-      <div class="rounded-2xl border border-orange-100 shadow-xl shadow-orange-100/50 p-7 space-y-5 bg-white/80 backdrop-blur-sm">
+      <div class="rounded-2xl border border-orange-100 shadow-xl shadow-orange-100/50 p-5 sm:p-7 space-y-4 sm:space-y-5 bg-white/80 backdrop-blur-sm">
 
         <!-- 账号 -->
         <div class="space-y-1.5">
@@ -67,7 +67,10 @@
           <label class="block text-xs font-medium text-gray-500 uppercase tracking-wider">安全验证</label>
 
           <!-- 图形验证码容器 -->
-          <div class="relative rounded-lg overflow-hidden border border-orange-200" style="height:100px;background:#f5f5f5">
+          <div
+            class="relative w-full rounded-lg overflow-hidden border border-orange-200"
+            :style="{ aspectRatio: `${captcha.imageWidth} / ${captcha.imageHeight}`, background: '#f5f5f5' }"
+          >
             <!-- 加载中占位 -->
             <div v-if="captchaLoading" class="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-orange-50 to-amber-50">
               <div class="flex items-center gap-2 text-gray-400">
@@ -90,13 +93,7 @@
               v-if="captcha.puzzleImage && !captchaLoading"
               :src="captcha.puzzleImage"
               class="absolute select-none pointer-events-none transition-opacity"
-              :style="{
-                left: offset.value + 'px',
-                top: captcha.puzzleY + 'px',
-                width: '50px',
-                height: '50px',
-                opacity: dragging ? 0.8 : 1
-              }"
+              :style="puzzleStyle"
               alt="拼图块"
               draggable="false"
             />
@@ -116,9 +113,15 @@
           </div>
 
           <!-- 滑动轨道 -->
-          <div class="relative select-none rounded-full overflow-hidden" style="height:40px;background:#e8e8e8">
-            <!-- 进度填充 -->
-            <div class="absolute inset-y-0 left-0 pointer-events-none transition-none" :style="fillStyle" />
+          <div
+            class="relative select-none rounded-full"
+            style="height:40px;background:#ededed;box-shadow:inset 0 1px 2px rgba(0,0,0,0.06)"
+            data-testid="captcha-track"
+          >
+            <!-- 只裁切轨道背景，避免滑块和阴影在两端被截断 -->
+            <div class="absolute inset-0 rounded-full overflow-hidden pointer-events-none">
+              <div class="absolute inset-y-0 left-0 rounded-full transition-none" :style="fillStyle" />
+            </div>
 
             <!-- 提示文字 -->
             <div class="absolute inset-0 flex items-center justify-center text-xs font-medium pointer-events-none" :style="{ color: verified ? '#059669' : '#999' }">
@@ -127,13 +130,20 @@
 
             <!-- 滑块 -->
             <div
-              class="absolute top-0.5 flex items-center justify-center rounded-full shadow-lg touch-none"
+              class="absolute top-0 z-10 flex items-center justify-center rounded-full shadow-lg touch-none"
               :class="verified ? 'cursor-default' : 'cursor-grab active:cursor-grabbing'"
               :style="thumbStyle"
+              role="slider"
+              tabindex="0"
+              aria-label="滑动验证码"
+              :aria-valuemin="0"
+              :aria-valuemax="maxOffset"
+              :aria-valuenow="Math.round(offset)"
               @pointerdown="startDrag"
               @pointermove="onDrag"
               @pointerup="endDrag"
               @pointercancel="endDrag"
+              @keydown="onSliderKeydown"
             >
               <UIcon :name="verified ? 'i-heroicons-check' : 'i-heroicons-chevron-right'" class="w-4 h-4 text-white" />
             </div>
@@ -162,7 +172,7 @@
         </button>
       </div>
 
-      <p class="text-center text-xs text-gray-400 mt-8">PetPogo 宠物管理平台 © 2026</p>
+      <p class="text-center text-xs text-gray-400 mt-5 sm:mt-8">PetPogo 宠物管理平台 © 2026</p>
     </div>
   </div>
 </template>
@@ -181,6 +191,8 @@ const captcha = reactive({
   backgroundImage: '',
   puzzleImage: '',
   trackWidth: 300,
+  imageWidth: 350,
+  imageHeight: 100,
   puzzleWidth: 50,
   puzzleY: 25  // 拼图块垂直位置（居中占位，后端可能返回实际位置）
 })
@@ -190,16 +202,30 @@ const verified       = ref(false)
 const captchaLoading = ref(false)
 let dragStartX = 0
 let dragStartOffset = 0
+let dragTrackWidth = 0
+const THUMB_SIZE = 40
+
+const maxOffset = computed(() => Math.max(0, captcha.trackWidth - captcha.puzzleWidth))
+const offsetRatio = computed(() => maxOffset.value ? offset.value / maxOffset.value : 0)
 
 const thumbStyle = computed(() => ({
-  left: offset.value + 'px',
-  width: '38px',
-  height: '38px',
+  left: `calc(${offsetRatio.value * 100}% - ${offsetRatio.value * THUMB_SIZE}px)`,
+  width: THUMB_SIZE + 'px',
+  height: THUMB_SIZE + 'px',
   background: verified.value ? 'linear-gradient(135deg,#34d399,#059669)' : 'linear-gradient(135deg,#f59e0b,#ea580c)',
 }))
 const fillStyle = computed(() => ({
-  width: (offset.value + 38) + 'px',
-  background: verified.value ? 'rgba(16,185,129,0.3)' : 'linear-gradient(90deg, #4facfe 0%, #00f2fe 100%)',
+  width: `calc(${offsetRatio.value * 100}% + ${(1 - offsetRatio.value) * THUMB_SIZE}px)`,
+  background: verified.value
+    ? 'linear-gradient(90deg, rgba(52,211,153,0.28), rgba(5,150,105,0.38))'
+    : 'linear-gradient(90deg, rgba(245,158,11,0.28), rgba(234,88,12,0.38))',
+}))
+const puzzleStyle = computed(() => ({
+  left: `${offset.value / captcha.imageWidth * 100}%`,
+  top: `${captcha.puzzleY / captcha.imageHeight * 100}%`,
+  width: `${captcha.puzzleWidth / captcha.imageWidth * 100}%`,
+  height: `${captcha.puzzleWidth / captcha.imageHeight * 100}%`,
+  opacity: dragging.value ? 0.8 : 1,
 }))
 
 async function loadCaptcha() {
@@ -212,8 +238,10 @@ async function loadCaptcha() {
     captcha.backgroundImage = res.backgroundImage
     captcha.puzzleImage     = res.puzzleImage
     captcha.trackWidth      = res.trackWidth || 300
+    captcha.imageWidth      = res.imageWidth || 350
+    captcha.imageHeight     = res.imageHeight || 100
     captcha.puzzleWidth     = res.puzzleWidth || 50
-    captcha.puzzleY         = res.puzzleY || 25  // 如果后端返回 Y 坐标则使用，否则居中
+    captcha.puzzleY         = res.puzzleY ?? 25  // 使用后端返回的 Y 坐标
   } catch (err) {
     errorMsg.value = '验证码加载失败，请刷新重试'
   } finally { captchaLoading.value = false }
@@ -223,21 +251,34 @@ onMounted(loadCaptcha)
 function startDrag(e: PointerEvent) {
   if (verified.value || captchaLoading.value) return
   dragging.value = true
+  errorMsg.value = ''
   dragStartX = e.clientX
   dragStartOffset = offset.value
+  dragTrackWidth = (e.currentTarget as HTMLElement).parentElement?.clientWidth || captcha.trackWidth
   ;(e.currentTarget as HTMLElement).setPointerCapture(e.pointerId)
 }
 function onDrag(e: PointerEvent) {
   if (!dragging.value) return
   const delta = e.clientX - dragStartX
-  const max = captcha.trackWidth - captcha.puzzleWidth
-  offset.value = Math.min(max, Math.max(0, dragStartOffset + delta))
+  const maxDragDistance = Math.max(1, dragTrackWidth - THUMB_SIZE)
+  const logicalDelta = delta / maxDragDistance * maxOffset.value
+  offset.value = Math.min(maxOffset.value, Math.max(0, dragStartOffset + logicalDelta))
 }
 function endDrag() {
   if (!dragging.value) return
   dragging.value = false
-  // 简单的前端反馈（实际校验由后端完成）
-  verified.value = true
+  verified.value = offset.value > 0
+}
+function onSliderKeydown(e: KeyboardEvent) {
+  if (verified.value || captchaLoading.value) return
+  if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
+    e.preventDefault()
+    const delta = e.key === 'ArrowRight' ? 5 : -5
+    offset.value = Math.min(maxOffset.value, Math.max(0, offset.value + delta))
+  } else if ((e.key === 'Enter' || e.key === ' ') && offset.value > 0) {
+    e.preventDefault()
+    verified.value = true
+  }
 }
 
 async function login() {
@@ -251,7 +292,7 @@ async function login() {
         username: form.username,
         password: form.password,
         captchaToken: captcha.token,
-        captchaOffset: offset.value,
+        captchaOffset: Math.round(offset.value),
       },
     })
     localStorage.setItem('admin_token', res.token)

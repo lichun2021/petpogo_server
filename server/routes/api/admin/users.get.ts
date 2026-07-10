@@ -10,9 +10,20 @@ export default defineEventHandler(async (event) => {
 
   const [[{ total }]]: any = await db.query(`SELECT COUNT(*) as total FROM t_user ${where}`, params)
   const [list]: any = await db.query(
-    `SELECT id, phone, nickname, avatar, status, created_at FROM t_user ${where} ORDER BY created_at DESC LIMIT ? OFFSET ?`,
+    `SELECT id, phone, nickname, avatar, status, plan_type,
+            points_weekly, points_permanent, created_at
+     FROM t_user ${where} ORDER BY created_at DESC LIMIT ? OFFSET ?`,
     [...params, Number(size), offset]
   )
 
-  return { list: list.map((u: any) => ({ ...u, id: String(u.id) })), total: Number(total) }
+  return {
+    list: list.map((u: any) => ({
+      ...u,
+      id: String(u.id),
+      points_weekly:    u.points_weekly    ?? 0,
+      points_permanent: u.points_permanent ?? 0,
+      points_total:     (u.points_weekly ?? 0) + (u.points_permanent ?? 0),
+    })),
+    total: Number(total),
+  }
 })
