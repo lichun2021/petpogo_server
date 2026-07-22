@@ -391,8 +391,9 @@ CREATE TABLE IF NOT EXISTS t_system_settings (
   `value`     VARCHAR(2000) NOT NULL DEFAULT ''     COMMENT '配置值',
   label       VARCHAR(100) NOT NULL DEFAULT ''      COMMENT '前端显示名称',
   description VARCHAR(300)          DEFAULT ''      COMMENT '配置说明',
-  type        VARCHAR(20)  NOT NULL DEFAULT 'text'  COMMENT '值类型: text/boolean/number/json',
-  group_name  VARCHAR(50)  NOT NULL DEFAULT 'general' COMMENT '分组: general/sms/oss/ai',
+  type        VARCHAR(20)  NOT NULL DEFAULT 'text'  COMMENT '值类型: text/boolean/number/json/secret',
+  group_name  VARCHAR(50)  NOT NULL DEFAULT 'general' COMMENT '分组: general/sms/oss/ai/client',
+  status      TINYINT      NOT NULL DEFAULT 1      COMMENT '1=启用 0=停用（client分组停用后App不返回该项）',
   sort_order  INT          DEFAULT 0                COMMENT '组内排序',
   created_at  DATETIME     DEFAULT CURRENT_TIMESTAMP,
   updated_at  DATETIME     ON UPDATE CURRENT_TIMESTAMP,
@@ -411,7 +412,14 @@ INSERT IGNORE INTO t_system_settings (`key`, `value`, label, description, type, 
   ('app_name',              '萌宠帮',                      '应用名称',           '在通知、短信签名等处展示的应用名称',                       'text',    'general', 1),
   ('register_open',         '1',                           '开放注册',           '关闭后新用户无法注册，仅已有账号可登录',                   'boolean', 'general', 2),
   -- OSS
-  ('oss_cdn_base_url',      'https://pet-20260430.oss-cn-shanghai.aliyuncs.com', 'OSS CDN 地址', '静态资源 CDN 基础地址，结尾不加 /', 'text', 'oss', 1);
+  ('oss_cdn_base_url',      'https://pet-20260430.oss-cn-shanghai.aliyuncs.com', 'OSS CDN 地址', '静态资源 CDN 基础地址，结尾不加 /', 'text', 'oss', 1),
+  -- 客户端运行时配置（App 启动时通过 /sdkapi/config/client 拉取，secret 类型对App脱敏）
+  ('client_app_force_update', '0',  '强制更新开关', '开启后 App 应弹窗强制更新', 'boolean', 'client', 1),
+  ('client_min_version',      '1.0.0', '最低可用版本', '低于此版本 App 应提示更新', 'text', 'client', 2),
+  ('client_update_url_ios',   '',     'iOS 下载地址', 'App Store 或 TestFlight 链接', 'text', 'client', 3),
+  ('client_update_url_android','',     'Android 下载地址', 'APK 下载直链或应用市场链接', 'text', 'client', 4),
+  ('client_service_hotline',  '',     '客服热线', 'App「联系我们」展示的电话', 'text', 'client', 5),
+  ('client_map_api_key',      '',     '地图 SDK Key', '客户端地图 SDK 使用的密钥（对App脱敏返回）', 'secret', 'client', 6);
 
 CREATE TABLE IF NOT EXISTS t_feedback (
   id         BIGINT        PRIMARY KEY AUTO_INCREMENT,

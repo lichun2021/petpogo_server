@@ -13,18 +13,29 @@ export default defineEventHandler(async (event) => {
   const db = useDb()
   await ensureShareLinkTable(db)
 
-  // device/location 类型：设备在 iPet 服务器，不在本地 MySQL
-  // 如果 App 已传入 payload（含 deviceName/mac），直接用，不查库
+  // device/location/pet 类型：设备/宠物可能在对方 iPet 后台，不在本地 MySQL
+  // 如果 App 已传入 payload（含名称），直接用 payload，不查库
   const clientPayload = body.payload && typeof body.payload === 'object' ? body.payload : null
   const isDeviceType = type === 'device' || type === 'location'
+  const isPetType = type === 'pet'
+  // 客户端 payload 里带了可用的名称（deviceName / petName）即认为可直供
+  const clientHasName = clientPayload && (
+    String(clientPayload.deviceName || '').trim() ||
+    String(clientPayload.petName || '').trim()
+  )
 
   let summary: Awaited<ReturnType<typeof loadShareTargetSummary>>
-  if (isDeviceType && clientPayload?.deviceName) {
-    const deviceName = String(clientPayload.deviceName).trim() || '智能设备'
+  if ((isDeviceType || isPetType) && clientHasName) {
+    // 客户端直供：用 payload 里的信息生成摘要，不查本地表（兼容宠物/设备在 iPet 后台的场景）
+    const displayName = String(clientPayload.deviceName || clientPayload.petName || '').trim()
     summary = {
-      targetId: String(clientPayload.deviceId || targetId),
-      title: body.title || `邀请你共同管理「${deviceName}」`,
-      description: body.description || '打开链接，将设备添加到你的账户，即可一起查看和控制。',
+      targetId: String(clientPayload.petId || clientPayload.deviceId || targetId),
+      title: body.title || (isDeviceType
+        ? `邀请你共同管理「${displayName}」`
+        : `邀请你一起守护${displayName}`),
+      description: body.description || (isDeviceType
+        ? '打开链接，将设备添加到你的账户，即可一起查看和控制。'
+        : `${displayName}的资料、位置和动态都在这里。`),
       imageUrl: String(body.imageUrl || ''),
       publicPayload: clientPayload,
     }
