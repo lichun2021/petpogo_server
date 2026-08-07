@@ -55,6 +55,20 @@ async function queryMpsJobOutput(
 
 // ── 主回调处理 ─────────────────────────────────────────────
 export default defineEventHandler(async (event) => {
+  // ── 回调鉴权：MNS 控制台订阅 URL 需带 ?token=<MPS_CALLBACK_TOKEN> ──
+  // 未配置 token → 拒绝（强制运维配置，避免回调端点裸奔被伪造）
+  const config = useRuntimeConfig()
+  const callbackToken = config.mpsCallbackToken
+  if (!callbackToken) {
+    console.error('[MPS] 回调未配置 MPS_CALLBACK_TOKEN，拒绝处理')
+    throw createError({ statusCode: 500, message: 'MPS 回调未配置鉴权 token' })
+  }
+  const query = getQuery(event)
+  if (query.token !== callbackToken) {
+    console.warn(`[MPS] 回调鉴权失败 token=${(query.token as string)?.substring(0, 6) ?? '(empty)'}...`)
+    throw createError({ statusCode: 403, message: '回调鉴权失败' })
+  }
+
   const raw = await readBody(event)
   console.log('[MPS Raw]', JSON.stringify(raw))
 
@@ -95,7 +109,6 @@ export default defineEventHandler(async (event) => {
   })
 
   const db     = useDb()
-  const config = useRuntimeConfig()
   const base   = config.public.ossCdnBaseUrl
 
   if (execState === 'Completed') {

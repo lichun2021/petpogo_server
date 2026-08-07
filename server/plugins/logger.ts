@@ -88,6 +88,16 @@ export default defineNitroPlugin((nitroApp) => {
       })
 
       _orig.error(`│ #${rid} [OUT] ${status} (${duration}ms) | Error: ${resStr}`)
+
+      // ── 5xx 错误兜底：把响应给客户端的 message 替换为通用文案 ──
+      // 4xx 是业务错误（如"验证码错误"），保留原 message 给用户；
+      // 5xx 是服务端错误，原 message 可能含 SQL/堆栈/第三方细节，不透传。
+      // 真实错误已在上面 resStr 打进 pm2 日志，此处改写不影响日志可见性。
+      if (status >= 500) {
+        error.message = '服务器内部错误，请稍后重试'
+        error.statusMessage = 'Internal Server Error'
+      }
+
       _orig.log(`└──── #${rid} ────────────────────────────────────\n`)
     } catch {
       // 日志自身绝不能再抛错，否则会递归触发 error hook

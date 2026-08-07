@@ -117,7 +117,27 @@ CREATE TABLE IF NOT EXISTS t_fence_alert (
   created_at DATETIME  DEFAULT CURRENT_TIMESTAMP,
   INDEX idx_fence (fence_id),
   INDEX idx_user_time (user_id, created_at)
-) ENGINE=InnoDB;
+) ENGINE=InnoDB COMMENT='已废弃：改用 t_device_event 统一表（保留存量数据，不再写入）';
+
+-- ===========================
+-- 设备事件模块（越界/离线/低电统一表）
+-- ===========================
+CREATE TABLE IF NOT EXISTS t_device_event (
+  id            BIGINT       PRIMARY KEY COMMENT 'Snowflake ID',
+  user_id       BIGINT       NOT NULL COMMENT '事件归属用户',
+  event_type    VARCHAR(20)  NOT NULL COMMENT '事件类型：breach越界 / offline离线 / low_battery低电',
+  device_mac    VARCHAR(50)  NOT NULL COMMENT '设备MAC（App 展示 + 推送 extras 用）',
+  device_name   VARCHAR(100) COMMENT '设备名快照（防改名失真）',
+  pet_id        BIGINT       COMMENT '关联宠物（breach 事件可能带）',
+  pet_name      VARCHAR(50)  COMMENT '宠物名快照',
+  description   VARCHAR(500) COMMENT '事件描述文案',
+  extra         JSON         COMMENT '类型特有字段（如 distance / battery_percent / product_key）',
+  is_read       TINYINT      DEFAULT 0 COMMENT '0=未读 1=已读',
+  created_at    DATETIME     DEFAULT CURRENT_TIMESTAMP,
+  INDEX idx_user_time (user_id, created_at),
+  INDEX idx_user_read (user_id, is_read),
+  INDEX idx_type (event_type)
+) ENGINE=InnoDB COMMENT='设备事件统一表（越界/离线/低电，PeerApi 回调落库）';
 
 -- ===========================
 -- 社交模块

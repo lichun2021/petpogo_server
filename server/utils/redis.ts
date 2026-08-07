@@ -41,4 +41,7 @@ export const RedisKey = {
   adminCaptcha:   (token: string)            => `admin:captcha:${token}`,
   adminLoginFail: (username: string)         => `admin:login_fail:${username}`,
   userLoginFail:  (phone: string)            => `sdkapi:login_fail:${phone}`,
+  // ── 安全加固：CC 限流 / 签名防重放 ──────────────────────
+  rateLimit:      (surface: string, ip: string) => `rate:${surface}:${ip}`,
+  nonce:          (nonce: string)               => `nonce:${nonce}`,
 }

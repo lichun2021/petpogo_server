@@ -33,9 +33,11 @@ export default defineEventHandler(async (event) => {
     aiResult = aiResp.data
   } catch (e: any) {
     const errMsg = e.response?.data?.detail ?? e.message ?? '未知错误'
+    // 真实错误（含 AI 服务 detail）只进 pm2 日志，不透传给客户端
+    console.error('[AI音频] 失败:', errMsg, 'code=', e.code, 'status=', e.response?.status)
     throw createError({
       statusCode: 502,
-      message: `音频 AI 服务异常: ${errMsg}`,
+      message: '音频 AI 服务暂时不可用，请稍后重试',
     })
   }
 

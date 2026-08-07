@@ -85,6 +85,11 @@ export default defineNuxtConfig({
     openapiSecret: process.env.OPENAPI_SECRET || 'bec1adf7ad77c6e38d3a7599926d9b4203b3ff34f797c2cf',
     // 内部定时任务密钥（cron 调 /api/internal/** 时带在 header）
     internalTaskKey: process.env.INTERNAL_TASK_KEY || 'petpogo_internal_task_2026',
+    // MNS/MPS 回调鉴权 token：MNS 控制台订阅 URL 带 ?token=<同值>，handler 校验一致性。
+    // 默认空字符串 → 未配置时拒绝所有回调（强制运维配置，避免裸奔）。
+    mpsCallbackToken: process.env.MPS_CALLBACK_TOKEN || '',
+    // 签名 nonce 防重放过渡开关：默认 true 强制校验；App 端未升级时设 'false' 只告警不拦
+    signatureNonceRequired: process.env.SIGNATURE_NONCE_REQUIRED !== 'false',
     public: {
       ossCdnBaseUrl: process.env.OSS_CDN_BASE_URL || 'https://pet-20260430.oss-cn-shanghai.aliyuncs.com',
       tencentImSdkAppId: '1600139420',

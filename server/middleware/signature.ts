@@ -1,7 +1,7 @@
 import crypto from 'node:crypto'
 
 // 需要跳过签名的路径，例如后台管理接口、上传接口等
-export default defineEventHandler((event) => {
+export default defineEventHandler(async (event) => {
   const path = event.path.split('?')[0] 
 
   // 只拦截 /sdkapi 的请求 (App 专用)
@@ -46,4 +46,35 @@ export default defineEventHandler((event) => {
     console.warn(`[Signature] 拦截: 签名不匹配 - path: ${path}, clientSig: ${signature}, expected: ${expectedSignature}, secret: ${secret}`)
     throw createError({ statusCode: 403, message: '请求签名验证失败 (Invalid signature)' })
   }
+
+  // ── nonce 防重放 ──────────────────────────────────────────
+  // App 端每个请求需带 x-nonce（≥8 位随机串），服务端用 Redis SETNX 去重，
+  // TTL 与时间戳窗口对齐（5 分钟），窗口内同一 nonce 只能被消费一次。
+  //
+  // 过渡期：runtimeConfig.signatureNonceRequired 控制行为
+  //   true  （默认，App 端已升级后）—— 缺失或重复 nonce 直接 400/403 拒绝
+  //   false （App 端未升级时）       —— 只 console.warn 告警，不拦截，保证零中断
+  const nonce = getHeader(event, 'x-nonce')
+  if (!nonce || nonce.length < 8) {
+    if (config.signatureNonceRequired) {
+      console.warn(`[Signature] 拦截: 缺少 nonce - path: ${path}, nonce: ${nonce}`)
+      throw createError({ statusCode: 400, message: '缺少 nonce 防重放标识' })
+    }
+    console.warn(`[Signature] 告警(过渡期未拦截): 缺少 nonce - path: ${path}`)
+    return
+  }
+
+  const redis = useRedis()
+  const nonceKey = RedisKey.nonce(nonce)
+  const set = await redis.setnx(nonceKey, '1')
+  if (set !== 1) {
+    if (config.signatureNonceRequired) {
+      console.warn(`[Signature] 拦截: nonce 重复(疑似重放) - path: ${path}, nonce: ${nonce}`)
+      throw createError({ statusCode: 403, message: '请求已处理，请勿重放' })
+    }
+    console.warn(`[Signature] 告警(过渡期未拦截): nonce 重复 - path: ${path}, nonce: ${nonce}`)
+    return
+  }
+  // TTL 与时间戳窗口对齐（5 分钟）
+  await redis.expire(nonceKey, 5 * 60)
 })

@@ -99,8 +99,9 @@ export default defineEventHandler(async (event) => {
       throw new Error(`[${res.body.code}] ${res.body.message}`)
     }
   } catch (e: any) {
+    // 真实错误（含阿里云错误码）只进 pm2 日志，不透传给客户端
     console.error(`[SMS] 发送失败: ${e.message}`)
-    throw createError({ statusCode: 500, message: `短信发送失败: ${e.message}` })
+    throw createError({ statusCode: 500, message: '短信发送失败，请稍后重试' })
   }
 
   await redis.setex(RedisKey.smsCode(normalizedPhone), codeExpireSec, JSON.stringify({ code, attempts: 0 }))

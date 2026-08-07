@@ -1,6 +1,6 @@
 # PetPogo OpenAPI — 接口文档
 
-**版本**: v1.2
+**版本**: v1.3
 **Base URL**: `http://115.29.196.61:3000`
 
 ---
@@ -544,4 +544,129 @@ AI 服务（图片情绪分析 / 语音情绪分析 / AI 问诊等）完成一�
 | `404` | `phone` 对应用户不存在 |
 | `500` | 服务器内部错误 |
 
+---
+
+## 接口六：设备事件回调
+
+### `POST /openapi/device-event/callback`
+
+PeerApi 在设备发生 **越界 / 离线 / 低电** 事件时，主动调用此接口上报。服务端落库后**自动触发极光推送**通知用户，App 端 `push_service.dart` 已就绪可识别对应 `type` 并跳转。
+
+> 与接口四（AI 消费上报）一致，本接口用 **`phone`（手机号）** 或 **`alias`（`手机号@qq.com`）** 标识用户，二者至少传一个；`alias` 优先。
+
+---
+
+### 请求头
+
+同推送接口，需携带 `x-api-key` / `x-timestamp` / `x-signature`。
+
+---
+
+### 请求体
+
+| 字段 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| `phone` | `string` | 条件必填 | 用户手机号，反查 `t_user`。`alias` 未传时必填 |
+| `alias` | `string` | 条件必填 | 用户 alias（格式：`手机号@qq.com`），优先于 `phone`。二选一 |
+| `event_type` | `string` | ✅ | 事件类型：`breach`（越界）/ `offline`（离线）/ `low_battery`（低电） |
+| `device_mac` | `string` | ✅ | 设备 MAC 地址（App 展示 + 推送 extras 跳转用） |
+| `device_name` | `string` | ❌ | 设备名。不传则服务端查 `t_device` 兜底补全，再取不到则用 `device_mac` |
+| `pet_name` | `string` | ❌ | 宠物名。不传则服务端查 `t_pet` 兜底补全，再取不到则为空 |
+| `description` | `string` | ❌ | 事件描述文案。不传则服务端按 `event_type` 生成默认文案 |
+| `extra` | `object` | ❌ | 类型特有字段，写入 `t_device_event.extra` JSON 列。如 `breach` 传 `{"distance": 50}`，`low_battery` 传 `{"battery_percent": 18}` |
+
+---
+
+### 默认文案（`description` 未传时）
+
+| `event_type` | 生成文案 |
+|--------------|---------|
+| `breach` | `{pet_name}离开了安全围栏范围` |
+| `offline` | `设备{device_name}已离线` |
+| `low_battery` | `设备{device_name}电量不足（{extra.battery_percent}%）` |
+
+---
+
+### 触发推送
+
+落库成功后，服务端**同步**调用极光推送（推送失败不影响落库和回调响应），推送参数：
+
+| 项 | 值 |
+|----|-----|
+| 推送目标 | `alias = userId`（App 登录后已 setAlias 绑定） |
+| `title` | `围栏警报` / `设备离线` / `电量提醒` |
+| `content` | 同 `description` |
+| `extras.type` | `breach` → `fence_alert`，`offline` → `device_offline`，`low_battery` → `low_battery` |
+| `extras.device_mac` | 请求体的 `device_mac`，App 点击后跳设备详情页 |
+| `extras.pet_name` | 宠物名（若有） |
+
+> App 端 `push_service._handleNotificationTap` 已识别上述三种 `type`：带 `device_mac` 时跳 `AppRoutes.deviceDetail(deviceMac)`，无 `device_mac` 时跳 `AppRoutes.message`。
+
+---
+
+### 请求示例
+
+**越界事件**
+
+```json
+{
+  "phone": "13800138000",
+  "event_type": "breach",
+  "device_mac": "ipt-esp32-Device-02",
+  "extra": { "distance": 50 }
+}
+```
+
+**离线事件**
+
+```json
+{
+  "alias": "13800138000@qq.com",
+  "event_type": "offline",
+  "device_mac": "ipt-esp32-Device-02",
+  "device_name": "毛毛的项圈"
+}
+```
+
+**低电事件**
+
+```json
+{
+  "phone": "13800138000",
+  "event_type": "low_battery",
+  "device_mac": "ipt-esp32-Device-02",
+  "device_name": "毛毛的项圈",
+  "extra": { "battery_percent": 18 }
+}
+```
+
+---
+
+### 响应
+
+**成功（200）**
+
+```json
+{
+  "success": true,
+  "id": "7234567890123456"
+}
+```
+
+`id` 为 `t_device_event` 记录的 Snowflake ID（字符串），可用于后续追溯。
+
+### 错误码
+
+| 状态码 | 原因 |
+|--------|------|
+| `401` | 缺少鉴权 Header |
+| `403` | API Key 错误 / 时间戳过期 / 签名错误 |
+| `400` | `event_type` 无效 / `device_mac` 为空 / `phone` 与 `alias` 都未传 |
+| `404` | `phone`（或 `alias`）对应用户不存在 |
+| `500` | 服务器内部错误 |
+
+> [!NOTE]
+> - **推送失败不影响回调响应**：极光推送异常时只记服务端日志，接口仍返回 `success: true`，落库数据可被 App 通过 `/sdkapi/device-event/list` 查询到。
+> - **冗余快照**：`device_name` / `pet_name` 落库时做快照，防止用户后续改名导致历史事件文案失真。
+> - **幂等性**：本接口不做去重，PeerApi 若重复回调同一事件会产生多条记录，需调用方自行控制。
 ---
