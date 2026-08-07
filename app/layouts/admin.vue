@@ -155,6 +155,7 @@ const navBase = [
   { to: '/admin',          label: '数据概览',    icon: 'i-heroicons-squares-2x2' },
   { to: '/admin/users',    label: '用户管理',    icon: 'i-heroicons-users' },
   { to: '/admin/devices',  label: '设备管理',    icon: 'i-heroicons-cpu-chip' },
+  { to: '/admin/device-events', label: '设备事件', icon: 'i-heroicons-bell-alert' },
   { to: '/admin/posts',    label: '帖子审核',    icon: 'i-heroicons-photo' },
   { to: '/admin/stores',   label: '门店管理',    icon: 'i-heroicons-building-storefront' },
   { to: '/admin/ai-analysis', label: 'AI 识别记录', icon: 'i-heroicons-sparkles' },
