@@ -20,6 +20,12 @@ export default defineNuxtConfig({
     compatibilityVersion: 4,
   },
 
+  // @nuxt/fonts：只用本地字体提供方，避免启动时联网拉 Google Fonts 超时
+  // （生产环境服务器无法访问 fonts.google.com，默认会卡 10s 超时再 fallback）
+  fonts: {
+    provider: 'local',
+  },
+
   routeRules: {
     '/': { redirect: '/admin/login' },
     '/api/**':     { cors: true },
