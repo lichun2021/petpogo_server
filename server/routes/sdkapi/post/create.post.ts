@@ -1,11 +1,15 @@
 // 发布帖子（支持图片/视频）
 export default defineEventHandler(async (event) => {
   const user = await requireAuth(event)
-  const { content, mediaType, mediaUrls, videoUrl, coverUrl, rawVideoKey, location, longitude, latitude, visibility } = await readBody(event)
+  const { content, mediaType, mediaUrls, videoUrl, coverUrl, rawVideoKey, location, longitude, latitude, visibility, category, tag } = await readBody(event)
 
   if (!content && !mediaUrls?.length && !videoUrl && !rawVideoKey) {
     throw createError({ statusCode: 400, message: '内容不能为空' })
   }
+
+  // 帖子标签：App 传 category（兼容 tag），只接受 cat/dog/other，其余归为 other
+  const rawTag = String(category ?? tag ?? '').trim().toLowerCase()
+  const postTag = (rawTag === 'cat' || rawTag === 'dog') ? rawTag : 'other'
 
   const db = useDb()
   const redis = useRedis()
@@ -21,13 +25,13 @@ export default defineEventHandler(async (event) => {
   const status = isProcessing ? 0 : 2
 
   const [result]: any = await db.query(
-    `INSERT INTO t_post(user_id,content,media_type,media_urls,video_url,cover_url,raw_video_key,location,longitude,latitude,visibility,status,created_at)
-     VALUES(?,?,?,?,?,?,?,?,?,?,?,?,NOW())`,
+    `INSERT INTO t_post(user_id,content,media_type,media_urls,video_url,cover_url,raw_video_key,location,longitude,latitude,visibility,status,tag,created_at)
+     VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,NOW())`,
     [user.userId, content || '', mediaType || 0,
      mediaUrls ? JSON.stringify(mediaUrls) : null,
      resolvedVideoUrl, coverUrl || null, rawVideoKey || null,
      location || null, longitude || null, latitude || null,
-     visibility ?? 1, status]
+     visibility ?? 1, status, postTag]
   )
   const id = result.insertId
 

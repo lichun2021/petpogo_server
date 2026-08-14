@@ -2,7 +2,7 @@
 // 查询参数: petId / page / pageSize
 
 export default defineEventHandler(async (event) => {
-  const user = await requireAuth(event)
+  await requireAuth(event)
   const query = getQuery(event)
 
   const petId = String(query.petId ?? query.pet_id ?? '').trim()
@@ -15,11 +15,13 @@ export default defineEventHandler(async (event) => {
   const db = useDb()
   await ensurePetCirclePostTable(db)
 
-  const params = [user.userId, petId]
+  // 宠物可共享给多个用户，动态按 pet_id 查询，不限定 owner_user_id，
+  // 否则共享方（非宠物主人）看不到该宠物的萌宠圈动态。
+  const params = [petId]
   const [[{ total }]]: any = await db.query(
     `SELECT COUNT(*) AS total
      FROM t_pet_circle_post
-     WHERE owner_user_id = ? AND pet_id = ? AND status = 1`,
+     WHERE pet_id = ? AND status = 1`,
     params,
   )
 
@@ -27,7 +29,7 @@ export default defineEventHandler(async (event) => {
     `SELECT id, owner_user_id, pet_id, pet_name, pet_avatar, content, media_type,
             media_urls, cover_url, event_type, source_id, source_time, created_at
      FROM t_pet_circle_post
-     WHERE owner_user_id = ? AND pet_id = ? AND status = 1
+     WHERE pet_id = ? AND status = 1
      ORDER BY COALESCE(source_time, created_at) DESC, id DESC
      LIMIT ? OFFSET ?`,
     [...params, pageSize, offset],
