@@ -545,7 +545,7 @@ CREATE TABLE IF NOT EXISTS t_share_link (
 -- 每种情绪可配置多条默认声音，后台可自由增删改
 CREATE TABLE IF NOT EXISTS t_sound_preset (
   id          BIGINT        PRIMARY KEY AUTO_INCREMENT,
-  pet_type VARCHAR(10) NOT NULL DEFAULT 'cat' COMMENT '宠物类型: cat/dog' 
+  pet_type    VARCHAR(10)   NOT NULL DEFAULT 'cat' COMMENT '宠物类型: cat/dog',
   emotion     VARCHAR(50)   NOT NULL    COMMENT '情绪类型: happy/sad/excited/calm/angry/scared/neutral',
   name        VARCHAR(100)  NOT NULL    COMMENT '声音名称',
   url         TEXT          NOT NULL    COMMENT '声音OSS直链',
@@ -799,3 +799,128 @@ CREATE TABLE IF NOT EXISTS t_checkin_claim_log (
   UNIQUE KEY uk_user_rule_period (user_id, rule_id, period_key)
 ) ENGINE=InnoDB COMMENT='签到奖励领取记录表';
 ) ENGINE=InnoDB COMMENT='签到奖励领取记录表';
+
+-- ===========================
+-- 电子宠物模块（养成属性 / 资源库 / 互动 / 硬件动作 / 统一事件日志）
+-- ===========================
+
+-- t_pet 增加养成属性与形象/背景引用字段
+ALTER TABLE t_pet ADD COLUMN IF NOT EXISTS satiety INT NOT NULL DEFAULT 100 COMMENT '饱腹度 0-100';
+ALTER TABLE t_pet ADD COLUMN IF NOT EXISTS mood INT NOT NULL DEFAULT 100 COMMENT '心情值 0-100';
+ALTER TABLE t_pet ADD COLUMN IF NOT EXISTS cleanliness INT NOT NULL DEFAULT 100 COMMENT '清洁度 0-100';
+ALTER TABLE t_pet ADD COLUMN IF NOT EXISTS background_id BIGINT NULL COMMENT '当前背景，引用 t_pet_background.id';
+ALTER TABLE t_pet ADD COLUMN IF NOT EXISTS model_id BIGINT NULL COMMENT '当前形象，引用 t_pet_model.id';
+ALTER TABLE t_pet ADD COLUMN IF NOT EXISTS stats_updated_at DATETIME NULL COMMENT '养成属性最后一次写入/衰减基准时间';
+ALTER TABLE t_pet ADD COLUMN IF NOT EXISTS updated_at DATETIME NULL ON UPDATE CURRENT_TIMESTAMP COMMENT '最后更新时间';
+
+-- GLB 动作标识库：动作是内嵌在各宠物形象 GLB 模型里的动画片段（clip），所有形象通用同一套命名，
+-- 因此本表只登记"动作标识码"，不上传任何文件；互动类型 / 硬件动作码引用它决定用哪个片段名播放动画
+CREATE TABLE IF NOT EXISTS t_pet_glb_action (
+  id          BIGINT        PRIMARY KEY COMMENT 'Snowflake ID',
+  code        VARCHAR(50)   NOT NULL COMMENT '动作标识码，对应宠物模型GLB内置动画片段(clip)的名称，App按此名去当前加载的模型里查找并播放',
+  name        VARCHAR(100)  NOT NULL COMMENT '动作显示名称（后台展示用）',
+  enabled     TINYINT       NOT NULL DEFAULT 1 COMMENT '1启用 0停用',
+  deleted     TINYINT       NOT NULL DEFAULT 0,
+  created_at  DATETIME      DEFAULT CURRENT_TIMESTAMP,
+  updated_at  DATETIME      ON UPDATE CURRENT_TIMESTAMP,
+  UNIQUE KEY uk_code (code),
+  INDEX idx_enabled (enabled)
+) ENGINE=InnoDB COMMENT='GLB 动作标识库（对应模型内置动画片段名，所有宠物形象通用，不含文件）';
+
+INSERT IGNORE INTO t_pet_glb_action (id, code, name, enabled) VALUES
+  (1, 'lying',    '躺卧动画', 1),
+  (2, 'eating',   '进食动画', 1),
+  (3, 'sitting',  '坐动画',   1),
+  (4, 'walking',  '行走动画', 1),
+  (5, 'standing', '站立动画', 1),
+  (6, 'feed',     '喂食反馈动画', 1),
+  (7, 'play',     '逗猫反馈动画', 1),
+  (8, 'clean',    '清洁反馈动画', 1);
+
+-- 背景资源
+CREATE TABLE IF NOT EXISTS t_pet_background (
+  id          BIGINT        PRIMARY KEY COMMENT 'Snowflake ID',
+  name        VARCHAR(100)  NOT NULL,
+  image_url   VARCHAR(500)  NOT NULL,
+  enabled     TINYINT       NOT NULL DEFAULT 1,
+  deleted     TINYINT       NOT NULL DEFAULT 0,
+  created_at  DATETIME      DEFAULT CURRENT_TIMESTAMP,
+  updated_at  DATETIME      ON UPDATE CURRENT_TIMESTAMP,
+  INDEX idx_enabled (enabled)
+) ENGINE=InnoDB COMMENT='电子宠物背景资源';
+
+-- 形象（GLB模型）资源
+CREATE TABLE IF NOT EXISTS t_pet_model (
+  id            BIGINT        PRIMARY KEY COMMENT 'Snowflake ID',
+  name          VARCHAR(100)  NOT NULL,
+  glb_url       VARCHAR(500)  NOT NULL COMMENT '形象 GLB 文件 OSS 直链',
+  thumbnail_url VARCHAR(500)  COMMENT '预览缩略图',
+  enabled       TINYINT       NOT NULL DEFAULT 1,
+  deleted       TINYINT       NOT NULL DEFAULT 0,
+  created_at    DATETIME      DEFAULT CURRENT_TIMESTAMP,
+  updated_at    DATETIME      ON UPDATE CURRENT_TIMESTAMP,
+  INDEX idx_enabled (enabled)
+) ENGINE=InnoDB COMMENT='电子宠物形象（GLB模型）资源';
+
+-- 互动类型（喂食/逗猫/清洁等）：后台可自由增删改查，预置3条初始数据但不限制数量
+CREATE TABLE IF NOT EXISTS t_pet_interaction_type (
+  id                BIGINT        PRIMARY KEY COMMENT 'Snowflake ID',
+  code              VARCHAR(50)   NOT NULL COMMENT '标识码，管理员可自定义新增',
+  name              VARCHAR(50)   NOT NULL COMMENT '显示名称',
+  icon_url          VARCHAR(500)  COMMENT '图标',
+  glb_action_id     BIGINT        NULL COMMENT '引用 t_pet_glb_action.id，为空表示未映射动画',
+  satiety_delta     INT           NOT NULL DEFAULT 0 COMMENT '饱腹度增减（可正可负）',
+  mood_delta        INT           NOT NULL DEFAULT 0 COMMENT '心情值增减（可正可负）',
+  cleanliness_delta INT           NOT NULL DEFAULT 0 COMMENT '清洁度增减（可正可负）',
+  enabled           TINYINT       NOT NULL DEFAULT 1,
+  deleted           TINYINT       NOT NULL DEFAULT 0,
+  created_at        DATETIME      DEFAULT CURRENT_TIMESTAMP,
+  updated_at        DATETIME      ON UPDATE CURRENT_TIMESTAMP,
+  UNIQUE KEY uk_code (code),
+  INDEX idx_enabled (enabled),
+  INDEX idx_glb_action (glb_action_id)
+) ENGINE=InnoDB COMMENT='电子宠物互动类型（喂食/逗猫/清洁等，后台可增删改查）';
+
+INSERT IGNORE INTO t_pet_interaction_type (id, code, name, icon_url, glb_action_id, satiety_delta, mood_delta, cleanliness_delta, enabled) VALUES
+  (1, 'feed',  '喂食', '', 6, 20, 5,  0,  1),
+  (2, 'play',  '逗猫', '', 7, 0,  15, 0,  1),
+  (3, 'clean', '清洁', '', 8, 0,  5,  20, 1);
+
+-- 硬件动作码（躺卧/进食/坐/行走/站立等）：硬件/算法侦测出的宠物物理状态标识，非动画本身
+-- 后台可自由增删改查，预置5条初始数据，硬件支持新动作时可继续新增
+CREATE TABLE IF NOT EXISTS t_pet_hardware_action_type (
+  id            BIGINT        PRIMARY KEY COMMENT 'Snowflake ID',
+  code          VARCHAR(50)   NOT NULL COMMENT '标识码，管理员可自定义新增',
+  name          VARCHAR(50)   NOT NULL COMMENT '显示名称',
+  icon_url      VARCHAR(500)  COMMENT '图标',
+  glb_action_id BIGINT        NULL COMMENT '引用 t_pet_glb_action.id，为空表示未映射动画',
+  enabled       TINYINT       NOT NULL DEFAULT 1,
+  deleted       TINYINT       NOT NULL DEFAULT 0,
+  created_at    DATETIME      DEFAULT CURRENT_TIMESTAMP,
+  updated_at    DATETIME      ON UPDATE CURRENT_TIMESTAMP,
+  UNIQUE KEY uk_code (code),
+  INDEX idx_enabled (enabled),
+  INDEX idx_glb_action (glb_action_id)
+) ENGINE=InnoDB COMMENT='硬件动作码（宠物物理状态标识，后台可增删改查）';
+
+INSERT IGNORE INTO t_pet_hardware_action_type (id, code, name, icon_url, glb_action_id, enabled) VALUES
+  (1, 'lying',    '躺卧', '', 1, 1),
+  (2, 'eating',   '进食', '', 2, 1),
+  (3, 'sitting',  '坐',   '', 3, 1),
+  (4, 'walking',  '行走', '', 4, 1),
+  (5, 'standing', '站立', '', 5, 1);
+
+-- 统一宠物事件日志：互动触发 + 硬件动作上报，统一记录，便于后台一处查询
+CREATE TABLE IF NOT EXISTS t_pet_event (
+  id           BIGINT                              PRIMARY KEY COMMENT 'Snowflake ID',
+  source       ENUM('interaction','hardware_action') NOT NULL COMMENT '事件来源：互动触发/硬件动作上报',
+  pet_id       BIGINT                              NULL COMMENT '关联宠物（互动事件必有；硬件事件按设备反查，可能为空）',
+  device_id    BIGINT                              NULL COMMENT '关联设备（硬件事件必有；互动事件可选）',
+  ref_type_id  BIGINT                              NOT NULL COMMENT 'source=interaction 时指向 t_pet_interaction_type.id；source=hardware_action 时指向 t_pet_hardware_action_type.id',
+  occurred_at  DATETIME                            NOT NULL COMMENT '事件发生时间',
+  created_at   DATETIME      DEFAULT CURRENT_TIMESTAMP,
+  INDEX idx_pet (pet_id),
+  INDEX idx_device (device_id),
+  INDEX idx_occurred (occurred_at),
+  INDEX idx_source (source)
+) ENGINE=InnoDB COMMENT='宠物事件统一日志（互动触发 + 硬件动作上报）';

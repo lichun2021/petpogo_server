@@ -44,4 +44,6 @@ export const RedisKey = {
   // ── 安全加固：CC 限流 / 签名防重放 ──────────────────────
   rateLimit:      (surface: string, ip: string) => `rate:${surface}:${ip}`,
   nonce:          (nonce: string)               => `nonce:${nonce}`,
+  // ── 电子宠物：硬件动作码最新上报缓存（Redis优先 + DB兜底，同 devicePosition）──
+  petAction:      (deviceId: string)            => `pet:action:${deviceId}`,
 }
