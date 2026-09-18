@@ -22,7 +22,7 @@ const STRICT_LIMIT   = 20    // 次（敏感端点）
 
 // 严格限流端点匹配
 function isStrictPath(path: string): boolean {
-  return path.startsWith('/sdkapi/ai/')
+  return path.startsWith('/sdkapi/ai-proxy/')
       || path === '/sdkapi/upload/sign'
       || path === '/sdkapi/auth/sms'
 }

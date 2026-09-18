@@ -42,6 +42,12 @@ export default defineEventHandler(async (event) => {
 
   if (!code) return { code: null, reportedAt: null, clipCode: null }
 
+  // 状态时效性校验：超过 1 分钟没有新上报，视为过期（硬件可能已断连），不返回陈旧状态
+  const reportedAtMs = reportedAt ? new Date(reportedAt).getTime() : 0
+  if (!reportedAtMs || Date.now() - reportedAtMs > 60 * 1000) {
+    return { code: null, reportedAt: null, clipCode: null }
+  }
+
   const [[actionType]]: any = await db.query(
     `SELECT ga.code AS clip_code
        FROM t_pet_hardware_action_type h

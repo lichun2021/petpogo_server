@@ -288,7 +288,7 @@ function buildHeaders(token) {
 { "code": "lying", "reportedAt": "2026-09-16T04:35:15.911Z", "clipCode": null }
 ```
 
-**响应（200，设备从未上报过 / 宠物未关联设备）**
+**响应（200，设备从未上报过 / 宠物未关联设备 / 上报已超过 1 分钟未刷新）**
 
 ```json
 { "code": null, "reportedAt": null, "clipCode": null }
@@ -298,4 +298,5 @@ function buildHeaders(token) {
 
 > [!NOTE]
 > - 优先读取 Redis 缓存（TTL 6 小时），缓存缺失时自动回退查询统一事件日志 `t_pet_event` 中该设备最近一次硬件动作记录。
+> - **新鲜度窗口**：`reportedAt` 距当前时间超过 1 分钟时，视为过期状态，接口直接返回 `code`/`reportedAt`/`clipCode` 均为 `null`，不会返回硬件早已停止上报的陈旧动作（例如设备离线、断连）。
 > - 建议轮询间隔与动画播放需求匹配（如 2-5 秒），无需过于频繁。

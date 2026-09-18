@@ -28,8 +28,8 @@ export default defineNuxtConfig({
 
   routeRules: {
     '/': { redirect: '/admin/login' },
-    '/api/**':     { cors: true },
-    '/sdkapi/**':  { cors: true },
+    '/api/**': { cors: true },
+    '/sdkapi/**': { cors: true },
     '/openapi/**': { cors: true },
   },
 
@@ -80,14 +80,21 @@ export default defineNuxtConfig({
     uclPositionUrl: process.env.UCL_POSITION_URL || '',
     uclMapMarkName: process.env.UCL_MAP_MARK_NAME || 'position',
     appApiSecret: process.env.APP_API_SECRET || '1q21ee182efd1gf1g@#$',
-    aiServiceUrl: process.env.AI_SERVICE_URL || 'http://127.0.0.1:8000',
+    aiServiceUrl: process.env.AI_SERVICE_URL || 'https://ai.jxpetai.com',
+    aiApiKey: process.env.AI_API_KEY || '',
+    aiApiSecret: process.env.AI_API_SECRET || '',
+    aiProxyTimeoutMs: process.env.AI_PROXY_TIMEOUT_MS || '120000',
+    aiProxyRecordingTimeoutMs: process.env.AI_PROXY_RECORDING_TIMEOUT_MS || '300000',
+    aiProxyStreamTimeoutMs: process.env.AI_PROXY_STREAM_TIMEOUT_MS || '300000',
+    aiProxyStreamIdleTimeoutMs: process.env.AI_PROXY_STREAM_IDLE_TIMEOUT_MS || '60000',
     siteBaseUrl: process.env.SITE_BASE_URL || 'https://www.jxpetai.com',
     // 对方后台（iPet 宠物/硬件管理系统）
     peerBackendUrl: process.env.PEER_BACKEND_URL || '',
-    peerBackendPublicUrl: process.env.PEER_BACKEND_PUBLIC_URL || process.env.PEER_BACKEND_URL || 'http://49.234.39.11:8006',
+    peerBackendTimeoutMs: process.env.PEER_BACKEND_TIMEOUT_MS || '20000',
+    peerBackendPublicUrl: process.env.PEER_BACKEND_PUBLIC_URL || process.env.PEER_BACKEND_URL || 'https://peer.jxpetai.com',
     peerBackendMerchantId: process.env.PEER_BACKEND_MERCHANT_ID || '1',
     peerBackendSecret: process.env.PEER_BACKEND_SECRET || '',
-    openapiKey:    process.env.OPENAPI_KEY    || 'ce96786dcc394fddeb521d0e',
+    openapiKey: process.env.OPENAPI_KEY || 'ce96786dcc394fddeb521d0e',
     openapiSecret: process.env.OPENAPI_SECRET || 'bec1adf7ad77c6e38d3a7599926d9b4203b3ff34f797c2cf',
     // 内部定时任务密钥（cron 调 /api/internal/** 时带在 header）
     internalTaskKey: process.env.INTERNAL_TASK_KEY || 'petpogo_internal_task_2026',

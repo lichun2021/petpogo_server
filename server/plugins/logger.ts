@@ -29,9 +29,11 @@ export default defineNitroPlugin((nitroApp) => {
     event.context.startTime = Date.now()
     event.context.reqId = shortReqId()
     const rid = event.context.reqId
+    // 中转内容含凭证、问诊或媒体地址，只记录路径及状态；也避免预读 multipart/SSE。
+    const isProxy = event.path.startsWith('/sdkapi/peer/') || event.path.startsWith('/sdkapi/ai-proxy/')
 
     let bodyStr = ''
-    if (['POST', 'PUT', 'PATCH', 'DELETE'].includes(event.method)) {
+    if (!isProxy && ['POST', 'PUT', 'PATCH', 'DELETE'].includes(event.method)) {
       try {
         if (!event.path.includes('/upload')) {
           const body = await readBody(event)
@@ -42,12 +44,12 @@ export default defineNitroPlugin((nitroApp) => {
       } catch (e) { /* 忽略无法解析的 body */ }
     }
 
-    const queryStr = Object.keys(getQuery(event)).length
+    const queryStr = !isProxy && Object.keys(getQuery(event)).length
       ? ` | Query: ${JSON.stringify(getQuery(event))}`
       : ''
 
     _orig.log(`\n┌─── [API 请求] ${_ts()} #${rid} ──────────────────────`)
-    _orig.log(`│ #${rid} [IN] ${event.method} ${event.path}${queryStr}${bodyStr}`)
+    _orig.log(`│ #${rid} [IN] ${event.method} ${isProxy ? event.path.split('?')[0] : event.path}${queryStr}${bodyStr}`)
   })
 
   // 正常响应：打印 [OUT]（beforeResponse 在抛错时不触发）
@@ -59,7 +61,9 @@ export default defineNitroPlugin((nitroApp) => {
     const status   = getResponseStatus(event)
 
     let resStr = ''
-    if (body) {
+    if (event.path.startsWith('/sdkapi/peer/') || event.path.startsWith('/sdkapi/ai-proxy/')) {
+      resStr = '[中转响应内容不记录]'
+    } else if (body) {
       if (typeof body === 'string') {
         resStr = body.length > 1000 ? body.substring(0, 1000) + '... (truncated)' : body
       } else if (typeof body === 'object') {
@@ -104,4 +108,3 @@ export default defineNitroPlugin((nitroApp) => {
     }
   })
 })
-

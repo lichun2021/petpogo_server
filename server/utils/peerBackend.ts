@@ -6,17 +6,17 @@
  * 基础URL:   PEER_BACKEND_URL (内部通信)
  * 公网URL:   PEER_BACKEND_PUBLIC_URL (前端直连宠物/设备接口用)
  * 认证方式:  token Header (对方颁发的 ipet_token)
- * 内容类型:  application/x-www-form-urlencoded
+ * 账号接口使用表单；SDK 中转同时支持 GET、表单和 JSON。
  *
  * 账号映射规则:
- *   本后台 phone(手机号) → 对方 account({phone}@petpogo.com)
+ *   本后台 phone(手机号) → 对方 account({phone}@qq.com)
  *
- * 密码生成规则（确定性，无需存库）:
- *   sha256("peer:" + phone + ":" + PEER_BACKEND_SECRET).substring(0, 32)
+ * 账号业务保持原有固定密码规则。所有上游 HTTP 请求集中在本文件。
  * ──────────────────────────────────────────────────────────────
  */
 
 import crypto from 'node:crypto'
+import { createError } from 'h3'
 
 // ── 类型定义 ──────────────────────────────────────────────────
 
@@ -72,6 +72,61 @@ function getPeerConfig() {
   }
 }
 
+export interface PeerRequestOptions {
+  method: 'GET' | 'POST'
+  encoding: 'query' | 'form' | 'json' | 'empty'
+  params?: Record<string, string | number>
+  token?: string
+}
+
+/**
+ * 唯一上游 HTTP 出口。path 只能由服务端账号方法或接口清单提供。
+ * 原始 JSON 文本交给中转层，避免长整数 ID 被 JS 解析后截断。
+ * 不自动重试或跟随重定向，避免重复控制设备或将 token 发送到其他地址。
+ */
+export async function peerRequest(path: string, options: PeerRequestOptions) {
+  const { url } = getPeerConfig()
+  if (!/^\/[a-zA-Z0-9]+(?:\/[a-zA-Z0-9]+)*$/.test(path)) {
+    throw createError({ statusCode: 500, message: 'Peer 接口路径配置错误' })
+  }
+  const target = new URL(`${url.replace(/\/+$/, '')}${path}`)
+  if (!['http:', 'https:'].includes(target.protocol) || target.username || target.password || target.search || target.hash) {
+    throw createError({ statusCode: 503, message: 'Peer 上游地址配置错误' })
+  }
+  const headers: Record<string, string> = { Accept: '*/*' }
+  if (options.token) headers.token = options.token
+  const params = options.params ?? {}
+  const form = new URLSearchParams(Object.entries(params).map(([key, value]) => [key, String(value)]))
+  let body: string | undefined
+  if (options.encoding === 'query') target.search = form.toString()
+  if (options.encoding === 'form') {
+    headers['Content-Type'] = 'application/x-www-form-urlencoded'
+    body = form.toString()
+  } else if (options.encoding === 'json') {
+    headers['Content-Type'] = 'application/json'
+    body = JSON.stringify(params)
+  }
+  const configuredTimeout = Number(useRuntimeConfig().peerBackendTimeoutMs)
+  const timeout = Number.isFinite(configuredTimeout) && configuredTimeout > 0 ? configuredTimeout : 20000
+  const signal = AbortSignal.timeout(timeout)
+  try {
+    const response = await fetch(target, { method: options.method, headers, body, signal, redirect: 'manual' })
+    const text = await response.text()
+    if (response.status >= 300 && response.status < 400) {
+      throw createError({ statusCode: 502, message: 'Peer 上游返回了重定向' })
+    }
+    // 仅检查 JSON 格式，不重新序列化；错误页不能作为成功 JSON 返回给 App。
+    try { JSON.parse(text) } catch {
+      throw createError({ statusCode: 502, message: 'Peer 上游响应格式异常' })
+    }
+    return { status: response.status, body: text }
+  } catch (error: any) {
+    if (signal.aborted) throw createError({ statusCode: 504, message: 'Peer 服务响应超时，请稍后重试' })
+    if (error?.statusCode) throw error
+    throw createError({ statusCode: 502, message: 'Peer 服务暂时不可用，请稍后重试' })
+  }
+}
+
 /**
  * 账号格式：手机号 + @qq.com（对方后台要求邮箱格式）
  */
@@ -95,51 +150,16 @@ async function peerFetch<T = any>(
   params: Record<string, string | number>,
   granwinToken?: string
 ): Promise<T> {
-  const { url } = getPeerConfig()
-  const fullUrl = `${url}${path}`
-
-  const headers: Record<string, string> = {
-    'Content-Type': 'application/x-www-form-urlencoded',
-  }
-  if (granwinToken) {
-    headers['token'] = granwinToken
-  }
-
-  // 打印发出的请求（密码字段脱敏）
-  const logParams = { ...params }
-  if ('password' in logParams) logParams.password = '***'
-  if ('oldPassword' in logParams) logParams.oldPassword = '***'
-  if ('newPassword' in logParams) logParams.newPassword = '***'
-  console.log(`[PeerBackend] → POST ${fullUrl}`, JSON.stringify(logParams))
-
-  let res: PeerResponse<T>
-  try {
-    res = await $fetch<PeerResponse<T>>(fullUrl, {
-      method: 'POST',
-      headers,
-      body: new URLSearchParams(
-        Object.fromEntries(
-          Object.entries(params).map(([k, v]) => [k, String(v)])
-        )
-      ).toString(),
-    })
-  } catch (err: any) {
-    const msg = err?.data?.tip || err?.data?.message || err?.message || '对方后台服务异常'
-    const status = err?.statusCode || err?.response?.status || 503
-    const safeParams = { ...params }
-    if ('password' in safeParams) safeParams.password = '***'
-    if ('oldPassword' in safeParams) safeParams.oldPassword = '***'
-    if ('newPassword' in safeParams) safeParams.newPassword = '***'
-    console.error(`[PeerBackend] POST ${fullUrl} 失败:`, msg, '| params:', safeParams)
-    throw createError({ statusCode: status, message: `[iPet] ${msg}` })
+  const response = await peerRequest(path, {
+    method: 'POST', encoding: 'form', params, token: granwinToken,
+  })
+  const res = JSON.parse(response.body) as PeerResponse<T>
+  if (response.status >= 400) {
+    throw createError({ statusCode: response.status, message: `[iPet] ${res.tip || '对方后台服务异常'}` })
   }
 
   if (res.code !== 0) {
-    const safeParams = { ...params }
-    if ('password' in safeParams) safeParams.password = '***'
-    if ('oldPassword' in safeParams) safeParams.oldPassword = '***'
-    if ('newPassword' in safeParams) safeParams.newPassword = '***'
-    console.error(`[PeerBackend] POST ${fullUrl} 业务错误 code=${res.code}:`, res.tip, '| params:', safeParams)
+    console.error(`[PeerBackend] POST ${path} 业务错误 code=${res.code}`)
     throw createError({ statusCode: 400, message: `[iPet] ${res.tip}` })
   }
 
@@ -158,25 +178,13 @@ export async function peerRegister(phone: string): Promise<void> {
   const { merchantId } = getPeerConfig()
   const account = `${phone}@qq.com`
 
-  const { url } = getPeerConfig()
-  const fullUrl = `${url}/user/register`
-  const params = { account, password: generatePeerPassword(), merchantId }
-
-  console.log(`[PeerBackend] → POST ${fullUrl}`, JSON.stringify({ ...params, password: '***' }))
-
-  let res: PeerResponse
-  try {
-    res = await $fetch<PeerResponse>(fullUrl, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: new URLSearchParams(
-        Object.fromEntries(Object.entries(params).map(([k, v]) => [k, String(v)]))
-      ).toString(),
-    })
-  } catch (err: any) {
-    const msg = err?.data?.tip || err?.data?.message || err?.message || '对方后台服务异常'
-    console.error(`[PeerBackend] POST ${fullUrl} 失败:`, msg)
-    throw createError({ statusCode: err?.statusCode || 503, message: `[iPet] ${msg}` })
+  const response = await peerRequest('/user/register', {
+    method: 'POST', encoding: 'form',
+    params: { account, password: generatePeerPassword(), merchantId },
+  })
+  const res = JSON.parse(response.body) as PeerResponse
+  if (response.status >= 400) {
+    throw createError({ statusCode: response.status, message: `[iPet] ${res.tip || '对方后台服务异常'}` })
   }
 
   // code=1 且含「已注册」→ 幂等成功，静默跳过
@@ -189,7 +197,7 @@ export async function peerRegister(phone: string): Promise<void> {
       console.log(`[PeerBackend] /user/register: ${account} 已注册，跳过`)
       return
     }
-    console.error(`[PeerBackend] POST ${fullUrl} 业务错误 code=${res.code}:`, tip)
+    console.error(`[PeerBackend] POST /user/register 业务错误 code=${res.code}`)
     throw createError({ statusCode: 400, message: `[iPet] ${tip}` })
   }
 }
