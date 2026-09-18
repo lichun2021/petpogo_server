@@ -17,6 +17,7 @@
 
 import crypto from 'node:crypto'
 import { createError } from 'h3'
+import { readProxyResponse } from '../integrations/shared/bounds.ts'
 
 // ── 类型定义 ──────────────────────────────────────────────────
 
@@ -77,6 +78,8 @@ export interface PeerRequestOptions {
   encoding: 'query' | 'form' | 'json' | 'empty'
   params?: Record<string, string | number>
   token?: string
+  signal?: AbortSignal
+  requestId?: string
 }
 
 /**
@@ -108,22 +111,51 @@ export async function peerRequest(path: string, options: PeerRequestOptions) {
   }
   const configuredTimeout = Number(useRuntimeConfig().peerBackendTimeoutMs)
   const timeout = Number.isFinite(configuredTimeout) && configuredTimeout > 0 ? configuredTimeout : 20000
-  const signal = AbortSignal.timeout(timeout)
+  const deadline = AbortSignal.timeout(timeout)
+  const signal = options.signal ? AbortSignal.any([deadline, options.signal]) : deadline
+  const startedAt = Date.now()
+  const trace = { requestId: options.requestId, method: options.method, path }
+  let stage = 'waiting_headers'
+  let upstreamStatus: number | undefined
+  if (options.requestId) console.info(JSON.stringify({
+    time: new Date().toISOString(), event: 'peer.request.start', ...trace, timeoutMs: timeout,
+  }))
   try {
     const response = await fetch(target, { method: options.method, headers, body, signal, redirect: 'manual' })
-    const text = await response.text()
+    upstreamStatus = response.status
+    stage = 'reading_body'
+    const text = await readProxyResponse(response)
+    stage = 'validating_response'
     if (response.status >= 300 && response.status < 400) {
       throw createError({ statusCode: 502, message: 'Peer 上游返回了重定向' })
     }
     // 仅检查 JSON 格式，不重新序列化；错误页不能作为成功 JSON 返回给 App。
-    try { JSON.parse(text) } catch {
+    let businessCode: string | number | undefined
+    try {
+      const code = JSON.parse(text)?.code
+      if (typeof code === 'number' || (typeof code === 'string' && /^-?\d{1,10}$/.test(code))) businessCode = code
+    } catch {
       throw createError({ statusCode: 502, message: 'Peer 上游响应格式异常' })
     }
-    return { status: response.status, body: text }
+    if (options.requestId) console.info(JSON.stringify({
+      time: new Date().toISOString(), event: 'peer.request.end', ...trace,
+      durationMs: Date.now() - startedAt, upstreamStatus, businessCode,
+    }))
+    return { status: response.status, body: text, businessCode }
   } catch (error: any) {
-    if (signal.aborted) throw createError({ statusCode: 504, message: 'Peer 服务响应超时，请稍后重试' })
+    if (options.signal?.aborted) throw options.signal.reason
+    const rawCode = String(error?.cause?.code || error?.code || '')
+    const errorCode = deadline.aborted ? 'PEER_TIMEOUT' : /^[A-Z][A-Z0-9_]{1,39}$/.test(rawCode) ? rawCode : 'PEER_UPSTREAM_ERROR'
+    // 只记录接口与失败阶段，不记录账号、密码、token 或上游响应正文。
+    console.error(JSON.stringify({
+      time: new Date().toISOString(), event: 'peer.request.error',
+      ...trace, stage, upstreamStatus, errorCode, timeoutMs: timeout, durationMs: Date.now() - startedAt,
+      status: deadline.aborted ? 504 : error?.statusCode || 502,
+      outcome: deadline.aborted ? 'timeout' : 'upstream_error',
+    }))
+    if (deadline.aborted) throw createError({ statusCode: 504, message: 'Peer 服务响应超时，请稍后重试', cause: { code: errorCode } })
     if (error?.statusCode) throw error
-    throw createError({ statusCode: 502, message: 'Peer 服务暂时不可用，请稍后重试' })
+    throw createError({ statusCode: 502, message: 'Peer 服务暂时不可用，请稍后重试', cause: { code: errorCode } })
   }
 }
 
@@ -148,10 +180,11 @@ export function generatePeerPassword(): string {
 async function peerFetch<T = any>(
   path: string,
   params: Record<string, string | number>,
-  granwinToken?: string
+  granwinToken?: string,
+  requestId?: string
 ): Promise<T> {
   const response = await peerRequest(path, {
-    method: 'POST', encoding: 'form', params, token: granwinToken,
+    method: 'POST', encoding: 'form', params, token: granwinToken, requestId,
   })
   const res = JSON.parse(response.body) as PeerResponse<T>
   if (response.status >= 400) {
@@ -174,13 +207,13 @@ async function peerFetch<T = any>(
  *
  * @param phone 本后台手机号
  */
-export async function peerRegister(phone: string): Promise<void> {
+export async function peerRegister(phone: string, requestId?: string): Promise<void> {
   const { merchantId } = getPeerConfig()
   const account = `${phone}@qq.com`
 
   const response = await peerRequest('/user/register', {
     method: 'POST', encoding: 'form',
-    params: { account, password: generatePeerPassword(), merchantId },
+    params: { account, password: generatePeerPassword(), merchantId }, requestId,
   })
   const res = JSON.parse(response.body) as PeerResponse
   if (response.status >= 400) {
@@ -194,7 +227,7 @@ export async function peerRegister(phone: string): Promise<void> {
       tip.includes('已注册') || tip.includes('已存在') ||
       tip.includes('already') || tip.includes('exist') || tip.includes('duplicate')
     ) {
-      console.log(`[PeerBackend] /user/register: ${account} 已注册，跳过`)
+      console.info(JSON.stringify({ time: new Date().toISOString(), event: 'peer.register.exists', requestId, next: '/user/login' }))
       return
     }
     console.error(`[PeerBackend] POST /user/register 业务错误 code=${res.code}`)
@@ -206,8 +239,8 @@ export async function peerRegister(phone: string): Promise<void> {
  * 1.1b 确保用户在对方后台存在（注册 or 已存在均视为成功）
  * peerRegister 内部已处理「已注册」情况，此处直接调用即可。
  */
-export async function peerEnsureRegistered(phone: string): Promise<void> {
-  await peerRegister(phone)
+export async function peerEnsureRegistered(phone: string, requestId?: string): Promise<void> {
+  await peerRegister(phone, requestId)
 }
 
 /**
@@ -217,13 +250,13 @@ export async function peerEnsureRegistered(phone: string): Promise<void> {
  * @param phone 本后台手机号
  * @returns 对方后台完整的登录信息（含 ipet_token / refresh_token / AWS凭证）
  */
-export async function peerLogin(phone: string): Promise<PeerAuthInfo> {
+export async function peerLogin(phone: string, requestId?: string): Promise<PeerAuthInfo> {
   const { merchantId } = getPeerConfig()
   return peerFetch<PeerAuthInfo>('/user/login', {
     account: `${phone}@qq.com`,
     password: generatePeerPassword(),
     merchantId,
-  })
+  }, undefined, requestId)
 }
 
 /**

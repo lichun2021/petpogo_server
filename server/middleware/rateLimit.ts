@@ -50,9 +50,11 @@ export default defineEventHandler(async (event) => {
                 : 'openapi'
 
   const redis = useRedis()
-  const key   = RedisKey.rateLimit(surface, ip)
-  const count = await redis.incr(key)
-  if (count === 1) await redis.expire(key, DEFAULT_WINDOW)
+  const key   = RedisKey.rateLimit(`${surface}:${isStrictPath(path) ? 'strict' : 'default'}`, ip)
+  const count = Number(await redis.eval(
+    "local n=redis.call('INCR',KEYS[1]); if n==1 then redis.call('EXPIRE',KEYS[1],ARGV[1]) end; return n",
+    1, key, DEFAULT_WINDOW,
+  ))
 
   if (count > limit) {
     const ttl     = await redis.ttl(key)

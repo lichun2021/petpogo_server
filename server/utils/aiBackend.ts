@@ -8,6 +8,7 @@ export async function aiRequest(path: string, params: AiParams, options: {
   signal: AbortSignal
   multipart?: boolean
   stream?: boolean
+  context?: Record<string, any>
 }) {
   const config = useRuntimeConfig()
   const { aiServiceUrl: base, aiApiKey: key, aiApiSecret: secret } = config
@@ -33,14 +34,33 @@ export async function aiRequest(path: string, params: AiParams, options: {
     headers['Content-Type'] = 'application/json'
     body = JSON.stringify(params)
   }
+  const context = options.context ?? {}
+  context.proxyUpstreamHost = target.host
+  context.proxyUpstreamPath = path
+  context.proxyUpstreamStage = 'waiting_headers'
+  const startedAt = Date.now()
   // 原始 Response：SSE 交给路由逐块转发，普通 JSON 不二次序列化。
-  const response = await fetch(target, { method: 'POST', headers, body, signal: options.signal, redirect: 'manual' })
+  let response: Response
+  try {
+    response = await fetch(target, { method: 'POST', headers, body, signal: options.signal, redirect: 'manual' })
+  } catch (error: any) {
+    const code = String(error?.cause?.code || error?.code || '')
+    context.requestErrorCode = options.signal.aborted ? 'AI_REQUEST_ABORTED'
+      : /^[A-Z][A-Z0-9_]{1,39}$/.test(code) ? code : 'AI_NETWORK_ERROR'
+    throw error
+  } finally {
+    context.proxyUpstreamHeaderMs = Date.now() - startedAt
+  }
+  context.proxyUpstreamStatus = response.status
+  context.proxyUpstreamStage = 'reading_body'
   if (response.status >= 300 && response.status < 400) {
+    context.requestErrorCode = 'AI_UPSTREAM_REDIRECT'
     await response.body?.cancel()
     throw createError({ statusCode: 502, message: 'AI 上游返回了重定向' })
   }
   // 应用签名失败不应被客户端当作自身登录过期。
   if (response.status === 401 || response.status === 403) {
+    context.requestErrorCode = 'AI_UPSTREAM_AUTH_FAILED'
     await response.body?.cancel()
     throw createError({ statusCode: 502, message: 'AI 服务鉴权失败' })
   }

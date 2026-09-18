@@ -47,8 +47,8 @@ export default defineEventHandler(async (event) => {
   const redis = useRedis()
 
   // ── 同步对方后台（确保 iPet 账号存在，再登录）───────────────────
-  await peerEnsureRegistered(normalizedPhone)
-  const peerInfo = await peerLogin(normalizedPhone)
+  await peerEnsureRegistered(normalizedPhone, event.context.reqId)
+  const peerInfo = await peerLogin(normalizedPhone, event.context.reqId)
   const tokenTtl = peerInfo.expiration || 43200
 
   // ── 写入 Redis Session ────────────────────────────────────────

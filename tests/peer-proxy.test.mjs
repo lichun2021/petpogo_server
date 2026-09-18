@@ -13,6 +13,8 @@ import * as h3 from 'h3'
 let api, upstream, base, modules, temp
 let requests = [], responseBody = '{"code":0,"info":{}}', responseStatus = 200, delay = 0
 let banned = false
+let accountResponses = {}
+let sessionWrites = []
 const nonces = new Set()
 const config = { peerBackendUrl: '', peerBackendTimeoutMs: 20000, peerBackendMerchantId: 1, appApiSecret: 'local-test-secret', signatureNonceRequired: true }
 const listen = server => new Promise((resolve, reject) => server.once('error', reject).listen(0, '127.0.0.1', () => resolve(`http://127.0.0.1:${server.address().port}`)))
@@ -21,30 +23,35 @@ const close = server => new Promise(resolve => { if (!server) return resolve(); 
 before(async () => {
   temp = await mkdtemp(join(tmpdir(), 'petpogo-peer-test-'))
   const output = join(temp, 'peer.cjs')
-  await build({ stdin: { contents: `export * from './server/integrations/peer/handler.ts'; export * from './server/integrations/peer/endpoints.ts'; export * from './server/utils/peerBackend.ts'; export { default as signature } from './server/middleware/signature.ts';`, resolveDir: process.cwd(), loader: 'ts' }, bundle: true, platform: 'node', format: 'cjs', outfile: output, logLevel: 'silent' })
+  await build({ stdin: { contents: `export * from './server/integrations/peer/handler.ts'; export * from './server/integrations/peer/endpoints.ts'; export * from './server/utils/peerBackend.ts'; export { default as signature } from './server/middleware/signature.ts'; export { default as loginPwd } from './server/routes/sdkapi/auth/login-pwd.post.ts';`, resolveDir: process.cwd(), loader: 'ts' }, bundle: true, platform: 'node', format: 'cjs', outfile: output, logLevel: 'silent' })
   Object.assign(globalThis, {
     useRuntimeConfig: () => config,
-    getHeader: h3.getHeader, createError: h3.createError, defineEventHandler: h3.defineEventHandler,
-    RedisKey: { nonce: n => `nonce:${n}` },
+    readBody: h3.readBody, getHeader: h3.getHeader, createError: h3.createError, defineEventHandler: h3.defineEventHandler,
+    RedisKey: { nonce: n => `nonce:${n}`, userLoginFail: p => `login:${p}`, imUserSig: id => `im:${id}` },
+    assertNotLocked: async () => {}, clearLoginFailures: async () => {},
+    genUserSig: () => 'mock-im-sig', getPointsBalance: async () => ({ balance: 0 }),
     useRedis: () => ({
       get: async key => key === `peer_token:${crypto.createHash('sha256').update('valid-token').digest('hex')}` ? JSON.stringify({ userId: '123', phone: '13800138000' }) : null,
-      setnx: async key => { if (nonces.has(key)) return 0; nonces.add(key); return 1 },
+      set: async key => { if (nonces.has(key)) return null; nonces.add(key); return 'OK' },
       expire: async () => 1,
+      setex: async (...args) => { sessionWrites.push(args) },
     }),
-    useDb: () => ({ query: async () => [[{ id: '123', status: banned ? 2 : 1 }]] }),
+    useDb: () => ({ query: async () => [[{ id: '123', phone: '13800138000', password: null, status: banned ? 2 : 1 }]] }),
   })
   modules = (await import(pathToFileURL(output))).default
+  for (const key of ['peerEnsureRegistered', 'peerLogin', 'tokenSessionKey', 'getPeerPublicUrl']) globalThis[key] = modules[key]
   upstream = createServer(async (req, res) => {
     let body = ''
     for await (const chunk of req) body += chunk
     requests.push({ url: req.url, method: req.method, headers: req.headers, body })
-    const status = responseStatus, text = responseBody, wait = delay
+    const override = accountResponses[req.url]
+    const status = responseStatus, text = override?.body ?? responseBody, wait = override?.delay ?? delay
     if (wait) await new Promise(resolve => setTimeout(resolve, wait))
     res.writeHead(status, { 'Content-Type': 'application/json', Location: `${config.peerBackendUrl}/should-not-follow` })
     res.end(text)
   })
   config.peerBackendUrl = await listen(upstream)
-  api = createServer(h3.toNodeListener(h3.createApp().use(modules.signature).use(modules.peerProxyHandler)))
+  api = createServer(h3.toNodeListener(h3.createApp().use(h3.defineEventHandler(event => { event.context.reqId = 'test-login-request' })).use(modules.signature).use('/sdkapi/auth/login-pwd', modules.loginPwd).use(modules.peerProxyHandler)))
   base = await listen(api)
 })
 after(async () => { await close(api); await close(upstream); await rm(temp, { recursive: true, force: true }) })
@@ -54,7 +61,7 @@ function call(path, { method = 'POST', body, token = 'valid-token', headers = {}
   const signedHeaders = signed ? { 'x-timestamp': ts, 'x-signature': crypto.createHash('md5').update(ts + config.appApiSecret).digest('hex'), 'x-nonce': crypto.randomUUID() } : {}
   return fetch(`${base}/sdkapi/peer${path}`, { method, signal: AbortSignal.timeout(3000), headers: { ...signedHeaders, ...(token ? { Authorization: `Bearer ${token}` } : {}), ...(body !== undefined ? { 'Content-Type': 'application/json' } : {}), ...headers }, body: body === undefined ? undefined : typeof body === 'string' ? body : JSON.stringify(body) })
 }
-function reset() { requests = []; responseBody = '{"code":0,"info":{}}'; responseStatus = 200; delay = 0; banned = false; config.peerBackendTimeoutMs = 20000 }
+function reset() { requests = []; accountResponses = {}; sessionWrites = []; responseBody = '{"code":0,"info":{}}'; responseStatus = 200; delay = 0; banned = false; config.peerBackendTimeoutMs = 20000 }
 
 test('37 条清单无重复；未知接口/错误方法/缺签名不会调用上游', async () => {
   reset()
@@ -159,4 +166,56 @@ test('原账号封装复用同一出口，保持登录解包和注册幂等行�
   responseBody = '{"code":1,"tip":"账号已注册"}'
   await modules.peerEnsureRegistered('13800138000')
   assert.equal(requests[3].url, '/user/register')
+})
+
+async function loginPwd() {
+  const ts = String(Date.now())
+  return fetch(`${base}/sdkapi/auth/login-pwd`, {
+    method: 'POST', headers: {
+      'Content-Type': 'application/json', 'x-timestamp': ts,
+      'x-signature': crypto.createHash('md5').update(ts + config.appApiSecret).digest('hex'),
+      'x-nonce': crypto.randomUUID(),
+    }, body: JSON.stringify({ phone: '13800138000', password: '123456' }),
+  })
+}
+
+test('密码登录：注册提示已注册后，仍调用登录并建立会话', async () => {
+  reset()
+  accountResponses = {
+    '/user/register': { body: '{"code":1,"tip":"账号已注册"}' },
+    '/user/login': { body: '{"code":0,"info":{"ipet_token":"new-token","expiration":43200}}' },
+  }
+  const result = await loginPwd()
+  assert.equal(result.status, 200)
+  assert.equal((await result.json()).token, 'new-token')
+  assert.deepEqual(requests.map(r => r.url), ['/user/register', '/user/login'])
+  assert.equal(new URLSearchParams(requests[1].body).get('account'), '13800138000@qq.com')
+  assert.ok(sessionWrites.some(([key]) => key === modules.tokenSessionKey('new-token')))
+})
+
+test('密码登录：已注册后登录超时，日志明确失败接口且不写会话', async () => {
+  reset()
+  config.peerBackendTimeoutMs = 50
+  accountResponses = {
+    '/user/register': { body: '{"code":1,"tip":"账号已注册"}' },
+    '/user/login': { body: '{"code":0,"info":{"ipet_token":"private-token"}}', delay: 200 },
+  }
+  const errors = [], original = console.error
+  console.error = value => errors.push(value)
+  try {
+    const result = await loginPwd()
+    assert.equal(result.status, 504)
+    assert.deepEqual(requests.map(r => r.url), ['/user/register', '/user/login'])
+    assert.equal(sessionWrites.length, 0)
+    const entry = errors.map(v => JSON.parse(v)).find(v => v.event === 'peer.request.error')
+    assert.equal(entry.path, '/user/login')
+    assert.equal(entry.requestId, 'test-login-request')
+    assert.equal(entry.stage, 'waiting_headers')
+    assert.equal(entry.errorCode, 'PEER_TIMEOUT')
+    assert.equal(entry.outcome, 'timeout')
+    assert.equal(entry.status, 504)
+    assert.ok(entry.durationMs >= 40)
+    assert.ok(!JSON.stringify(errors).includes('13800138000'))
+    assert.ok(!JSON.stringify(errors).includes('private-token'))
+  } finally { console.error = original; reset() }
 })

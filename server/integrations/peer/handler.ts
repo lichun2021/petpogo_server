@@ -2,6 +2,7 @@ import {
   createError, defineEventHandler, getHeader, getQuery, readBody,
   send, setHeader, setResponseStatus,
 } from 'h3'
+import { readProxyBody } from '../shared/bounds.ts'
 import { requireAuth } from '../../utils/auth.ts'
 import { peerRequest } from '../../utils/peerBackend.ts'
 import { peerEndpoints, type PeerEndpoint } from './endpoints.ts'
@@ -41,6 +42,7 @@ export function validatePeerParams(endpoint: PeerEndpoint, input: unknown): Reco
       }
     }
   }
+  if (Number(params.pageSize) > 100) throw createError({ statusCode: 400, message: 'pageSize 不能超过 100' })
   if (endpoint.path === '/pet/sound/play') {
     const volume = Number(params.volume ?? 15)
     if (!Number.isInteger(volume) || volume < 0 || volume > 21) {
@@ -82,10 +84,15 @@ export const peerProxyHandler = defineEventHandler(async (event) => {
     if (contentType && !['application/json', 'application/x-www-form-urlencoded'].includes(contentType)) {
       throw createError({ statusCode: 415, message: '请使用 JSON 或表单请求体' })
     }
+    await readProxyBody(event)
     input = await readBody(event)
   }
   const params = validatePeerParams(endpoint, input)
+  const upstreamStart = Date.now()
   const response = await peerRequest(endpoint.path, { ...endpoint, params, token })
+  event.context.proxyUpstreamMs = Date.now() - upstreamStart
+  event.context.proxyUpstreamStatus = response.status
+  event.context.proxyBusinessCode = response.businessCode
   setResponseStatus(event, response.status)
   setHeader(event, 'Cache-Control', 'no-store')
   // 不传递上游 cookie/重定向等响应头，也不对 JSON 做解析后再序列化。

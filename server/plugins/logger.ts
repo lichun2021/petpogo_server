@@ -1,110 +1,59 @@
-// ── 全局注入时间戳，所有 console.log/warn/error 自动带时间 ──────────
-const _ts = () => new Date().toLocaleString('zh-CN', {
-  year: 'numeric', month: '2-digit', day: '2-digit',
-  hour: '2-digit', minute: '2-digit', second: '2-digit',
-  hour12: false,
-}).replace(/\//g, '-')
+import crypto from 'node:crypto'
+import { setHeader } from 'h3'
 
-const _orig = { log: console.log, warn: console.warn, error: console.error, info: console.info }
-console.log   = (...a) => _orig.log  (`[${_ts()}]`, ...a)
-console.info  = (...a) => _orig.info (`[${_ts()}]`, ...a)
-console.warn  = (...a) => _orig.warn (`[${_ts()}]`, ...a)
-console.error = (...a) => _orig.error(`[${_ts()}]`, ...a)
+// 请求日志不预读正文、不序列化响应：避免凭证泄漏、重复缓冲和 SSE 日志缺失。
+const shouldLog = (path: string) => ['/api/', '/sdkapi/', '/openapi/'].some(prefix => path.startsWith(prefix))
 
-// ─────────────────────────────────────────────────────────────────────
-
-const shouldLog = (path: string) =>
-  (typeof path === 'string') &&
-  (path.startsWith('/sdkapi/') || path.startsWith('/api/') || path.startsWith('/openapi/'))
-
-// 生成 4 位短请求 ID，用于并发请求时把 [IN] 和 [OUT]/[Error] 配对
-function shortReqId(): string {
-  return Math.random().toString(36).slice(2, 6).toUpperCase()
-}
-
-export default defineNitroPlugin((nitroApp) => {
-  nitroApp.hooks.hook('request', async (event) => {
+export default defineNitroPlugin(nitroApp => {
+  nitroApp.hooks.hook('request', event => {
     if (!shouldLog(event.path)) return
-
-    event.context.startTime = Date.now()
-    event.context.reqId = shortReqId()
-    const rid = event.context.reqId
-    // 中转内容含凭证、问诊或媒体地址，只记录路径及状态；也避免预读 multipart/SSE。
-    const isProxy = event.path.startsWith('/sdkapi/peer/') || event.path.startsWith('/sdkapi/ai-proxy/')
-
-    let bodyStr = ''
-    if (!isProxy && ['POST', 'PUT', 'PATCH', 'DELETE'].includes(event.method)) {
-      try {
-        if (!event.path.includes('/upload')) {
-          const body = await readBody(event)
-          if (body) bodyStr = ` | Body: ${JSON.stringify(body)}`
-        } else {
-          bodyStr = ` | Body: [FormData/File]`
-        }
-      } catch (e) { /* 忽略无法解析的 body */ }
+    const start = Date.now()
+    const requestId = crypto.randomUUID().slice(0, 12)
+    event.context.startTime = start
+    event.context.reqId = requestId
+    setHeader(event, 'X-Request-Id', requestId)
+    // 不记录 query；JSON 序列化避免换行注入，限制异常长路径的日志体积。
+    const request = { requestId, method: event.method, path: event.path.split('?')[0].slice(0, 240) }
+    console.info(JSON.stringify({ time: new Date().toISOString(), event: 'request.start', ...request }))
+    let logged = false
+    const finish = (closed: boolean) => {
+      if (logged) return
+      logged = true
+      const status = event.node.res.statusCode
+      const businessCode = event.context.proxyBusinessCode
+      console.info(JSON.stringify({
+        time: new Date().toISOString(), event: 'request.end', ...request,
+        status, durationMs: Date.now() - start,
+        outcome: event.context.proxyOutcome || (closed ? 'client_closed' : status >= 400 ? 'http_error' : event.context.proxyBusinessSuccess === false || (businessCode !== undefined && Number(businessCode) !== 0) ? 'business_error' : event.context.proxySseDone === false ? 'incomplete_stream' : 'complete'),
+        firstByteMs: event.context.proxyFirstByteMs,
+        streamBytes: event.context.proxyBytes,
+        sseDone: event.context.proxySseDone,
+        errorType: event.context.requestErrorType,
+        errorCode: event.context.requestErrorCode,
+        permissionMs: event.context.proxyPermissionMs,
+        upstreamHost: event.context.proxyUpstreamHost,
+        upstreamPath: event.context.proxyUpstreamPath,
+        upstreamStage: status >= 400 ? event.context.proxyUpstreamStage : undefined,
+        upstreamStatus: event.context.proxyUpstreamStatus,
+        upstreamMs: event.context.proxyUpstreamMs,
+        upstreamHeaderMs: event.context.proxyUpstreamHeaderMs,
+        businessCode,
+      }))
     }
-
-    const queryStr = !isProxy && Object.keys(getQuery(event)).length
-      ? ` | Query: ${JSON.stringify(getQuery(event))}`
-      : ''
-
-    _orig.log(`\n┌─── [API 请求] ${_ts()} #${rid} ──────────────────────`)
-    _orig.log(`│ #${rid} [IN] ${event.method} ${isProxy ? event.path.split('?')[0] : event.path}${queryStr}${bodyStr}`)
+    event.node.res.once('finish', () => finish(false))
+    event.node.res.once('close', () => finish(!event.node.res.writableFinished))
   })
 
-  // 正常响应：打印 [OUT]（beforeResponse 在抛错时不触发）
-  nitroApp.hooks.hook('beforeResponse', async (event, { body }) => {
-    if (!shouldLog(event.path)) return
-
-    const rid = event.context.reqId || '----'
-    const duration = Date.now() - (event.context.startTime || Date.now())
-    const status   = getResponseStatus(event)
-
-    let resStr = ''
-    if (event.path.startsWith('/sdkapi/peer/') || event.path.startsWith('/sdkapi/ai-proxy/')) {
-      resStr = '[中转响应内容不记录]'
-    } else if (body) {
-      if (typeof body === 'string') {
-        resStr = body.length > 1000 ? body.substring(0, 1000) + '... (truncated)' : body
-      } else if (typeof body === 'object') {
-        const str = JSON.stringify(body)
-        resStr = str.length > 1000 ? str.substring(0, 1000) + '... (truncated)' : str
-      }
-    }
-
-    _orig.log(`│ #${rid} [OUT] ${status} (${duration}ms) | Response: ${resStr}`)
-    _orig.log(`└──── #${rid} ────────────────────────────────────\n`)
-  })
-
-  // ★ 错误响应：beforeResponse 不触发，需监听 error hook 才能看到 4xx/5xx 的响应
-  nitroApp.hooks.hook('error', async (error, event) => {
-    try {
-      if (!event || !shouldLog(event.path)) return
-
-      const rid = event.context?.reqId || '----'
-      const duration = Date.now() - (event.context?.startTime || Date.now())
-      const status = error.statusCode || 500
-      const resStr = JSON.stringify({
-        statusCode: status,
-        statusMessage: error.statusMessage || '',
-        message: error.message,
-        stack: error.stack ? String(error.stack).split('\n')[0] : '',
-      })
-
-      _orig.error(`│ #${rid} [OUT] ${status} (${duration}ms) | Error: ${resStr}`)
-
-      // ── 5xx 错误兜底：把响应给客户端的 message 替换为通用文案 ──
-      // 4xx 是业务错误（如"验证码错误"），保留原 message 给用户；
-      // 5xx 是服务端错误，原 message 可能含 SQL/堆栈/第三方细节，不透传。
-      // 真实错误已在上面 resStr 打进 pm2 日志，此处改写不影响日志可见性。
-      if (status >= 500) {
-        error.message = '服务器内部错误，请稍后重试'
-        error.statusMessage = 'Internal Server Error'
-      }
-
-      _orig.log(`└──── #${rid} ────────────────────────────────────\n`)
-    } catch {
-      // 日志自身绝不能再抛错，否则会递归触发 error hook
+  // Nitro 第二个参数是 { event, ... }，不是 event 本身。
+  nitroApp.hooks.hook('error', (error, { event }) => {
+    if (!event || !shouldLog(event.path)) return
+    event.context.requestErrorType = /^[A-Za-z0-9_]{1,40}$/.test(error.name) ? error.name : 'Error'
+    const code = String((error as any).code || (error as any).cause?.code || '')
+    if (/^[A-Z][A-Z0-9_]{1,39}$/.test(code)) event.context.requestErrorCode = code
+    // 不记录异常原文/堆栈首行（可能带 SQL、密码或第三方响应）。
+    if (Number((error as any).statusCode || 500) >= 500) {
+      error.message = '服务器内部错误，请稍后重试'
+      ;(error as any).statusMessage = 'Internal Server Error'
     }
   })
 })

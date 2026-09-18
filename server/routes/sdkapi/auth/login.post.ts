@@ -70,8 +70,8 @@ export default defineEventHandler(async (event) => {
   const userId = String(user.id)
 
   // ── 同步对方后台：确保账号存在，再登录拿 token ─────────────
-  await peerEnsureRegistered(normalizedPhone)
-  const peerInfo = await peerLogin(normalizedPhone)
+  await peerEnsureRegistered(normalizedPhone, event.context.reqId)
+  const peerInfo = await peerLogin(normalizedPhone, event.context.reqId)
 
   // ipet_token 有效期（对方返回 expiration 秒，默认 43200 = 12小时）
   const tokenTtl = peerInfo.expiration || 43200

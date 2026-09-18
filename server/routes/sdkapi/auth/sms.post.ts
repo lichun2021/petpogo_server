@@ -1,3 +1,4 @@
+import crypto from 'node:crypto'
 import DysmsapiPkg from '@alicloud/dysmsapi20170525'
 import OpenApiPkg from '@alicloud/openapi-client'
 
@@ -59,12 +60,10 @@ export default defineEventHandler(async (event) => {
   }
 
   // 生成 6 位验证码
-  const code = Math.floor(100000 + Math.random() * 900000).toString()
+  const code = crypto.randomInt(100000, 1000000).toString()
 
-  // 开发模式 或 短信网关关闭：跳过真实短信，只打印日志
+  // 开发模式或网关关闭时跳过短信；验证码仅在开发响应中返回，不写日志。
   if (process.env.NODE_ENV !== 'production' || !smsEnabled) {
-    const reason = !smsEnabled ? '[SMS网关已关闭]' : '[开发模式]'
-    console.log(`${reason} 手机号 ${normalizedPhone} 验证码: ${code}，有效期 ${codeExpireSec}s`)
     await redis.setex(RedisKey.smsCode(normalizedPhone), codeExpireSec, JSON.stringify({ code, attempts: 0 }))
     await redis.setex(lockKey, 60, '1')
     return { success: true, ...(process.env.NODE_ENV !== 'production' ? { dev_code: code } : {}) }
@@ -74,7 +73,6 @@ export default defineEventHandler(async (event) => {
   const config = useRuntimeConfig()
   // 阿里云格式：中国大陆直接用手机号，境外加 + 区号前缀
   const aliyunPhone = isChinese ? phone : `+${dialCode}${phone}`
-  console.log(`[SMS] 开始发送 - phone: ${normalizedPhone}, aliyunPhone: ${aliyunPhone}, keyId: ${config.aliSmsKeyId?.substring(0, 8)}***, sign: ${config.aliSmsSign}, tpl: ${config.aliSmsTplCode}`)
 
 
   try {
@@ -115,6 +113,5 @@ export default defineEventHandler(async (event) => {
     await redis.expireat(dailyKey, Math.floor(new Date().setHours(23, 59, 59, 999) / 1000))
   }
 
-  console.log(`[SMS] 发送成功 - phone: ${normalizedPhone}, code: ${code}, 有效期 ${codeExpireSec}s`)
   return { success: true }
 })

@@ -83,6 +83,7 @@ export default defineNuxtConfig({
     aiServiceUrl: process.env.AI_SERVICE_URL || 'https://ai.jxpetai.com',
     aiApiKey: process.env.AI_API_KEY || '',
     aiApiSecret: process.env.AI_API_SECRET || '',
+    aiMediaAllowedHosts: process.env.AI_MEDIA_ALLOWED_HOSTS || '',
     aiProxyTimeoutMs: process.env.AI_PROXY_TIMEOUT_MS || '120000',
     aiProxyRecordingTimeoutMs: process.env.AI_PROXY_RECORDING_TIMEOUT_MS || '300000',
     aiProxyStreamTimeoutMs: process.env.AI_PROXY_STREAM_TIMEOUT_MS || '300000',

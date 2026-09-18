@@ -10,8 +10,8 @@ export function parseResourceJson(text: string): any {
   }))
 }
 
-async function peerInfo(path: string, token: string, params: Record<string, string | number> = {}, method: 'GET' | 'POST' = 'POST') {
-  const response = await peerRequest(path, { method, encoding: method === 'GET' ? 'query' : 'form', params, token })
+async function peerInfo(path: string, token: string, params: Record<string, string | number> = {}, method: 'GET' | 'POST' = 'POST', signal?: AbortSignal) {
+  const response = await peerRequest(path, { method, encoding: method === 'GET' ? 'query' : 'form', params, token, signal })
   const data = parseResourceJson(response.body)
   if (response.status >= 400 || !data || Number(data.code) !== 0) {
     throw createError({ statusCode: 502, message: '暂时无法确认 Peer 资源权限，请稍后重试' })
@@ -19,8 +19,8 @@ async function peerInfo(path: string, token: string, params: Record<string, stri
   return data
 }
 
-export async function assertAiDeviceAccess(token: string, mac: string) {
-  const data = await peerInfo('/user/device/list', token)
+export async function assertAiDeviceAccess(token: string, mac: string, signal?: AbortSignal) {
+  const data = await peerInfo('/user/device/list', token, {}, 'POST', signal)
   const devices = Array.isArray(data.info) ? data.info : data.list
   if (!Array.isArray(devices)) throw createError({ statusCode: 502, message: 'Peer 设备列表格式异常' })
   if (!devices.some(device => String(device.mac) === mac)) {
@@ -28,13 +28,13 @@ export async function assertAiDeviceAccess(token: string, mac: string) {
   }
 }
 
-export async function assertAiPetAccess(token: string, petId: string, phone: string) {
-  const own = await peerInfo('/pet/info/list', token)
+export async function assertAiPetAccess(token: string, petId: string, phone: string, signal?: AbortSignal) {
+  const own = await peerInfo('/pet/info/list', token, {}, 'POST', signal)
   const pets = Array.isArray(own.info) ? own.info : own.list
   if (!Array.isArray(pets)) throw createError({ statusCode: 502, message: 'Peer 宠物列表格式异常' })
   if (pets.some(pet => String(pet.petId) === petId)) return
   // 共享邀请列表不等于已接受的成员权限，使用成员信息校验当前账号。
-  const shared = await peerInfo('/pet/share/members', token, { petId })
+  const shared = await peerInfo('/pet/share/members', token, { petId }, 'POST', signal)
   const members = shared.info?.members
   const owner = shared.info?.owner
   if (!Array.isArray(members)) throw createError({ statusCode: 403, message: '无法确认宠物共享权限' })

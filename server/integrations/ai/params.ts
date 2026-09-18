@@ -43,7 +43,13 @@ export function validateAiParams(endpoint: AiEndpoint, input: unknown, phone: st
   if (params.url !== undefined) {
     try {
       const url = new URL(String(params.url))
-      if (!['http:', 'https:'].includes(url.protocol) || url.username || url.password) fail('素材 URL 无效')
+      const config = useRuntimeConfig()
+      const hosts = String(config.aiMediaAllowedHosts || '').split(',').map(host => host.trim().toLowerCase()).filter(Boolean)
+      if (config.public?.ossCdnBaseUrl) hosts.push(new URL(String(config.public.ossCdnBaseUrl)).hostname.toLowerCase())
+      // 下载发生在 AI 服务上，不能让客户端借应用凭证要求它访问内网地址。
+      if (url.protocol !== 'https:' || url.port || url.username || url.password || !hosts.includes(url.hostname.toLowerCase())) {
+        fail('素材 URL 必须使用已配置的 HTTPS 素材域名')
+      }
     } catch { fail('素材 URL 无效') }
   }
   return params
