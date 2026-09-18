@@ -2,7 +2,7 @@
 export default defineEventHandler(async (event) => {
   const db = useDb()
   const [rows]: any = await db.query(
-    `SELECT it.id, it.code, it.name, it.icon_url, it.glb_action_id, ga.code AS glb_action_code, ga.name AS glb_action_name,
+    `SELECT it.id, it.code, it.name, it.icon_url, ga.id AS glb_action_id, ga.code AS glb_action_code, ga.name AS glb_action_name,
             it.satiety_delta, it.mood_delta, it.cleanliness_delta, it.enabled, it.created_at, it.updated_at
        FROM t_pet_interaction_type it
        LEFT JOIN t_pet_glb_action ga ON ga.id = it.glb_action_id AND ga.deleted = 0
