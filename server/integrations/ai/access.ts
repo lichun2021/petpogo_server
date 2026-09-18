@@ -1,14 +1,8 @@
 import { createError } from 'h3'
 import { peerRequest, phoneToAccount } from '../../utils/peerBackend.ts'
 
-// 只用于读取资源归属信息。跳过完整字符串 token，将超长整数转字符串再解析。
-// 不修改对 App 返回的 JSON，也不把字符串里的数字当作 JSON 数值。
-export function parseResourceJson(text: string): any {
-  return JSON.parse(text.replace(/"(?:[^"\\]|\\.)*"|-?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?/g, token => {
-    if (/^-?\d+$/.test(token) && !Number.isSafeInteger(Number(token))) return JSON.stringify(token)
-    return token
-  }))
-}
+import { parseResourceJson } from '../shared/json.ts'
+export { parseResourceJson } from '../shared/json.ts'
 
 async function peerInfo(path: string, token: string, params: Record<string, string | number> = {}, method: 'GET' | 'POST' = 'POST', signal?: AbortSignal) {
   const response = await peerRequest(path, { method, encoding: method === 'GET' ? 'query' : 'form', params, token, signal })

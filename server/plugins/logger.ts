@@ -30,6 +30,8 @@ export default defineNitroPlugin(nitroApp => {
         sseDone: event.context.proxySseDone,
         errorType: event.context.requestErrorType,
         errorCode: event.context.requestErrorCode,
+        localSync: event.context.peerLocalSync,
+        localSyncMs: event.context.peerLocalSyncMs,
         permissionMs: event.context.proxyPermissionMs,
         upstreamHost: event.context.proxyUpstreamHost,
         upstreamPath: event.context.proxyUpstreamPath,

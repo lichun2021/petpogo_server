@@ -5,6 +5,7 @@ import {
 import { readProxyBody } from '../shared/bounds.ts'
 import { requireAuth } from '../../utils/auth.ts'
 import { peerRequest } from '../../utils/peerBackend.ts'
+import { syncPeerMutation } from './localSync.ts'
 import { peerEndpoints, type PeerEndpoint } from './endpoints.ts'
 
 export function validatePeerParams(endpoint: PeerEndpoint, input: unknown): Record<string, string | number> {
@@ -70,10 +71,11 @@ export const peerProxyHandler = defineEventHandler(async (event) => {
     throw createError({ statusCode: 405, message: '请求方法不支持' })
   }
   let token: string | undefined
+  let userId: string | undefined
   if (!endpoint.public) {
     // 沿用本地登录/封禁检查；上游使用同一 ipet_token 校验所有权与分享权限。
-    // 不使用本地宠物表判断 Peer 资源权限，两套 ID 和共享关系不等价。
-    await requireAuth(event)
+    // 本地档案可能滞后且不包含完整共享关系，不用于判断 Peer 资源权限。
+    userId = (await requireAuth(event)).userId
     token = getHeader(event, 'authorization')?.replace('Bearer ', '').trim()
   }
   let input: unknown
@@ -93,6 +95,23 @@ export const peerProxyHandler = defineEventHandler(async (event) => {
   event.context.proxyUpstreamMs = Date.now() - upstreamStart
   event.context.proxyUpstreamStatus = response.status
   event.context.proxyBusinessCode = response.businessCode
+  if (userId && token) {
+    const syncStart = Date.now()
+    try {
+      const synced = await syncPeerMutation({ path, params, body: response.body, status: response.status,
+        userId, token, requestId: event.context.reqId })
+      if (synced) event.context.peerLocalSync = 'complete'
+    } catch {
+      event.context.peerLocalSync = 'failed'
+      event.context.proxyOutcome = 'local_sync_error'
+      event.context.requestErrorCode = 'PEER_LOCAL_SYNC_FAILED'
+      // 上游已经完成写操作，明确标记以免客户端误把 502 当成未执行并重复添加。
+      throw createError({ statusCode: 502, message: '上游操作已成功，本地同步失败，请勿重复提交',
+        data: { code: 'PEER_LOCAL_SYNC_FAILED', upstreamApplied: true } })
+    } finally {
+      if (event.context.peerLocalSync) event.context.peerLocalSyncMs = Date.now() - syncStart
+    }
+  }
   setResponseStatus(event, response.status)
   setHeader(event, 'Cache-Control', 'no-store')
   // 不传递上游 cookie/重定向等响应头，也不对 JSON 做解析后再序列化。

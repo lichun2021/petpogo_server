@@ -37,7 +37,7 @@ export const peerEndpoints: readonly PeerEndpoint[] = [
   form('/user/device/mcuota/get', 'mac'),
   form('/device/shadow/update', 'mac data'),
   form('/pet/agora/getToken', 'mac loginCustomerId'),
-  // 宠物与围栏（10）：使用 Peer ID，不与本地 t_pet/t_device 做映射。
+  // 宠物与围栏（10）：沿用 Peer ID；添加/删除成功后同步本地档案。
   form('/pet/info/list'),
   form('/pet/info/get', '', 'mac deviceId', 'mac deviceId'),
   form('/pet/info/add', 'petName', 'mac deviceId breed weight sex avatar age'),

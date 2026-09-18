@@ -60,34 +60,14 @@ function buildHeaders(token) {
 
 ## 一、宠物档案（`/sdkapi/pet/**`）
 
-### `POST /sdkapi/pet/create` — 创建宠物档案
+### 创建与删除统一走 Peer 中转
 
-**请求体**
-
-| 字段 | 类型 | 必填 | 说明 |
-|------|------|------|------|
-| `id` | `string` | ✅ | 宠物ID，由调用方指定（可与对方iPet硬件后台的宠物ID保持一致），须全局唯一，重复将返回 `400` |
-| `name` | `string` | ✅ | 宠物名称 |
-| `avatar` | `string` | ❌ | 头像 URL |
-| `species` | `string` | ❌ | 物种，如 `cat`/`dog` |
-| `breed` | `string` | ❌ | 品种 |
-| `gender` | `number` | ❌ | 0未知 1男 2女，默认 0 |
-| `birthday` | `string` | ❌ | 出生日期 `YYYY-MM-DD` |
-| `weight` | `number` | ❌ | 体重(kg) |
-| `bio` | `string` | ❌ | 简介 |
-| `deviceId` | `string` | ❌ | 关联设备 ID |
-
-**响应（200）**
-
-```json
-{ "id": "55135763958784", "name": "小白", "modelId": "1", "modelGlbUrl": "https://oss.example.com/cat.glb" }
-```
-
-> 形象由系统自动分配，不接受客户端指定：取当前启用且未删除、创建最早的一个形象。`modelId`/`modelGlbUrl` 为本次实际分配到的形象；若资源库当前没有任何启用中的形象，两者均为 `null`。
-
-**错误码**：`400` 缺少 `id`/`name`，或 `id` 已存在。
-
-> 新建宠物的饱腹度/心情值/清洁度默认初始化为 100。
+- 创建：`POST /sdkapi/peer/pet/info/add`，参数使用 `petName`、`mac/deviceId` 等 Peer 字段。
+- 删除：`POST /sdkapi/peer/pet/info/del`，参数使用 `petId` 或 `deviceId`。
+- 上游成功后后台同步本地档案；客户端无需再发一次本地创建或删除请求。
+- 原 `POST /sdkapi/pet/create`、`DELETE /sdkapi/pet/{id}` 已移除。
+- 首次建档自动分配最早启用的形象，三项养成值初始化为 100；可通过详情或状态接口获取。
+- 完整字段映射及同步失败约定见 `docs/sdkapi-peer.md`。
 
 ---
 
@@ -150,20 +130,6 @@ function buildHeaders(token) {
 ```
 
 **错误码**：`400` 名称为空，或 `backgroundId`/`modelId` 指向的资源不存在/已停用；`404` 宠物不存在或不属于当前用户。
-
----
-
-### `DELETE /sdkapi/pet/{id}` — 删除宠物档案（软删除，新增）
-
-仅能删除本人的宠物，删除后不再出现在列表/详情中。
-
-**响应（200）**
-
-```json
-{ "success": true }
-```
-
-**错误码**：`404` 宠物不存在或不属于当前用户。
 
 ---
 
