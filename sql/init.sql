@@ -932,7 +932,9 @@ CREATE TABLE IF NOT EXISTS t_pet_event (
 -- 形象分配配置：单行配置，规则整体原子保存。
 CREATE TABLE IF NOT EXISTS t_pet_model_assignment (
   id TINYINT PRIMARY KEY,
-  default_model_id BIGINT NULL,
+  default_model_id BIGINT NULL COMMENT '未知类型保底',
+  default_cat_model_id BIGINT NULL COMMENT '默认猫形象',
+  default_dog_model_id BIGINT NULL COMMENT '默认狗形象',
   rules JSON NOT NULL,
   breed_mappings JSON NOT NULL,
   updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP

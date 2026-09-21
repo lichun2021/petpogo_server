@@ -1,4 +1,4 @@
-import { getPetModelConfig } from '../../utils/petModelAssignment.ts'
+import { assertPetModelDefaults } from '../../utils/petModelAssignment.ts'
 import {
   createError, defineEventHandler, getHeader, getQuery, readBody,
   send, setHeader, setResponseStatus,
@@ -93,9 +93,7 @@ export const peerProxyHandler = defineEventHandler(async (event) => {
   const params = validatePeerParams(endpoint, input)
   // 在上游真正创建之前检查保底配置，避免配置缺失造成半成功。
   if (path === '/pet/info/add') {
-    const config = await getPetModelConfig(useDb())
-    const [[model]]: any = await useDb().query('SELECT id FROM t_pet_model WHERE id=? AND enabled=1 AND deleted=0', [config.defaultModelId || null])
-    if (!model) throw createError({ statusCode: 503, message: '请先在后台设置默认 GLB 形象' })
+    await assertPetModelDefaults(useDb())
   }
   const upstreamStart = Date.now()
   const response = await peerRequest(endpoint.path, { ...endpoint, params, token })

@@ -11,7 +11,7 @@ export default defineEventHandler(async (event) => {
   try {
     await db.beginTransaction()
     const config = await getPetModelConfig(db, true)
-    if (enabled === 0 && config.defaultModelId === id) throw createError({ statusCode: 400, message: '请先更换默认形象，再停用或删除此资源' })
+    if (enabled === 0 && [config.defaultModelId, config.defaultCatModelId, config.defaultDogModelId].includes(id)) throw createError({ statusCode: 400, message: '请先更换默认形象，再停用或删除此资源' })
     const [[row]]: any = await db.query('SELECT id FROM t_pet_model WHERE id=? AND deleted=0 LIMIT 1', [id])
     if (!row) throw createError({ statusCode: 404, message: '形象资源不存在' })
 

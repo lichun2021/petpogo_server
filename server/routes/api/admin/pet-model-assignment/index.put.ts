@@ -2,7 +2,7 @@ export default defineEventHandler(async event => {
   const body = await readBody(event)
   const fail = () => { throw createError({ statusCode: 400, message: '配置格式无效，请检查名称、条件、优先级和形象' }) }
   const validId = (v: any) => typeof v === 'string' && /^[1-9]\d{0,18}$/.test(v) && BigInt(v) <= 9223372036854775807n
-  if (!body || !validId(body.defaultModelId) || !Array.isArray(body.rules) || body.rules.length > 200 || !Array.isArray(body.breedMappings) || body.breedMappings.length > 1000) fail()
+  if (!body || !validId(body.defaultModelId) || !validId(body.defaultCatModelId) || !validId(body.defaultDogModelId) || !Array.isArray(body.rules) || body.rules.length > 200 || !Array.isArray(body.breedMappings) || body.breedMappings.length > 1000) fail()
   const ids = new Set<string>()
   const rules = body.rules.map((r: any) => {
     if (!r || typeof r.name !== 'string' || !r.name.trim() || r.name.length > 100 || !['all','cat','dog'].includes(r.species) ||
@@ -27,8 +27,8 @@ export default defineEventHandler(async event => {
     await getPetModelConfig(db, true)
     const [models]: any = await db.query('SELECT id,enabled,deleted FROM t_pet_model FOR UPDATE')
     const valid = (id: string) => models.some((m: any) => String(m.id) === id && m.enabled && !m.deleted)
-    if (!valid(body.defaultModelId) || rules.some((r: any) => r.enabled && !valid(r.modelId))) throw createError({ statusCode: 400, message: '默认形象和启用规则必须选择有效的启用形象' })
-    await db.query('UPDATE t_pet_model_assignment SET default_model_id=?,rules=?,breed_mappings=? WHERE id=1', [body.defaultModelId, JSON.stringify(rules), JSON.stringify(breedMappings)])
+    if (![body.defaultModelId, body.defaultCatModelId, body.defaultDogModelId].every(valid) || rules.some((r: any) => r.enabled && !valid(r.modelId))) throw createError({ statusCode: 400, message: '默认形象和启用规则必须选择有效的启用形象' })
+    await db.query('UPDATE t_pet_model_assignment SET default_model_id=?,default_cat_model_id=?,default_dog_model_id=?,rules=?,breed_mappings=? WHERE id=1', [body.defaultModelId, body.defaultCatModelId, body.defaultDogModelId, JSON.stringify(rules), JSON.stringify(breedMappings)])
     await db.commit()
     return { success: true }
   } catch (e) { await db.rollback(); throw e } finally { db.release() }

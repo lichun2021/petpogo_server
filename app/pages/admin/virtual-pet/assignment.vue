@@ -10,10 +10,18 @@
     <template v-else-if="!loadError">
       <section class="bg-white border border-orange-100 rounded-2xl p-5 space-y-3">
         <h3 class="font-semibold">默认保底形象</h3>
-        <p class="text-xs text-stone-500">未命中规则时使用。必须选择启用形象，更换前不能删除或停用。</p>
-        <select v-model="config.defaultModelId" class="field">
-          <option value="">请选择默认 GLB</option><option v-for="m in available" :key="m.id" :value="m.id">{{ m.name }}</option>
-        </select>
+        <p class="text-xs text-stone-500">未命中规则时，猫使用默认猫形象，狗使用默认狗形象。无法识别类型时才使用未知类型保底。各项均需选择启用形象，更换前不能删除或停用。</p>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <label>默认猫形象<select v-model="config.defaultCatModelId" class="field">
+            <option value="">请选择猫 GLB</option><option v-for="m in available" :key="m.id" :value="m.id">{{ m.name }}</option>
+          </select></label>
+          <label>默认狗形象<select v-model="config.defaultDogModelId" class="field">
+            <option value="">请选择狗 GLB</option><option v-for="m in available" :key="m.id" :value="m.id">{{ m.name }}</option>
+          </select></label>
+          <label>未知类型保底形象<select v-model="config.defaultModelId" class="field">
+            <option value="">请选择保底 GLB</option><option v-for="m in available" :key="m.id" :value="m.id">{{ m.name }}</option>
+          </select></label>
+        </div>
       </section>
       <section class="bg-white border border-orange-100 rounded-2xl p-5 space-y-3">
         <div class="flex justify-between"><h3 class="font-semibold">匹配规则</h3><UButton label="新增规则" color="amber" variant="outline" size="sm" @click="addRule" /></div>
@@ -52,7 +60,7 @@
         <p v-if="dirty" class="text-amber-600">配置有未保存的修改。</p>
         <div v-if="result" class="flex gap-4 items-center bg-amber-50 p-4 rounded-xl">
           <img v-if="result.model.thumbnail_url" :src="result.model.thumbnail_url" class="w-20 h-20 object-contain" alt="形象预览" />
-          <div><p class="font-semibold">{{ result.model.name }}</p><p>{{ result.source === 'rule' ? `命中规则：${result.ruleName}` : '未命中有效规则，使用默认保底' }}</p><p>识别类型：{{ result.species === 'cat' ? '猫' : result.species === 'dog' ? '狗' : '未知' }}</p></div>
+          <div><p class="font-semibold">{{ result.model.name }}</p><p>{{ result.source === 'rule' ? `命中规则：${result.ruleName}` : `未命中有效规则，使用${result.species === 'cat' ? '默认猫形象' : result.species === 'dog' ? '默认狗形象' : '未知类型保底'}` }}</p><p>识别类型：{{ result.species === 'cat' ? '猫' : result.species === 'dog' ? '狗' : '未知' }}</p></div>
         </div>
       </section>
     </template>
@@ -62,7 +70,7 @@
 defineOptions({ name: 'AdminPetModelAssignment' })
 definePageMeta({ layout: 'admin' })
 const toast = useToast()
-const config = reactive<any>({ defaultModelId: '', rules: [], breedMappings: [] })
+const config = reactive<any>({ defaultModelId: '', defaultCatModelId: '', defaultDogModelId: '', rules: [], breedMappings: [] })
 const models = ref<any[]>([])
 const available = computed(() => models.value.filter(m => m.enabled))
 const loading = ref(true), saving = ref(false), previewing = ref(false), loadError = ref(''), saved = ref('')
@@ -76,7 +84,7 @@ async function load() {
   loadError.value = ''
   try {
     const [c, m] = await Promise.all([$fetch<any>('/api/admin/pet-model-assignment'), $fetch<any>('/api/admin/pet-models/list')])
-    Object.assign(config, { defaultModelId: c.defaultModelId, rules: c.rules.map((r: any) => ({ ...r, breedText: r.breeds.join('，') })), breedMappings: c.breedMappings })
+    Object.assign(config, { defaultModelId: c.defaultModelId, defaultCatModelId: c.defaultCatModelId, defaultDogModelId: c.defaultDogModelId, rules: c.rules.map((r: any) => ({ ...r, breedText: r.breeds.join('，') })), breedMappings: c.breedMappings })
     models.value = m.list
     saved.value = JSON.stringify(config)
   } catch (e) { loadError.value = error(e) } finally { loading.value = false }
