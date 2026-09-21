@@ -1,3 +1,4 @@
+import { selectPetModel, savePetModelSnapshot } from '../../utils/petModelAssignment.ts'
 import { createError } from 'h3'
 import type { PoolConnection } from 'mysql2/promise'
 import { peerRequest } from '../../utils/peerBackend.ts'
@@ -46,16 +47,20 @@ async function saveDevice(db: PoolConnection, userId: string, value: any, owner?
     owner === true || String(value.uType) === '1' ? 'owner' : 'shared'])
 }
 
-async function savePet(db: PoolConnection, userId: string, value: any, modelId: string | null) {
+async function savePet(db: PoolConnection, userId: string, value: any) {
   const petId = id(value.petId), name = text(value.petName, 50, true)
   // age 与生日、weight 与本地体重的单位未形成契约，不做猜测转换。
   const sex = String(value.sex ?? '')
   const gender = sex.startsWith('GG') ? 1 : sex.startsWith('MM') ? 2 : 0
+  const [[known]]: any = await db.query('SELECT user_id FROM t_pet WHERE id=? FOR UPDATE', [petId])
+  if (known && String(known.user_id) !== userId) throw invalid()
+  const assignment = known ? null : await selectPetModel(db, { breed: value.breed, species: value.species, gender })
   // 重复同步不重置形象、背景、养成值及本地独有的生日/简介。
   await db.query(`INSERT INTO t_pet(id,user_id,name,avatar,species,breed,gender,device_id,model_id,
     satiety,mood,cleanliness,stats_updated_at,created_at)
     VALUES(?,?,?,?,?,?,?,?,?,100,100,100,NOW(),NOW()) ON DUPLICATE KEY UPDATE id=id`,
-  [petId, userId, name, text(value.avatar, 500), 'other', text(value.breed, 100), gender, deviceId(value.deviceId), modelId])
+  [petId, userId, name, text(value.avatar, 500), assignment?.species || 'other', text(value.breed, 100), gender, deviceId(value.deviceId), assignment?.model.id || null])
+  if (assignment) await savePetModelSnapshot(db, petId, assignment)
   const [[existing]]: any = await db.query('SELECT user_id FROM t_pet WHERE id=? FOR UPDATE', [petId])
   if (!existing || String(existing.user_id) !== userId) throw invalid()
   await db.query(`UPDATE t_pet SET name=?,avatar=?,breed=?,gender=?,device_id=?,deleted=0,updated_at=NOW()
@@ -101,8 +106,7 @@ export async function syncPeerMutation(input: {
     await db.beginTransaction()
     for (const device of devices) await saveDevice(db, userId, device, path === '/user/device/bind')
     if (pets.length) {
-      const [[model]]: any = await db.query('SELECT id FROM t_pet_model WHERE deleted=0 AND enabled=1 ORDER BY created_at ASC LIMIT 1')
-      for (const pet of pets) await savePet(db, userId, pet, model ? String(model.id) : null)
+      for (const pet of pets) await savePet(db, userId, pet)
     }
     if (path === '/user/device/unbind') {
       // 解绑不删除硬件，也不删除宠物；仅解除当前用户关系及其宠物的设备关联。

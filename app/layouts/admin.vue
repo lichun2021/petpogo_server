@@ -158,6 +158,7 @@ const navBase = [
   { to: '/admin/device-events', label: '设备事件', icon: 'i-heroicons-bell-alert' },
   { to: '/admin/pets',     label: '宠物档案',    icon: 'i-heroicons-heart' },
   { to: '/admin/virtual-pet/scenes', label: '电子宠物环境', icon: 'i-heroicons-sparkles' },
+  { to: '/admin/virtual-pet/assignment', label: '宠物形象分配', icon: 'i-heroicons-adjustments-horizontal' },
   { to: '/admin/virtual-pet/actions', label: '硬件动作管理', icon: 'i-heroicons-bolt' },
   { to: '/admin/virtual-pet/events', label: '宠物事件查询', icon: 'i-heroicons-clock' },
   { to: '/admin/posts',    label: '帖子审核',    icon: 'i-heroicons-photo' },

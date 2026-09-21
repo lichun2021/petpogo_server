@@ -30,7 +30,7 @@ export default defineEventHandler(async (event) => {
   const [rows]: any = await db.query(
     `SELECT p.id, p.user_id, u.phone, u.nickname, p.name, p.avatar, p.species, p.breed,
             p.gender, p.birthday, p.weight, p.bio, p.device_id,
-            p.satiety, p.mood, p.cleanliness, p.background_id, p.model_id, p.created_at
+            p.satiety, p.mood, p.cleanliness, p.background_id, p.model_id, p.model_snapshot, p.model_assignment_source, p.model_rule_name, p.model_assigned_at, p.created_at
      FROM t_pet p
      LEFT JOIN t_user u ON u.id = p.user_id
      ${where}
@@ -42,6 +42,7 @@ export default defineEventHandler(async (event) => {
   return {
     list: rows.map((r: any) => ({
       ...r,
+      model_snapshot: parsePetJson(r.model_snapshot),
       id: String(r.id),
       user_id: String(r.user_id),
       device_id: r.device_id ? String(r.device_id) : null,

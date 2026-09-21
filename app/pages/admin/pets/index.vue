@@ -75,6 +75,19 @@
       <div class="bg-white rounded-2xl shadow-xl w-[440px] p-6 space-y-4 max-h-[90vh] overflow-y-auto">
         <h3 class="font-semibold text-stone-800">编辑宠物档案</h3>
 
+        <div class="bg-amber-50 rounded-xl p-3 space-y-2 text-sm">
+          <p>当前形象：{{ modal.modelName || '尚未分配' }}</p>
+          <p class="text-xs text-stone-500">{{ modal.assignmentInfo }}</p>
+          <label class="block">形象处理
+            <select v-model="modal.assignmentMode" class="w-full border rounded-lg p-2 bg-white mt-1">
+              <option value="keep">保留当前形象</option><option value="rematch">按本次保存的资料重新匹配</option><option value="manual">手动指定形象</option>
+            </select>
+          </label>
+          <select v-if="modal.assignmentMode === 'manual'" v-model="modal.modelId" class="w-full border rounded-lg p-2 bg-white">
+            <option value="">请选择形象</option><option v-for="m in models" :key="m.id" :value="m.id">{{ m.name }}</option>
+          </select>
+          <p v-if="modal.assignmentMode !== 'keep'" class="text-xs text-amber-700">保存后将替换这只宠物的形象。</p>
+        </div>
         <div class="space-y-3">
           <div>
             <label class="text-xs text-stone-500 font-medium block mb-1">宠物名称 *</label>
@@ -134,6 +147,7 @@ defineOptions({ name: 'AdminPets' })
 definePageMeta({ layout: 'admin' })
 
 const toast = useToast()
+const models = ref<any[]>([])
 
 const keyword  = ref('')
 const userId   = ref('')
@@ -159,6 +173,7 @@ function reset() { keyword.value = ''; userId.value = ''; page.value = 1; loadLi
 const modal = reactive({
   show: false,
   editingId: '',
+  assignmentMode: 'keep', modelId: '', modelName: '', assignmentInfo: '',
   name: '',
   species: '',
   breed: '',
@@ -170,10 +185,14 @@ const modal = reactive({
   saving: false,
 })
 
-function openEditModal(row: any) {
+async function openEditModal(row: any) {
+  try { models.value = (await $fetch<any>('/api/admin/pet-models/list')).list.filter((m: any) => m.enabled) }
+  catch { toast.add({ title: '形象列表加载失败', color: 'red' }); return }
   Object.assign(modal, {
     show: true,
     editingId: row.id,
+    assignmentMode: 'keep', modelId: '', modelName: row.model_snapshot?.name || '',
+    assignmentInfo: `${({ rule: '规则匹配', default: '默认保底', manual: '手动指定', legacy: '历史形象' } as Record<string, string>)[row.model_assignment_source] || '未记录'}${row.model_rule_name ? ' · ' + row.model_rule_name : ''}${row.model_assigned_at ? ' · ' + formatDate(row.model_assigned_at) : ''}`,
     name: row.name || '',
     species: row.species || '',
     breed: row.breed || '',
@@ -192,6 +211,8 @@ async function saveModal() {
     await $fetch(`/api/admin/pets/${modal.editingId}`, {
       method: 'PUT',
       body: {
+        assignmentMode: modal.assignmentMode,
+        modelId: modal.modelId,
         name: modal.name.trim(),
         species: modal.species || null,
         breed: modal.breed || null,

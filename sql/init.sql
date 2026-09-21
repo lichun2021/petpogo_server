@@ -70,6 +70,10 @@ CREATE TABLE IF NOT EXISTS t_user_device (
 ) ENGINE=InnoDB;
 
 CREATE TABLE IF NOT EXISTS t_pet (
+  model_snapshot JSON NULL COMMENT '分配时形象快照，资源修改不影响已有宠物',
+  model_assignment_source VARCHAR(20) NULL,
+  model_rule_name VARCHAR(100) NULL,
+  model_assigned_at DATETIME NULL,
   id         BIGINT        PRIMARY KEY,
   user_id    BIGINT        NOT NULL,
   device_id  BIGINT,
@@ -924,3 +928,13 @@ CREATE TABLE IF NOT EXISTS t_pet_event (
   INDEX idx_occurred (occurred_at),
   INDEX idx_source (source)
 ) ENGINE=InnoDB COMMENT='宠物事件统一日志（互动触发 + 硬件动作上报）';
+
+-- 形象分配配置：单行配置，规则整体原子保存。
+CREATE TABLE IF NOT EXISTS t_pet_model_assignment (
+  id TINYINT PRIMARY KEY,
+  default_model_id BIGINT NULL,
+  rules JSON NOT NULL,
+  breed_mappings JSON NOT NULL,
+  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+) ENGINE=InnoDB COMMENT='宠物形象分配规则';
+INSERT IGNORE INTO t_pet_model_assignment(id, rules, breed_mappings) VALUES(1, JSON_ARRAY(), JSON_ARRAY());

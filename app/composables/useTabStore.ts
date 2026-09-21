@@ -29,6 +29,7 @@ const TAB_ICONS: Record<string, string> = {
   '/admin/checkin/rules': 'i-heroicons-calendar-days',
   '/admin/pets':          'i-heroicons-heart',
   '/admin/virtual-pet/scenes':  'i-heroicons-sparkles',
+  '/admin/virtual-pet/assignment': 'i-heroicons-adjustments-horizontal',
   '/admin/virtual-pet/actions': 'i-heroicons-bolt',
   '/admin/virtual-pet/events':  'i-heroicons-clock',
 }
@@ -55,6 +56,7 @@ const TAB_TITLES: Record<string, string> = {
   '/admin/checkin/rules': '签到奖励',
   '/admin/pets':          '宠物档案',
   '/admin/virtual-pet/scenes':  '电子宠物环境',
+  '/admin/virtual-pet/assignment': '宠物形象分配',
   '/admin/virtual-pet/actions': '硬件动作管理',
   '/admin/virtual-pet/events':  '宠物事件查询',
 }

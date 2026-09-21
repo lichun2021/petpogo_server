@@ -8,7 +8,7 @@ export default defineEventHandler(async (event) => {
   const db = useDb()
   const [[pet]]: any = await db.query(
     `SELECT p.id, p.name, p.avatar, p.species, p.breed, p.gender, p.birthday, p.weight, p.bio,
-            p.satiety, p.mood, p.cleanliness, p.stats_updated_at,
+            p.satiety, p.mood, p.cleanliness, p.stats_updated_at, p.model_snapshot, p.model_assignment_source, p.model_rule_name, p.model_assigned_at,
             bg.id AS bg_id, bg.name AS bg_name, bg.image_url AS bg_image_url,
             md.id AS model_id, md.name AS model_name, md.glb_url AS model_glb_url, md.thumbnail_url AS model_thumbnail_url
        FROM t_pet p
@@ -38,7 +38,10 @@ export default defineEventHandler(async (event) => {
     background: pet.bg_id
       ? { id: String(pet.bg_id), name: pet.bg_name, image_url: pet.bg_image_url }
       : null,
-    model: pet.model_id
+    model_assignment_source: pet.model_assignment_source,
+    model_rule_name: pet.model_rule_name,
+    model_assigned_at: pet.model_assigned_at,
+    model: pet.model_snapshot ? parsePetJson(pet.model_snapshot) : pet.model_id
       ? { id: String(pet.model_id), name: pet.model_name, glb_url: pet.model_glb_url, thumbnail_url: pet.model_thumbnail_url }
       : null,
   }
