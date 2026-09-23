@@ -1,6 +1,6 @@
 <template>
   <div class="space-y-4">
-    <h1 class="text-xl font-semibold text-stone-900">用户反馈</h1>
+    <AdminPageTitle>用户反馈</AdminPageTitle>
     <!-- 顶部统计卡片 -->
     <div class="grid grid-cols-4 gap-3">
       <div
@@ -49,8 +49,8 @@
           :class="[
             'px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-150 border',
             activeStatus === s.value
-              ? 'text-amber-700 font-semibold'
-              : 'text-stone-500 hover:text-stone-700 hover:bg-amber-50'
+              ? 'text-primary font-semibold'
+              : 'text-stone-500 hover:text-stone-700 hover:bg-primary/5'
           ]"
           :style="activeStatus === s.value
             ? 'background: #fef3c7; border-color: #fde68a'
@@ -89,7 +89,7 @@
 
       <!-- 加载中 -->
       <div v-if="loading" class="py-16 flex items-center justify-center">
-        <UIcon name="i-heroicons-arrow-path" class="w-5 h-5 text-amber-400 animate-spin" />
+        <UIcon name="i-heroicons-arrow-path" class="w-5 h-5 text-primary animate-spin" />
       </div>
 
       <!-- 空状态 -->
@@ -102,7 +102,7 @@
       <template v-else>
         <div
           v-for="item in list" :key="item.id"
-          class="grid items-center px-5 py-3 border-b last:border-0 hover:bg-amber-50/40 transition-colors cursor-pointer group"
+          class="grid items-center px-5 py-3 border-b last:border-0 hover:bg-primary/5 transition-colors cursor-pointer group"
           style="grid-template-columns: 100px 1fr 110px 140px 100px 90px 80px; border-color: #f5f5f4"
           @click="openDetail(item)"
         >
@@ -132,7 +132,7 @@
             <button
               class="text-xs font-mono px-2 py-1 rounded-lg transition-all duration-200 select-all"
               :class="revealedPhones.has(item.id)
-                ? 'bg-amber-50 text-amber-700 ring-1 ring-amber-200'
+                ? 'bg-primary/5 text-primary ring-1 ring-primary'
                 : 'text-stone-500 hover:text-stone-600 hover:bg-stone-50'"
               :title="revealedPhones.has(item.id) ? '5秒后自动隐藏' : '点击查看完整号码'"
               @click="revealPhone(item)"

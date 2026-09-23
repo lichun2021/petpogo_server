@@ -1,11 +1,11 @@
 <template>
   <div class="space-y-4">
-    <h1 class="text-xl font-semibold text-stone-900">用户图库</h1>
+    <AdminPageTitle>用户图库</AdminPageTitle>
     <!-- 统计卡片 -->
     <div class="grid grid-cols-3 gap-3">
       <div
         v-for="card in statCards" :key="card.label"
-        class="bg-white rounded-2xl p-4 border flex items-center gap-3"
+        class="bg-white rounded-xl p-4 border flex items-center gap-3"
         style="border-color: #e7e5e4; box-shadow: 0 1px 4px rgba(0,0,0,0.04)"
       >
         <div class="w-10 h-10 rounded-xl flex items-center justify-center text-lg flex-shrink-0" :style="`background:${card.bg}`">
@@ -52,7 +52,7 @@
 
     <!-- 图库网格 -->
     <div v-if="loading" class="py-20 flex items-center justify-center">
-      <UIcon name="i-heroicons-arrow-path" class="w-6 h-6 text-amber-400 animate-spin" />
+      <UIcon name="i-heroicons-arrow-path" class="w-6 h-6 text-primary animate-spin" />
     </div>
     <div v-else-if="!list.length" class="py-20 flex flex-col items-center gap-2 text-stone-500">
       <span class="text-4xl">🖼️</span>

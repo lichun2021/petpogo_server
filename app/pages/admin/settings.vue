@@ -2,9 +2,9 @@
   <div class="space-y-5">
 
     <!-- 页头 -->
-    <div class="flex items-center justify-between">
+    <div class="flex items-center justify-between flex-wrap gap-3">
       <div>
-        <h2 class="text-xl font-semibold text-stone-800">系统设置</h2>
+        <AdminPageTitle>系统设置</AdminPageTitle>
         <p class="text-xs text-stone-500 mt-0.5">管理全局系统配置参数</p>
       </div>
       <UButton
@@ -31,7 +31,7 @@
         <!-- 分组标题 -->
         <div class="flex items-center gap-2.5 px-5 py-3.5 border-b" style="border-color: #e7e5e4; background: #fffbf5">
           <div class="w-7 h-7 rounded-lg flex items-center justify-center" style="background: #fef3c7">
-            <UIcon name="i-heroicons-chat-bubble-left-ellipsis" class="w-4 h-4 text-amber-600" />
+            <UIcon name="i-heroicons-chat-bubble-left-ellipsis" class="w-4 h-4 text-primary" />
           </div>
           <div>
             <p class="text-sm font-semibold text-stone-800">短信网关</p>
@@ -45,7 +45,7 @@
             <button
               :class="[
                 'relative inline-flex h-6 w-11 items-center rounded-full transition-colors duration-200 focus:outline-none',
-                getSetting('sms_enabled') === '1' ? 'bg-amber-500' : 'bg-stone-300'
+                getSetting('sms_enabled') === '1' ? 'bg-primary' : 'bg-stone-300'
               ]"
               @click="toggleBoolean('sms_enabled')"
             >
@@ -115,7 +115,7 @@
               <button
                 :class="[
                   'relative inline-flex h-6 w-11 items-center rounded-full transition-colors duration-200 focus:outline-none',
-                  localValues[item.key] === '1' ? 'bg-amber-500' : 'bg-stone-300'
+                  localValues[item.key] === '1' ? 'bg-primary' : 'bg-stone-300'
                 ]"
                 @click="toggleBoolean(item.key)"
               >
@@ -213,7 +213,7 @@
               <button
                 :class="[
                   'relative inline-flex h-6 w-11 items-center rounded-full transition-colors duration-200 focus:outline-none',
-                  localValues[item.key] === '1' ? 'bg-amber-500' : 'bg-stone-300'
+                  localValues[item.key] === '1' ? 'bg-primary' : 'bg-stone-300'
                 ]"
                 @click="toggleBoolean(item.key)"
               >
@@ -263,24 +263,22 @@
   </div>
 
     <!-- 新增客户端配置 弹窗 -->
-    <div v-if="clientModal.show" class="fixed inset-0 z-50 flex items-center justify-center" style="background: rgba(0,0,0,0.4)">
-      <div class="bg-white rounded-2xl shadow-xl w-96 p-6 space-y-4">
-        <h3 class="font-semibold text-stone-800">新增客户端配置</h3>
-        <div class="space-y-3">
+    <AdminFormModal v-model:open="clientModal.show" title="新增客户端配置" :busy="clientModal.saving">
+      <div class="space-y-4">
           <div>
-            <label class="text-xs text-stone-500 font-medium block mb-1">配置键 key *</label>
+            <label class="text-sm text-stone-600 font-medium block mb-1">配置键 key *</label>
             <UInput v-model="clientModal.key" placeholder="如 client_xxx_key（建议 client_ 前缀）" />
           </div>
           <div>
-            <label class="text-xs text-stone-500 font-medium block mb-1">显示名称 label *</label>
+            <label class="text-sm text-stone-600 font-medium block mb-1">显示名称 label *</label>
             <UInput v-model="clientModal.label" placeholder="如 高德地图Key" />
           </div>
           <div>
-            <label class="text-xs text-stone-500 font-medium block mb-1">值</label>
+            <label class="text-sm text-stone-600 font-medium block mb-1">值</label>
             <UInput v-model="clientModal.value" placeholder="配置值（secret 类型会被脱敏）" />
           </div>
           <div>
-            <label class="text-xs text-stone-500 font-medium block mb-1">值类型</label>
+            <label class="text-sm text-stone-600 font-medium block mb-1">值类型</label>
             <select v-model="clientModal.type" class="admin-select w-full rounded-lg text-sm py-1.5 px-2" style="border-color: #e7e5e4">
               <option value="text">text（明文字符串）</option>
               <option value="secret">secret（对App脱敏返回 ***）</option>
@@ -289,16 +287,15 @@
             </select>
           </div>
           <div>
-            <label class="text-xs text-stone-500 font-medium block mb-1">说明（可选）</label>
+            <label class="text-sm text-stone-600 font-medium block mb-1">说明（可选）</label>
             <UTextarea v-model="clientModal.description" :rows="2" placeholder="描述这个配置的用途" />
           </div>
         </div>
-        <div class="flex gap-2 pt-2">
-          <UButton label="取消" color="neutral" variant="outline" class="flex-1" @click="clientModal.show = false" />
-          <UButton label="创建" color="primary" class="flex-1" :loading="clientModal.saving" :disabled="!clientModal.key.trim() || !clientModal.label.trim()" @click="createClient" />
-        </div>
-      </div>
-    </div>
+      <template #footer>
+        <UButton label="取消" color="neutral" variant="ghost" class="min-w-20" @click="clientModal.show = false" :disabled="clientModal.saving" />
+        <UButton label="创建" color="primary" class="min-w-20" :loading="clientModal.saving" :disabled="!clientModal.key.trim() || !clientModal.label.trim()" @click="createClient" />
+      </template>
+    </AdminFormModal>
 </template>
 
 <script setup lang="ts">

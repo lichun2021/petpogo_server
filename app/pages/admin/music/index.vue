@@ -2,12 +2,12 @@
   <div class="space-y-5">
 
     <!-- 顶部操作栏 -->
-    <div class="flex items-center gap-3">
-      <h2 class="text-xl font-bold text-stone-800 flex items-center gap-2">
-        <UIcon name="i-heroicons-musical-note" class="w-5 h-5 text-amber-500" />
+    <div class="flex items-center gap-3 flex-wrap">
+      <AdminPageTitle class="flex items-center gap-2">
+        <UIcon name="i-heroicons-musical-note" class="w-5 h-5 text-primary" />
         宠物音乐管理
-      </h2>
-      <div class="ml-auto flex gap-2">
+      </AdminPageTitle>
+      <div class="ml-auto flex gap-2 flex-wrap">
         <UButton
           label="新建分类"
           icon="i-heroicons-tag"
@@ -33,8 +33,8 @@
         :class="[
           'px-4 py-1.5 rounded-lg text-sm font-medium transition-all',
           activeCatId === null
-            ? 'bg-amber-500 text-white shadow-sm'
-            : 'bg-white border text-stone-500 hover:text-stone-700 hover:border-amber-300'
+            ? 'bg-primary/10 text-primary font-medium'
+            : 'bg-white border text-stone-500 hover:text-stone-700 hover:border-primary/30'
         ]"
         style="border-color: #e7e5e4"
         @click="activeCatId = null; loadMusic()"
@@ -44,8 +44,8 @@
         :class="[
           'group px-4 py-1.5 rounded-lg text-sm font-medium transition-all flex items-center gap-1.5',
           activeCatId === c.id
-            ? 'bg-amber-500 text-white shadow-sm'
-            : 'bg-white border text-stone-500 hover:text-stone-700 hover:border-amber-300'
+            ? 'bg-primary/10 text-primary font-medium'
+            : 'bg-white border text-stone-500 hover:text-stone-700 hover:border-primary/30'
         ]"
         style="border-color: #e7e5e4"
         @click="activeCatId = c.id; loadMusic()"
@@ -59,8 +59,8 @@
           :class="[
             'w-3.5 h-3.5 ml-0.5 transition-colors',
             activeCatId === c.id
-              ? 'text-white/70 hover:text-white'
-              : 'text-stone-500 hover:text-amber-500'
+              ? 'text-primary/80 hover:text-primary'
+              : 'text-stone-500 hover:text-primary'
           ]"
           title="编辑分类"
           @click.stop="openCatModal(c)"
@@ -70,7 +70,7 @@
           :class="[
             'ml-0.5 leading-none transition-colors',
             activeCatId === c.id
-              ? 'text-white/70 hover:text-red-200'
+              ? 'text-primary/80 hover:text-red-600'
               : 'text-stone-500 hover:text-red-500'
           ]"
           title="删除分类"
@@ -111,7 +111,7 @@
         <!-- 行 -->
         <div
           v-for="m in musicList" :key="m.id"
-          class="grid grid-cols-[56px_1fr_100px_80px_80px_80px_120px] gap-3 px-4 py-3 border-b border-stone-100 hover:bg-amber-50/20 transition-colors items-center"
+          class="grid grid-cols-[56px_1fr_100px_80px_80px_80px_120px] gap-3 px-4 py-3 border-b border-stone-100 hover:bg-primary/5 transition-colors items-center"
         >
           <!-- 封面 -->
           <div class="w-10 h-10 rounded-lg overflow-hidden bg-stone-100 flex-shrink-0 flex items-center justify-center">
@@ -121,12 +121,12 @@
           <!-- 名称 + 播放链接 -->
           <div class="min-w-0">
             <p class="text-sm text-stone-700 font-medium truncate">{{ m.name }}</p>
-            <a :href="m.music_url" target="_blank" class="text-xs text-amber-500 hover:underline truncate block">
+            <a :href="m.music_url" target="_blank" class="text-xs text-primary hover:underline truncate block">
               点击试听 ↗
             </a>
           </div>
           <!-- 分类 -->
-          <span class="text-xs text-stone-500 bg-amber-50 px-2 py-0.5 rounded-full w-fit">{{ m.category_name }}</span>
+          <span class="text-xs text-stone-500 bg-primary/5 px-2 py-0.5 rounded-md w-fit">{{ m.category_name }}</span>
           <!-- 宠物类型 -->
           <span :class="petTypeCls(m.pet_type)" class="text-xs px-2 py-0.5 rounded-full w-fit font-medium">
             {{ petTypeLabel(m.pet_type) }}
@@ -160,20 +160,14 @@
     </div>
 
     <!-- ── 新建分类弹窗 ─────────────────────── -->
-    <div v-if="catModal.show"
-      class="fixed inset-0 z-50 flex items-center justify-center"
-      style="background: rgba(0,0,0,0.4)"
-    >
-      <div class="bg-white rounded-2xl shadow-xl w-96 p-6 space-y-4">
-        <h3 class="font-semibold text-stone-800">{{ catModal.editingId ? '编辑音乐分类' : '新建音乐分类' }}</h3>
-
-        <div class="space-y-3">
+    <AdminFormModal v-model:open="catModal.show" :title="catModal.editingId ? '编辑音乐分类' : '新建音乐分类'" :busy="catModal.uploading || catModal.saving">
+      <div class="space-y-4">
           <div>
-            <label class="text-xs text-stone-500 font-medium block mb-1">分类名称 *</label>
+            <label class="text-sm text-stone-600 font-medium block mb-1">分类名称 *</label>
             <UInput v-model="catModal.name" placeholder="如：助眠、安抚、平静…" />
           </div>
           <div>
-            <label class="text-xs text-stone-500 font-medium block mb-1">分类图标</label>
+            <label class="text-sm text-stone-600 font-medium block mb-1">分类图标</label>
             <!-- 图标上传 -->
             <div class="flex items-center gap-3">
               <div class="w-14 h-14 rounded-xl bg-stone-100 flex items-center justify-center overflow-hidden border border-dashed border-stone-300">
@@ -196,40 +190,32 @@
             </div>
           </div>
           <div>
-            <label class="text-xs text-stone-500 font-medium block mb-1">排序（越小越靠前）</label>
+            <label class="text-sm text-stone-600 font-medium block mb-1">排序（越小越靠前）</label>
             <UInput v-model.number="catModal.sortOrder" type="number" placeholder="0" />
           </div>
         </div>
-
-        <div class="flex gap-2 pt-2">
-          <UButton label="取消" color="neutral" variant="outline" class="flex-1" @click="catModal.show = false" />
-          <UButton
+      <template #footer>
+        <UButton label="取消" color="neutral" variant="ghost" class="min-w-20" @click="catModal.show = false" :disabled="catModal.uploading || catModal.saving" />
+        <UButton
             :label="catModal.editingId ? '保存修改' : '创建分类'"
             color="primary"
-            class="flex-1"
+            class="min-w-20"
             :loading="catModal.saving"
             :disabled="!catModal.name.trim()"
             @click="saveCat"
           />
-        </div>
-      </div>
-    </div>
+      </template>
+    </AdminFormModal>
 
     <!-- ── 上传音乐弹窗 ─────────────────────── -->
-    <div v-if="musicModal.show"
-      class="fixed inset-0 z-50 flex items-center justify-center"
-      style="background: rgba(0,0,0,0.4)"
-    >
-      <div class="bg-white rounded-2xl shadow-xl w-[440px] p-6 space-y-4">
-        <h3 class="font-semibold text-stone-800">{{ musicModal.editingId ? '编辑音乐' : '上传音乐' }}</h3>
-
-        <div class="space-y-3">
+    <AdminFormModal v-model:open="musicModal.show" :title="musicModal.editingId ? '编辑音乐' : '上传音乐'" :busy="musicModal.iconUploading || musicModal.audioUploading || musicModal.saving">
+      <div class="space-y-4">
           <!-- 分类 -->
           <div>
-            <label class="text-xs text-stone-500 font-medium block mb-1">所属分类 *</label>
+            <label class="text-sm text-stone-600 font-medium block mb-1">所属分类 *</label>
             <select
               v-model="musicModal.categoryId"
-              class="admin-select w-full border rounded-lg px-3 py-2 text-sm text-stone-700 bg-white focus:outline-none focus:ring-2 focus:ring-amber-300"
+              class="admin-select w-full border rounded-lg px-3 py-2 text-sm text-stone-700 bg-white focus:outline-none focus:ring-2 focus:ring-primary"
               style="border-color: #e5e7eb"
             >
               <option value="" disabled>请选择分类</option>
@@ -239,7 +225,7 @@
 
           <!-- 宠物类型 -->
           <div>
-            <label class="text-xs text-stone-500 font-medium block mb-1">适用宠物 *</label>
+            <label class="text-sm text-stone-600 font-medium block mb-1">适用宠物 *</label>
             <div class="flex gap-2">
               <button
                 v-for="pt in petTypeOpts" :key="pt.value"
@@ -258,13 +244,13 @@
 
           <!-- 名称 -->
           <div>
-            <label class="text-xs text-stone-500 font-medium block mb-1">音乐名称 *</label>
+            <label class="text-sm text-stone-600 font-medium block mb-1">音乐名称 *</label>
             <UInput v-model="musicModal.name" placeholder="输入音乐名称" />
           </div>
 
           <!-- 封面图 -->
           <div>
-            <label class="text-xs text-stone-500 font-medium block mb-1">封面图 *</label>
+            <label class="text-sm text-stone-600 font-medium block mb-1">封面图 *</label>
             <div class="flex items-center gap-3">
               <div class="w-14 h-14 rounded-xl bg-stone-100 flex items-center justify-center overflow-hidden border border-dashed border-stone-300">
                 <img v-if="musicModal.iconPreview" :src="musicModal.iconPreview" class="w-full h-full object-cover" />
@@ -287,7 +273,7 @@
 
           <!-- 音频文件 -->
           <div>
-            <label class="text-xs text-stone-500 font-medium block mb-1">音频文件 *</label>
+            <label class="text-sm text-stone-600 font-medium block mb-1">音频文件 *</label>
             <div class="flex items-center gap-3">
               <div class="flex-1 border rounded-lg px-3 py-2 text-xs text-stone-500 bg-stone-50 truncate" style="border-color: #e5e7eb">
                 {{ musicModal.audioName || '未选择文件' }}
@@ -308,13 +294,13 @@
 
           <!-- 排序 -->
           <div>
-            <label class="text-xs text-stone-500 font-medium block mb-1">排序</label>
+            <label class="text-sm text-stone-600 font-medium block mb-1">排序</label>
             <UInput v-model.number="musicModal.sortOrder" type="number" placeholder="0" />
           </div>
 
           <!-- 上下架状态(仅编辑时显示) -->
           <div v-if="musicModal.editingId">
-            <label class="text-xs text-stone-500 font-medium block mb-1">上下架状态</label>
+            <label class="text-sm text-stone-600 font-medium block mb-1">上下架状态</label>
             <div class="flex gap-2">
               <button
                 :class="[
@@ -337,19 +323,17 @@
             </div>
           </div>
         </div>
-
-        <div class="flex gap-2 pt-2">
-          <UButton label="取消" color="neutral" variant="outline" class="flex-1" @click="musicModal.show = false" />
-          <UButton
+      <template #footer>
+        <UButton label="取消" color="neutral" variant="ghost" class="min-w-20" @click="musicModal.show = false" :disabled="musicModal.iconUploading || musicModal.audioUploading || musicModal.saving" />
+        <UButton
             :label="musicModal.editingId ? '保存修改' : '保存音乐'"
             color="primary"
-            class="flex-1"
+            class="min-w-20"
             :loading="musicModal.saving"
             @click="saveMusic"
           />
-        </div>
-      </div>
-    </div>
+      </template>
+    </AdminFormModal>
 
   </div>
 </template>
@@ -391,7 +375,7 @@ const catModal = reactive({
 const petTypeOpts = [
   { value: 'all', label: '通用',  emoji: '🐾', activeCls: 'border-stone-500 bg-stone-50 text-stone-700' },
   { value: 'cat', label: '猫咪',  emoji: '🐱', activeCls: 'border-orange-400 bg-orange-50 text-orange-700' },
-  { value: 'dog', label: '狗狗',  emoji: '🐶', activeCls: 'border-amber-400 bg-amber-50 text-amber-700' },
+  { value: 'dog', label: '狗狗',  emoji: '🐶', activeCls: 'border-primary/30 bg-primary/5 text-primary' },
 ]
 
 function petTypeLabel(v: string) {
@@ -401,7 +385,7 @@ function petTypeCls(v: string) {
   return ({
     all: 'bg-stone-100 text-stone-500',
     cat: 'bg-orange-100 text-orange-600',
-    dog: 'bg-amber-100 text-amber-600',
+    dog: 'bg-primary/10 text-primary',
   } as any)[v] ?? 'bg-stone-100 text-stone-500'
 }
 

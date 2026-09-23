@@ -1,8 +1,8 @@
 <template>
   <div class="space-y-4">
-    <div class="flex items-center justify-between">
+    <div class="flex items-center justify-between flex-wrap gap-3">
       <div>
-        <h2 class="text-xl font-semibold text-stone-800">计划购买订单</h2>
+        <AdminPageTitle>计划购买订单</AdminPageTitle>
         <p class="text-xs text-stone-500 mt-0.5">人工确认订单支付状态后自动开通对应计划</p>
       </div>
       <UButton label="返回计划配置" color="neutral" variant="outline" icon="i-heroicons-arrow-left" to="/admin/plans" />
@@ -33,7 +33,7 @@
           </tr>
         </thead>
         <tbody>
-          <tr v-for="row in list" :key="row.id" class="border-b border-stone-100 hover:bg-amber-50/30 transition-colors">
+          <tr v-for="row in list" :key="row.id" class="border-b border-stone-100 hover:bg-primary/5 transition-colors">
             <td class="py-3 px-4">
               <p class="text-stone-800 font-medium">{{ row.nickname || '未设置' }}</p>
               <p class="text-xs text-stone-500">{{ row.phone }}</p>

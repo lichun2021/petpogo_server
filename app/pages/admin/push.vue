@@ -2,13 +2,13 @@
   <div class="space-y-5">
 
     <!-- 页面标题 -->
-    <div class="flex items-center gap-3">
-      <div class="w-10 h-10 rounded-2xl flex items-center justify-center text-xl"
+    <div class="flex items-center gap-3 flex-wrap">
+      <div class="w-10 h-10 rounded-2xl flex items-center justify-center text-xl flex-wrap"
            style="background: linear-gradient(135deg, #f59e0b, #fb923c)">
         🔔
       </div>
       <div>
-        <h1 class="text-xl font-bold text-stone-800">推送测试</h1>
+        <AdminPageTitle>推送测试</AdminPageTitle>
         <p class="text-xs text-stone-500">通过极光推送向用户发送通知</p>
       </div>
     </div>
@@ -23,7 +23,7 @@
         <div class="bg-white rounded-xl border p-5 space-y-4"
              style="border-color: #e7e5e4; box-shadow: 0 1px 4px rgba(0,0,0,0.04)">
           <p class="text-sm font-bold text-stone-700 flex items-center gap-2">
-            <span class="w-5 h-5 rounded-md bg-amber-100 flex items-center justify-center text-xs">①</span>
+            <span class="w-5 h-5 rounded-md bg-primary/10 flex items-center justify-center text-xs">①</span>
             推送目标
           </p>
 
@@ -48,7 +48,7 @@
               v-model="form.alias"
               rows="3"
               placeholder="输入用户 ID，多个用逗号或换行分隔&#10;例：44162677806080, 44162677806081"
-              class="w-full px-3.5 py-2.5 text-sm rounded-xl border resize-none focus:outline-none focus:ring-2 focus:ring-amber-300 transition"
+              class="w-full px-3.5 py-2.5 text-sm rounded-xl border resize-none focus:outline-none focus:ring-2 focus:ring-primary transition"
               style="border-color: #e2d9d0; background: #faf8f5; font-family: monospace"
             />
             <p class="text-xs text-stone-500">💡 用户登录 App 后，客户端会自动把 userId 注册为 alias</p>
@@ -58,7 +58,7 @@
           <div v-else class="rounded-xl px-4 py-3 flex items-center gap-3"
                style="background: #fffbeb; border: 1px solid #fde68a">
             <span class="text-lg">📢</span>
-            <p class="text-xs text-amber-700">将向所有已安装 App 并开启通知权限的用户发送推送</p>
+            <p class="text-xs text-primary">将向所有已安装 App 并开启通知权限的用户发送推送</p>
           </div>
         </div>
 
@@ -66,7 +66,7 @@
         <div class="bg-white rounded-xl border p-5 space-y-4"
              style="border-color: #e7e5e4; box-shadow: 0 1px 4px rgba(0,0,0,0.04)">
           <p class="text-sm font-bold text-stone-700 flex items-center gap-2">
-            <span class="w-5 h-5 rounded-md bg-amber-100 flex items-center justify-center text-xs">②</span>
+            <span class="w-5 h-5 rounded-md bg-primary/10 flex items-center justify-center text-xs">②</span>
             通知内容
           </p>
 
@@ -89,7 +89,7 @@
                 v-model="form.title"
                 maxlength="50"
                 placeholder="通知标题（最多 50 字）"
-                class="w-full px-3.5 py-2.5 text-sm rounded-xl border focus:outline-none focus:ring-2 focus:ring-amber-300 transition"
+                class="w-full px-3.5 py-2.5 text-sm rounded-xl border focus:outline-none focus:ring-2 focus:ring-primary transition"
                 style="border-color: #e2d9d0; background: #faf8f5"
               />
             </div>
@@ -101,7 +101,7 @@
                 rows="3"
                 maxlength="200"
                 placeholder="通知内容（最多 200 字）"
-                class="w-full px-3.5 py-2.5 text-sm rounded-xl border resize-none focus:outline-none focus:ring-2 focus:ring-amber-300 transition"
+                class="w-full px-3.5 py-2.5 text-sm rounded-xl border resize-none focus:outline-none focus:ring-2 focus:ring-primary transition"
                 style="border-color: #e2d9d0; background: #faf8f5"
               />
             </div>
@@ -114,10 +114,10 @@
               <input
                 v-model="form.deviceMac"
                 placeholder="例：ipet-esp32-Device-02"
-                class="w-full px-3.5 py-2.5 text-sm rounded-xl border focus:outline-none focus:ring-2 focus:ring-amber-300 transition font-mono"
+                class="w-full px-3.5 py-2.5 text-sm rounded-xl border focus:outline-none focus:ring-2 focus:ring-primary transition font-mono"
                 style="border-color: #e2d9d0; background: #faf8f5"
               />
-              <p v-if="form.deviceMac.trim()" class="text-xs text-amber-600">
+              <p v-if="form.deviceMac.trim()" class="text-xs text-primary">
                 ℹ️ extras 将自动注入 device_mac，App 点击通知可跳转设备页
               </p>
             </div>
@@ -131,7 +131,7 @@
                 v-model="form.extras"
                 rows="2"
                 placeholder='{ "type": "auto_capture" }'
-                class="w-full px-3.5 py-2.5 text-xs rounded-xl border resize-none focus:outline-none focus:ring-2 focus:ring-amber-300 transition font-mono"
+                class="w-full px-3.5 py-2.5 text-xs rounded-xl border resize-none focus:outline-none focus:ring-2 focus:ring-primary transition font-mono"
                 style="border-color: #e2d9d0; background: #faf8f5"
               />
             </div>
@@ -144,7 +144,7 @@
             class="flex items-center gap-2 px-6 py-3 rounded-xl font-bold text-sm text-white transition-all duration-150 disabled:opacity-50"
             :style="sending
               ? 'background: #d1d5db; cursor: not-allowed'
-              : 'background: linear-gradient(135deg, #f59e0b, #fb923c); box-shadow: 0 4px 14px rgba(245,158,11,0.35)'"
+              : 'background: var(--ui-primary)'"
             :disabled="sending"
             @click="sendPush"
           >
@@ -172,7 +172,7 @@
           <p class="text-xs font-bold text-stone-500 mb-3">📱 通知预览</p>
           <div class="rounded-2xl p-4 space-y-1.5" style="background: #1c1c1e">
             <div class="flex items-center gap-2 mb-2">
-              <div class="w-5 h-5 rounded-md bg-amber-400 flex items-center justify-center">
+              <div class="w-5 h-5 rounded-md bg-primary flex items-center justify-center">
                 <span class="text-xs">🐾</span>
               </div>
               <span class="text-xs text-gray-400 font-medium">萌宠智伴</span>
@@ -200,7 +200,7 @@
           <div v-else class="divide-y max-h-96 overflow-y-auto" style="divide-color: #f5f5f4">
             <div
               v-for="(h, i) in history" :key="i"
-              class="px-4 py-3 space-y-1 cursor-pointer hover:bg-amber-50/40 transition-colors"
+              class="px-4 py-3 space-y-1 cursor-pointer hover:bg-primary/5 transition-colors"
               @click="restoreHistory(h)"
             >
               <div class="flex items-center justify-between">

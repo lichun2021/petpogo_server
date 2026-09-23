@@ -1,11 +1,11 @@
 <template>
   <div class="space-y-4">
     <!-- 顶部操作栏 -->
-    <div class="flex items-center gap-3">
-      <h2 class="text-xl font-bold text-stone-800 flex items-center gap-2">
-        <UIcon name="i-heroicons-heart" class="w-5 h-5 text-amber-500" />
+    <div class="flex items-center gap-3 flex-wrap">
+      <AdminPageTitle class="flex items-center gap-2">
+        <UIcon name="i-heroicons-heart" class="w-5 h-5 text-primary" />
         宠物档案管理
-      </h2>
+      </AdminPageTitle>
       <span class="text-xs text-stone-500">宠物档案由 App 端创建，后台可编辑/查询/删除</span>
     </div>
 
@@ -35,7 +35,7 @@
           </tr>
         </thead>
         <tbody>
-          <tr v-for="row in list" :key="row.id" class="border-b border-stone-100 hover:bg-amber-50/30 transition-colors">
+          <tr v-for="row in list" :key="row.id" class="border-b border-stone-100 hover:bg-primary/5 transition-colors">
             <td class="py-3 px-4">
               <div class="flex items-center gap-2">
                 <UAvatar :src="row.avatar" :alt="row.name" size="sm" />
@@ -49,7 +49,7 @@
             <td class="py-3 px-4 text-stone-600">{{ row.species || '-' }} {{ row.breed ? `/ ${row.breed}` : '' }}</td>
             <td class="py-3 px-4">
               <div class="flex gap-2 text-xs">
-                <span class="text-amber-600">饱腹 {{ row.satiety }}</span>
+                <span class="text-primary">饱腹 {{ row.satiety }}</span>
                 <span class="text-pink-600">心情 {{ row.mood }}</span>
                 <span class="text-sky-600">清洁 {{ row.cleanliness }}</span>
               </div>
@@ -71,11 +71,8 @@
     </div>
 
     <!-- 编辑弹窗 -->
-    <div v-if="modal.show" class="fixed inset-0 z-50 flex items-center justify-center" style="background: rgba(0,0,0,0.4)">
-      <div class="bg-white rounded-2xl shadow-xl w-[440px] p-6 space-y-4 max-h-[90vh] overflow-y-auto">
-        <h3 class="font-semibold text-stone-800">编辑宠物档案</h3>
-
-        <div class="bg-amber-50 rounded-xl p-3 space-y-2 text-sm">
+    <AdminFormModal v-model:open="modal.show" title="编辑宠物档案" :busy="modal.saving">
+      <div class="bg-primary/5 rounded-xl p-3 space-y-2 text-sm">
           <p>当前形象：{{ modal.modelName || '尚未分配' }}</p>
           <p class="text-xs text-stone-500">{{ modal.assignmentInfo }}</p>
           <label class="block">形象处理
@@ -86,26 +83,26 @@
           <select v-if="modal.assignmentMode === 'manual'" v-model="modal.modelId" class="admin-select w-full border rounded-lg p-2 bg-white">
             <option value="">请选择形象</option><option v-for="m in models" :key="m.id" :value="m.id">{{ m.name }}</option>
           </select>
-          <p v-if="modal.assignmentMode !== 'keep'" class="text-xs text-amber-700">保存后将替换这只宠物的形象。</p>
+          <p v-if="modal.assignmentMode !== 'keep'" class="text-xs text-primary">保存后将替换这只宠物的形象。</p>
         </div>
-        <div class="space-y-3">
+        <div class="space-y-4">
           <div>
-            <label class="text-xs text-stone-500 font-medium block mb-1">宠物名称 *</label>
+            <label class="text-sm text-stone-600 font-medium block mb-1">宠物名称 *</label>
             <UInput v-model="modal.name" placeholder="宠物名称" />
           </div>
           <div class="grid grid-cols-2 gap-3">
             <div>
-              <label class="text-xs text-stone-500 font-medium block mb-1">物种</label>
+              <label class="text-sm text-stone-600 font-medium block mb-1">物种</label>
               <UInput v-model="modal.species" placeholder="cat / dog" />
             </div>
             <div>
-              <label class="text-xs text-stone-500 font-medium block mb-1">品种</label>
+              <label class="text-sm text-stone-600 font-medium block mb-1">品种</label>
               <UInput v-model="modal.breed" placeholder="品种" />
             </div>
           </div>
           <div class="grid grid-cols-2 gap-3">
             <div>
-              <label class="text-xs text-stone-500 font-medium block mb-1">性别</label>
+              <label class="text-sm text-stone-600 font-medium block mb-1">性别</label>
               <select v-model.number="modal.gender" class="admin-select w-full border rounded-lg px-3 py-2 text-sm text-stone-700 bg-white" style="border-color: #e5e7eb">
                 <option :value="0">未知</option>
                 <option :value="1">男</option>
@@ -113,32 +110,30 @@
               </select>
             </div>
             <div>
-              <label class="text-xs text-stone-500 font-medium block mb-1">出生日期</label>
+              <label class="text-sm text-stone-600 font-medium block mb-1">出生日期</label>
               <UInput v-model="modal.birthday" type="date" />
             </div>
           </div>
           <div class="grid grid-cols-2 gap-3">
             <div>
-              <label class="text-xs text-stone-500 font-medium block mb-1">体重(kg)</label>
+              <label class="text-sm text-stone-600 font-medium block mb-1">体重(kg)</label>
               <UInput v-model.number="modal.weight" type="number" placeholder="0" />
             </div>
             <div>
-              <label class="text-xs text-stone-500 font-medium block mb-1">关联设备ID</label>
+              <label class="text-sm text-stone-600 font-medium block mb-1">关联设备ID</label>
               <UInput v-model="modal.deviceId" placeholder="可选" />
             </div>
           </div>
           <div>
-            <label class="text-xs text-stone-500 font-medium block mb-1">简介</label>
+            <label class="text-sm text-stone-600 font-medium block mb-1">简介</label>
             <UInput v-model="modal.bio" placeholder="宠物简介" />
           </div>
         </div>
-
-        <div class="flex gap-2 pt-2">
-          <UButton label="取消" color="neutral" variant="outline" class="flex-1" @click="modal.show = false" />
-          <UButton label="保存修改" color="primary" class="flex-1" :loading="modal.saving" :disabled="!modal.name.trim()" @click="saveModal" />
-        </div>
-      </div>
-    </div>
+      <template #footer>
+        <UButton label="取消" color="neutral" variant="ghost" class="min-w-20" @click="modal.show = false" :disabled="modal.saving" />
+        <UButton label="保存修改" color="primary" class="min-w-20" :loading="modal.saving" :disabled="!modal.name.trim()" @click="saveModal" />
+      </template>
+    </AdminFormModal>
   </div>
 </template>
 

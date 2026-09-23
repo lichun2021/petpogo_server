@@ -1,10 +1,10 @@
 <template>
   <div class="space-y-4">
-    <div class="flex items-center gap-3">
-      <h2 class="text-xl font-bold text-stone-800 flex items-center gap-2">
-        <UIcon name="i-heroicons-bolt" class="w-5 h-5 text-amber-500" />
+    <div class="flex items-center gap-3 flex-wrap">
+      <AdminPageTitle class="flex items-center gap-2">
+        <UIcon name="i-heroicons-bolt" class="w-5 h-5 text-primary" />
         宠物硬件动作管理
-      </h2>
+      </AdminPageTitle>
       <UButton label="新建动作码" icon="i-heroicons-plus" color="primary" size="sm" class="ml-auto" @click="openModal()" />
     </div>
 
@@ -15,7 +15,7 @@
         <div class="grid grid-cols-[1fr_180px_100px_140px] gap-3 px-4 py-2 bg-stone-50 border-b border-stone-200 text-sm text-stone-500 font-medium">
           <span>名称 / 标识码</span><span>关联GLB动作</span><span>状态</span><span>操作</span>
         </div>
-        <div v-for="h in list" :key="h.id" class="grid grid-cols-[1fr_180px_100px_140px] gap-3 px-4 py-3 border-b border-stone-100 hover:bg-amber-50/20 items-center">
+        <div v-for="h in list" :key="h.id" class="grid grid-cols-[1fr_180px_100px_140px] gap-3 px-4 py-3 border-b border-stone-100 hover:bg-primary/5 items-center">
           <div>
             <p class="text-sm text-stone-700 font-medium">{{ h.name }}</p>
             <p class="text-xs text-stone-500 font-mono">{{ h.code }}</p>
@@ -31,39 +31,36 @@
     </div>
 
     <!-- 编辑/新建弹窗 -->
-    <div v-if="modal.show" class="fixed inset-0 z-50 flex items-center justify-center" style="background: rgba(0,0,0,0.4)">
-      <div class="bg-white rounded-2xl shadow-xl w-[420px] p-6 space-y-4">
-        <h3 class="font-semibold text-stone-800">{{ modal.editingId ? '编辑动作码' : '新建动作码' }}</h3>
-        <div class="space-y-3">
+    <AdminFormModal v-model:open="modal.show" :title="modal.editingId ? '编辑动作码' : '新建动作码'" :busy="modal.saving">
+      <div class="space-y-4">
           <div v-if="!modal.editingId">
-            <label class="text-xs text-stone-500 font-medium block mb-1">标识码 *（创建后不可改）</label>
+            <label class="text-sm text-stone-600 font-medium block mb-1">标识码 *（创建后不可改）</label>
             <UInput v-model="modal.code" placeholder="如：lying / eating / jumping" />
           </div>
           <div>
-            <label class="text-xs text-stone-500 font-medium block mb-1">显示名称 *</label>
+            <label class="text-sm text-stone-600 font-medium block mb-1">显示名称 *</label>
             <UInput v-model="modal.name" placeholder="如：躺卧" />
           </div>
           <div>
-            <label class="text-xs text-stone-500 font-medium block mb-1">关联 GLB 动作资源</label>
+            <label class="text-sm text-stone-600 font-medium block mb-1">关联 GLB 动作资源</label>
             <select v-model="modal.glbActionId" class="admin-select w-full border rounded-lg px-3 py-2 text-sm text-stone-700 bg-white" style="border-color: #e5e7eb">
               <option value="">未映射</option>
               <option v-for="g in glbActions" :key="g.id" :value="g.id">{{ g.name }}（{{ g.code }}）</option>
             </select>
           </div>
           <div v-if="modal.editingId">
-            <label class="text-xs text-stone-500 font-medium block mb-1">状态</label>
+            <label class="text-sm text-stone-600 font-medium block mb-1">状态</label>
             <div class="flex gap-2">
               <button :class="stateBtnCls(modal.enabled === 1)" @click="modal.enabled = 1">✓ 启用</button>
               <button :class="stateBtnCls(modal.enabled === 0)" @click="modal.enabled = 0">× 停用</button>
             </div>
           </div>
         </div>
-        <div class="flex gap-2 pt-2">
-          <UButton label="取消" color="neutral" variant="outline" class="flex-1" @click="modal.show = false" />
-          <UButton :label="modal.editingId ? '保存修改' : '创建'" color="primary" class="flex-1" :loading="modal.saving" @click="saveModal" />
-        </div>
-      </div>
-    </div>
+      <template #footer>
+        <UButton label="取消" color="neutral" variant="ghost" class="min-w-20" @click="modal.show = false" :disabled="modal.saving" />
+        <UButton :label="modal.editingId ? '保存修改' : '创建'" color="primary" class="min-w-20" :loading="modal.saving" @click="saveModal" />
+      </template>
+    </AdminFormModal>
   </div>
 </template>
 

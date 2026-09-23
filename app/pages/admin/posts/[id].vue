@@ -1,9 +1,9 @@
 <template>
   <div class="space-y-5">
     <!-- 返回 + 操作栏 -->
-    <div class="flex items-center gap-3">
+    <div class="flex items-center gap-3 flex-wrap">
       <UButton icon="i-heroicons-arrow-left" color="neutral" variant="ghost" @click="$router.back()" />
-      <h2 class="text-xl font-semibold text-stone-700 flex-1">帖子详情</h2>
+      <AdminPageTitle class="flex-1">帖子详情</AdminPageTitle>
       <UBadge
         :label="statusLabel"
         :color="statusColor"
@@ -77,7 +77,7 @@
                   'flex items-center gap-1 px-3 py-1.5 rounded-lg text-sm font-medium border transition-all',
                   localTag === tg.value
                     ? `${tg.activeCls} text-white border-transparent`
-                    : 'bg-white border-stone-200 text-stone-500 hover:border-amber-300'
+                    : 'bg-white border-stone-200 text-stone-500 hover:border-primary/30'
                 ]"
                 @click="localTag = tg.value"
               >
@@ -100,15 +100,15 @@
             <p class="text-xs text-stone-500 mb-3 font-medium">数据统计</p>
             <div class="grid grid-cols-3 gap-3 text-center">
               <div>
-                <p class="text-2xl font-bold text-amber-600">{{ post.like_count }}</p>
+                <p class="text-2xl font-bold text-primary">{{ post.like_count }}</p>
                 <p class="text-xs text-stone-500 mt-0.5">点赞</p>
               </div>
               <div>
-                <p class="text-2xl font-bold text-amber-600">{{ post.comment_count }}</p>
+                <p class="text-2xl font-bold text-primary">{{ post.comment_count }}</p>
                 <p class="text-xs text-stone-500 mt-0.5">评论</p>
               </div>
               <div>
-                <p class="text-2xl font-bold text-amber-600">{{ post.view_count }}</p>
+                <p class="text-2xl font-bold text-primary">{{ post.view_count }}</p>
                 <p class="text-xs text-stone-500 mt-0.5">浏览</p>
               </div>
             </div>
@@ -165,7 +165,7 @@ const { closeTab } = useTabStore()
 
 const tagOpts = [
   { label: '猫',   value: 'cat',   emoji: '🐱', activeCls: 'bg-orange-400' },
-  { label: '狗',   value: 'dog',   emoji: '🐶', activeCls: 'bg-amber-500'  },
+  { label: '狗',   value: 'dog',   emoji: '🐶', activeCls: 'bg-primary'  },
   { label: '其他', value: 'other', emoji: '🐾', activeCls: 'bg-stone-400'  },
 ]
 

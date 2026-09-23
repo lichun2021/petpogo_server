@@ -1,6 +1,6 @@
 <template>
   <div class="space-y-4">
-    <h1 class="text-xl font-semibold text-stone-900">用户管理</h1>
+    <AdminPageTitle>用户管理</AdminPageTitle>
     <!-- 搜索栏 -->
     <div class="bg-white rounded-xl border p-4 flex flex-wrap items-center gap-3" style="border-color: #e7e5e4">
       <UInput v-model="search" placeholder="搜索手机号 / 昵称..." icon="i-heroicons-magnifying-glass" class="w-full sm:max-w-sm" @keyup.enter="() => { page = 1; loadList() }" />
@@ -39,7 +39,7 @@
         <tbody>
           <tr
             v-for="row in list" :key="row.id"
-            class="border-b border-stone-100 hover:bg-amber-50/30 transition-colors"
+            class="border-b border-stone-100 hover:bg-primary/5 transition-colors"
           >
             <td class="py-3 px-4">
               <UAvatar :src="row.avatar" :alt="row.nickname || row.phone" size="sm" />
@@ -61,7 +61,7 @@
                 <span class="text-xs text-stone-500">分</span>
               </div>
               <div class="flex gap-2 mt-0.5">
-                <span class="text-xs text-amber-500">期 {{ row.points_expiring }}</span>
+                <span class="text-xs text-primary">期 {{ row.points_expiring }}</span>
                 <span class="text-xs text-stone-500">永 {{ row.points_permanent }}</span>
               </div>
             </td>
@@ -112,7 +112,7 @@
           <div class="flex items-center gap-3 mr-4">
             <div class="text-center">
               <p class="text-xs text-stone-500">有期限</p>
-              <p class="text-sm font-bold text-amber-500">{{ logUser?.points_expiring ?? 0 }}</p>
+              <p class="text-sm font-bold text-primary">{{ logUser?.points_expiring ?? 0 }}</p>
             </div>
             <div class="w-px h-8 bg-stone-100" />
             <div class="text-center">
@@ -135,8 +135,8 @@
             :class="[
               'px-3 py-1 rounded-lg text-xs font-medium transition-all',
               logDirection === f.value
-                ? 'bg-amber-500 text-white'
-                : 'bg-stone-100 text-stone-500 hover:bg-amber-50'
+                ? 'bg-primary/10 text-primary font-medium'
+                : 'bg-stone-100 text-stone-500 hover:bg-primary/5'
             ]"
             @click="logDirection = f.value; logPage = 1; loadLog()"
           >{{ f.label }}</button>
@@ -152,17 +152,17 @@
             <div
               v-for="row in logList" :key="row.id"
               class="flex items-start gap-3 p-3 rounded-xl border transition-colors"
-              :class="row.direction === 1 ? 'border-green-100 bg-green-50/40' : 'border-amber-100 bg-amber-50/30'"
+              :class="row.direction === 1 ? 'border-green-100 bg-green-50/40' : 'border-amber-100 bg-primary/5'"
             >
               <!-- 图标 -->
               <div
                 class="w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5"
-                :class="row.direction === 1 ? 'bg-green-100' : 'bg-amber-100'"
+                :class="row.direction === 1 ? 'bg-green-100' : 'bg-primary/10'"
               >
                 <UIcon
                   :name="row.direction === 1 ? 'i-heroicons-arrow-down-left' : 'i-heroicons-arrow-up-right'"
                   class="w-3.5 h-3.5"
-                  :class="row.direction === 1 ? 'text-green-600' : 'text-amber-600'"
+                  :class="row.direction === 1 ? 'text-green-600' : 'text-primary'"
                 />
               </div>
               <!-- 内容 -->
@@ -177,7 +177,7 @@
                 </div>
               </div>
               <!-- 金额 -->
-              <div class="text-sm font-bold flex-shrink-0" :class="row.direction === 1 ? 'text-green-600' : 'text-amber-600'">
+              <div class="text-sm font-bold flex-shrink-0" :class="row.direction === 1 ? 'text-green-600' : 'text-primary'">
                 {{ row.direction === 1 ? '+' : '-' }}{{ row.amount }}
               </div>
             </div>

@@ -1,10 +1,10 @@
 <template>
   <div class="space-y-4">
-    <h1 class="text-xl font-semibold text-stone-900">AI 识别记录</h1>
+    <AdminPageTitle>AI 识别记录</AdminPageTitle>
     <!-- 顶部统计 -->
     <div class="grid grid-cols-3 gap-4">
       <div v-for="s in summary" :key="s.label"
-        class="bg-white rounded-2xl p-4 border flex items-center gap-4"
+        class="bg-white rounded-xl p-4 border flex items-center gap-4"
         style="border-color: #e7e5e4; box-shadow: 0 1px 4px rgba(0,0,0,0.04)"
       >
         <div :class="['w-10 h-10 rounded-xl flex items-center justify-center text-xl', s.bg]">
@@ -27,8 +27,8 @@
           @click="filter.type = t.value; load()"
           :class="['px-3 py-1.5 text-xs font-medium transition-colors',
             filter.type === t.value
-              ? 'bg-amber-500 text-white'
-              : 'text-stone-500 hover:bg-amber-50']"
+              ? 'bg-primary/10 text-primary font-medium'
+              : 'text-stone-500 hover:bg-primary/5']"
         >{{ t.label }}</button>
       </div>
       <div class="flex gap-1 rounded-lg overflow-hidden border" style="border-color: #e7e5e4">
@@ -37,18 +37,18 @@
           @click="filter.success = s.value; load()"
           :class="['px-3 py-1.5 text-xs font-medium transition-colors',
             filter.success === s.value
-              ? 'bg-amber-500 text-white'
-              : 'text-stone-500 hover:bg-amber-50']"
+              ? 'bg-primary/10 text-primary font-medium'
+              : 'text-stone-500 hover:bg-primary/5']"
         >{{ s.label }}</button>
       </div>
       <input
         v-model="filter.userId"
         @keyup.enter="load()"
         placeholder="用户 ID 搜索..."
-        class="border rounded-lg px-3 py-1.5 text-xs text-stone-700 outline-none focus:ring-1 focus:ring-amber-300"
+        class="border rounded-lg px-3 py-1.5 text-xs text-stone-700 outline-none focus:ring-1 focus:ring-primary"
         style="border-color: #e7e5e4; width: 160px"
       />
-      <button @click="load()" class="px-3 py-1.5 bg-amber-500 text-white text-xs rounded-lg hover:bg-amber-600 transition-colors">
+      <button @click="load()" class="px-3 py-1.5 bg-primary text-white text-xs rounded-lg hover:bg-primary transition-colors">
         搜索
       </button>
     </div>
@@ -75,7 +75,7 @@
             <!-- 数据行 -->
             <tr
               class="border-b transition-colors cursor-pointer select-none"
-              :class="expandedId === r.id ? 'bg-amber-50/60' : 'hover:bg-amber-50/30'"
+              :class="expandedId === r.id ? 'bg-primary/5' : 'hover:bg-primary/5'"
               style="border-color: #f5ece0"
               @click="toggleDetail(r)"
             >
@@ -97,7 +97,7 @@
               <td class="px-4 py-3">
                 <div class="flex items-center gap-2">
                   <img v-if="r.user_avatar" :src="r.user_avatar" class="w-6 h-6 rounded-full object-cover" />
-                  <div v-else class="w-6 h-6 rounded-full bg-amber-100 flex items-center justify-center text-xs font-bold text-amber-600">
+                  <div v-else class="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center text-xs font-bold text-primary">
                     {{ (r.nickname || '?')[0] }}
                   </div>
                   <span class="text-xs text-stone-600 truncate max-w-20">{{ r.nickname || r.user_id }}</span>
@@ -143,7 +143,7 @@
                     <div v-else class="space-y-2">
                       <audio :src="r.audio_url" controls class="w-full rounded-lg" style="accent-color: #f59e0b" />
                       <a :href="r.audio_url" target="_blank"
-                        class="block text-xs text-stone-500 hover:text-amber-600 truncate transition-colors">
+                        class="block text-xs text-stone-500 hover:text-primary truncate transition-colors">
                         {{ r.audio_url }}
                       </a>
                     </div>
@@ -185,7 +185,7 @@
                       <div v-for="e in r.top3" :key="e.label" class="flex items-center gap-2 mb-1.5">
                         <span class="text-xs text-stone-600 w-14 flex-shrink-0">{{ e.label_zh || e.label }}</span>
                         <div class="flex-1 bg-stone-100 rounded-full h-1.5">
-                          <div class="bg-amber-400 h-1.5 rounded-full transition-all" :style="`width:${(e.confidence*100).toFixed(0)}%`" />
+                          <div class="bg-primary h-1.5 rounded-full transition-all" :style="`width:${(e.confidence*100).toFixed(0)}%`" />
                         </div>
                         <span class="text-xs text-stone-500 w-8 text-right">{{ (e.confidence*100).toFixed(0) }}%</span>
                       </div>
@@ -207,11 +207,11 @@
         <span class="text-xs text-stone-500">共 {{ total }} 条</span>
         <div class="flex gap-1">
           <button @click="prevPage" :disabled="page <= 1"
-            class="px-2.5 py-1 text-xs rounded border disabled:opacity-40 hover:bg-amber-50 transition-colors"
+            class="px-2.5 py-1 text-xs rounded border disabled:opacity-40 hover:bg-primary/5 transition-colors"
             style="border-color: #e7e5e4">上一页</button>
           <span class="px-3 py-1 text-xs text-stone-500">{{ page }}</span>
           <button @click="nextPage" :disabled="page * size >= total"
-            class="px-2.5 py-1 text-xs rounded border disabled:opacity-40 hover:bg-amber-50 transition-colors"
+            class="px-2.5 py-1 text-xs rounded border disabled:opacity-40 hover:bg-primary/5 transition-colors"
             style="border-color: #e7e5e4">下一页</button>
         </div>
       </div>
@@ -248,7 +248,7 @@ const expandedId  = ref<string | null>(null)
 const summary = computed(() => [
   { label: '图片分析总数', value: totalImage.value, emoji: '📸', bg: 'bg-blue-50' },
   { label: '音频分析总数', value: totalVoice.value, emoji: '🎙️', bg: 'bg-purple-50' },
-  { label: '本页总数',    value: list.value.length, emoji: '📊', bg: 'bg-amber-50' },
+  { label: '本页总数',    value: list.value.length, emoji: '📊', bg: 'bg-primary/5' },
 ])
 
 async function load() {

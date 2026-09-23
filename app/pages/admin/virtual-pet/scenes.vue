@@ -1,11 +1,11 @@
 <template>
   <div class="space-y-5">
     <!-- 顶部标题 -->
-    <div class="flex items-center gap-3">
-      <h2 class="text-xl font-bold text-stone-800 flex items-center gap-2">
-        <UIcon name="i-heroicons-sparkles" class="w-5 h-5 text-amber-500" />
+    <div class="flex items-center gap-3 flex-wrap">
+      <AdminPageTitle class="flex items-center gap-2">
+        <UIcon name="i-heroicons-sparkles" class="w-5 h-5 text-primary" />
         电子宠物环境编辑
-      </h2>
+      </AdminPageTitle>
     </div>
 
     <!-- 子模块 Tab -->
@@ -15,8 +15,8 @@
         :class="[
           'px-4 py-1.5 rounded-lg text-sm font-medium transition-all',
           activeTab === t.key
-            ? 'bg-amber-500 text-white shadow-sm'
-            : 'bg-white border text-stone-500 hover:text-stone-700 hover:border-amber-300'
+            ? 'bg-primary/10 text-primary font-medium'
+            : 'bg-white border text-stone-500 hover:text-stone-700 hover:border-primary/30'
         ]"
         style="border-color: #e7e5e4"
         @click="activeTab = t.key"
@@ -35,7 +35,7 @@
           <div class="grid grid-cols-[64px_1fr_100px_140px] gap-3 px-4 py-2 bg-stone-50 border-b border-stone-200 text-sm text-stone-500 font-medium">
             <span>预览</span><span>名称</span><span>状态</span><span>操作</span>
           </div>
-          <div v-for="b in backgrounds" :key="b.id" class="grid grid-cols-[64px_1fr_100px_140px] gap-3 px-4 py-3 border-b border-stone-100 hover:bg-amber-50/20 items-center">
+          <div v-for="b in backgrounds" :key="b.id" class="grid grid-cols-[64px_1fr_100px_140px] gap-3 px-4 py-3 border-b border-stone-100 hover:bg-primary/5 items-center">
             <div class="w-12 h-12 rounded-lg overflow-hidden bg-stone-100 flex items-center justify-center">
               <img v-if="b.image_url" :src="b.image_url" class="w-full h-full object-cover" />
               <UIcon v-else name="i-heroicons-photo" class="w-5 h-5 text-stone-300" />
@@ -63,14 +63,14 @@
           <div class="grid grid-cols-[64px_1fr_100px_140px] gap-3 px-4 py-2 bg-stone-50 border-b border-stone-200 text-sm text-stone-500 font-medium">
             <span>缩略图</span><span>名称</span><span>状态</span><span>操作</span>
           </div>
-          <div v-for="m in models" :key="m.id" class="grid grid-cols-[64px_1fr_100px_140px] gap-3 px-4 py-3 border-b border-stone-100 hover:bg-amber-50/20 items-center">
+          <div v-for="m in models" :key="m.id" class="grid grid-cols-[64px_1fr_100px_140px] gap-3 px-4 py-3 border-b border-stone-100 hover:bg-primary/5 items-center">
             <div class="w-12 h-12 rounded-lg overflow-hidden bg-stone-100 flex items-center justify-center">
               <img v-if="m.thumbnail_url" :src="m.thumbnail_url" class="w-full h-full object-cover" />
               <UIcon v-else name="i-heroicons-cube" class="w-5 h-5 text-stone-300" />
             </div>
             <div class="min-w-0">
               <p class="text-sm text-stone-700 font-medium truncate">{{ m.name }}</p>
-              <a :href="m.glb_url" target="_blank" class="text-xs text-amber-500 hover:underline">GLB 直链 ↗</a>
+              <a :href="m.glb_url" target="_blank" class="text-xs text-primary hover:underline">GLB 直链 ↗</a>
             </div>
             <UBadge :label="m.enabled ? '启用' : '停用'" :color="m.enabled ? 'success' : 'neutral'" variant="subtle" size="xs" class="w-fit" />
             <div class="flex items-center gap-1">
@@ -97,7 +97,7 @@
           <div class="grid grid-cols-[1fr_1fr_100px_140px] gap-3 px-4 py-2 bg-stone-50 border-b border-stone-200 text-sm text-stone-500 font-medium">
             <span>标识码</span><span>显示名称</span><span>状态</span><span>操作</span>
           </div>
-          <div v-for="g in glbActions" :key="g.id" class="grid grid-cols-[1fr_1fr_100px_140px] gap-3 px-4 py-3 border-b border-stone-100 hover:bg-amber-50/20 items-center">
+          <div v-for="g in glbActions" :key="g.id" class="grid grid-cols-[1fr_1fr_100px_140px] gap-3 px-4 py-3 border-b border-stone-100 hover:bg-primary/5 items-center">
             <span class="text-sm text-stone-700 font-mono">{{ g.code }}</span>
             <span class="text-sm text-stone-700">{{ g.name }}</span>
             <UBadge :label="g.enabled ? '启用' : '停用'" :color="g.enabled ? 'success' : 'neutral'" variant="subtle" size="xs" class="w-fit" />
@@ -122,14 +122,14 @@
           <div class="grid grid-cols-[1fr_1fr_180px_100px_140px] gap-3 px-4 py-2 bg-stone-50 border-b border-stone-200 text-sm text-stone-500 font-medium">
             <span>名称</span><span>关联动作标识</span><span>属性效果</span><span>状态</span><span>操作</span>
           </div>
-          <div v-for="it in interactionTypes" :key="it.id" class="grid grid-cols-[1fr_1fr_180px_100px_140px] gap-3 px-4 py-3 border-b border-stone-100 hover:bg-amber-50/20 items-center">
+          <div v-for="it in interactionTypes" :key="it.id" class="grid grid-cols-[1fr_1fr_180px_100px_140px] gap-3 px-4 py-3 border-b border-stone-100 hover:bg-primary/5 items-center">
             <div>
               <p class="text-sm text-stone-700 font-medium">{{ it.name }}</p>
               <p class="text-xs text-stone-500 font-mono">{{ it.code }}</p>
             </div>
             <span class="text-xs text-stone-500 truncate">{{ it.glb_action_code ? `${it.glb_action_name}（${it.glb_action_code}）` : '未映射' }}</span>
             <div class="flex gap-2 text-xs">
-              <span class="text-amber-600">饱腹{{ fmtDelta(it.satiety_delta) }}</span>
+              <span class="text-primary">饱腹{{ fmtDelta(it.satiety_delta) }}</span>
               <span class="text-pink-600">心情{{ fmtDelta(it.mood_delta) }}</span>
               <span class="text-sky-600">清洁{{ fmtDelta(it.cleanliness_delta) }}</span>
             </div>
@@ -144,16 +144,14 @@
     </div>
 
     <!-- ── 背景弹窗 ── -->
-    <div v-if="bgModal.show" class="fixed inset-0 z-50 flex items-center justify-center" style="background: rgba(0,0,0,0.4)">
-      <div class="bg-white rounded-2xl shadow-xl w-[420px] p-6 space-y-4">
-        <h3 class="font-semibold text-stone-800">{{ bgModal.editingId ? '编辑背景' : '新建背景' }}</h3>
-        <div class="space-y-3">
+    <AdminFormModal v-model:open="bgModal.show" :title="bgModal.editingId ? '编辑背景' : '新建背景'" :busy="bgModal.uploading || bgModal.saving">
+      <div class="space-y-4">
           <div>
-            <label class="text-xs text-stone-500 font-medium block mb-1">名称 *</label>
+            <label class="text-sm text-stone-600 font-medium block mb-1">名称 *</label>
             <UInput v-model="bgModal.name" placeholder="背景名称" />
           </div>
           <div>
-            <label class="text-xs text-stone-500 font-medium block mb-1">背景图 *</label>
+            <label class="text-sm text-stone-600 font-medium block mb-1">背景图 *</label>
             <div class="flex items-center gap-3">
               <div class="w-14 h-14 rounded-xl bg-stone-100 flex items-center justify-center overflow-hidden border border-dashed border-stone-300">
                 <img v-if="bgModal.preview" :src="bgModal.preview" class="w-full h-full object-cover" />
@@ -166,31 +164,28 @@
             </div>
           </div>
           <div v-if="bgModal.editingId">
-            <label class="text-xs text-stone-500 font-medium block mb-1">状态</label>
+            <label class="text-sm text-stone-600 font-medium block mb-1">状态</label>
             <div class="flex gap-2">
               <button :class="stateBtnCls(bgModal.enabled === 1)" @click="bgModal.enabled = 1">✓ 启用</button>
               <button :class="stateBtnCls(bgModal.enabled === 0)" @click="bgModal.enabled = 0">× 停用</button>
             </div>
           </div>
         </div>
-        <div class="flex gap-2 pt-2">
-          <UButton label="取消" color="neutral" variant="outline" class="flex-1" @click="bgModal.show = false" />
-          <UButton :label="bgModal.editingId ? '保存修改' : '创建'" color="primary" class="flex-1" :loading="bgModal.saving" @click="saveBg" />
-        </div>
-      </div>
-    </div>
+      <template #footer>
+        <UButton label="取消" color="neutral" variant="ghost" class="min-w-20" @click="bgModal.show = false" :disabled="bgModal.uploading || bgModal.saving" />
+        <UButton :label="bgModal.editingId ? '保存修改' : '创建'" color="primary" class="min-w-20" :loading="bgModal.saving" @click="saveBg" />
+      </template>
+    </AdminFormModal>
 
     <!-- ── 形象弹窗 ── -->
-    <div v-if="modelModal.show" class="fixed inset-0 z-50 flex items-center justify-center" style="background: rgba(0,0,0,0.4)">
-      <div class="bg-white rounded-2xl shadow-xl w-[420px] p-6 space-y-4">
-        <h3 class="font-semibold text-stone-800">{{ modelModal.editingId ? '编辑形象' : '新建形象' }}</h3>
-        <div class="space-y-3">
+    <AdminFormModal v-model:open="modelModal.show" :title="modelModal.editingId ? '编辑形象' : '新建形象'" :busy="modelModal.thumbUploading || modelModal.glbUploading || modelModal.saving">
+      <div class="space-y-4">
           <div>
-            <label class="text-xs text-stone-500 font-medium block mb-1">名称 *</label>
+            <label class="text-sm text-stone-600 font-medium block mb-1">名称 *</label>
             <UInput v-model="modelModal.name" placeholder="形象名称" />
           </div>
           <div>
-            <label class="text-xs text-stone-500 font-medium block mb-1">预览缩略图</label>
+            <label class="text-sm text-stone-600 font-medium block mb-1">预览缩略图</label>
             <div class="flex items-center gap-3">
               <div class="w-14 h-14 rounded-xl bg-stone-100 flex items-center justify-center overflow-hidden border border-dashed border-stone-300">
                 <img v-if="modelModal.thumbPreview" :src="modelModal.thumbPreview" class="w-full h-full object-cover" />
@@ -201,70 +196,64 @@
             </div>
           </div>
           <div>
-            <label class="text-xs text-stone-500 font-medium block mb-1">GLB 文件 *</label>
+            <label class="text-sm text-stone-600 font-medium block mb-1">GLB 文件 *</label>
             <div class="flex items-center gap-3">
               <input ref="modelGlbInput" type="file" accept=".glb" class="hidden" @change="onModelGlbPick" />
               <UButton :label="modelModal.glbUrl ? '已上传 ✓' : '选择 GLB 文件'" :color="modelModal.glbUrl ? 'success' : 'neutral'" variant="outline" size="sm" :loading="modelModal.glbUploading" @click="modelGlbInput?.click()" />
             </div>
           </div>
           <div v-if="modelModal.editingId">
-            <label class="text-xs text-stone-500 font-medium block mb-1">状态</label>
+            <label class="text-sm text-stone-600 font-medium block mb-1">状态</label>
             <div class="flex gap-2">
               <button :class="stateBtnCls(modelModal.enabled === 1)" @click="modelModal.enabled = 1">✓ 启用</button>
               <button :class="stateBtnCls(modelModal.enabled === 0)" @click="modelModal.enabled = 0">× 停用</button>
             </div>
           </div>
         </div>
-        <div class="flex gap-2 pt-2">
-          <UButton label="取消" color="neutral" variant="outline" class="flex-1" @click="modelModal.show = false" />
-          <UButton :label="modelModal.editingId ? '保存修改' : '创建'" color="primary" class="flex-1" :loading="modelModal.saving" @click="saveModel" />
-        </div>
-      </div>
-    </div>
+      <template #footer>
+        <UButton label="取消" color="neutral" variant="ghost" class="min-w-20" @click="modelModal.show = false" :disabled="modelModal.thumbUploading || modelModal.glbUploading || modelModal.saving" />
+        <UButton :label="modelModal.editingId ? '保存修改' : '创建'" color="primary" class="min-w-20" :loading="modelModal.saving" @click="saveModel" />
+      </template>
+    </AdminFormModal>
 
     <!-- ── GLB 动作标识弹窗 ── -->
-    <div v-if="glbModal.show" class="fixed inset-0 z-50 flex items-center justify-center" style="background: rgba(0,0,0,0.4)">
-      <div class="bg-white rounded-2xl shadow-xl w-[420px] p-6 space-y-4">
-        <h3 class="font-semibold text-stone-800">{{ glbModal.editingId ? '编辑动作标识' : '新建动作标识' }}</h3>
-        <div class="space-y-3">
+    <AdminFormModal v-model:open="glbModal.show" :title="glbModal.editingId ? '编辑动作标识' : '新建动作标识'" :busy="glbModal.saving">
+      <div class="space-y-4">
           <div v-if="!glbModal.editingId">
-            <label class="text-xs text-stone-500 font-medium block mb-1">标识码 *（创建后不可改，需与模型内动画片段名一致）</label>
+            <label class="text-sm text-stone-600 font-medium block mb-1">标识码 *（创建后不可改，需与模型内动画片段名一致）</label>
             <UInput v-model="glbModal.code" placeholder="如：lying / feed" />
           </div>
           <div>
-            <label class="text-xs text-stone-500 font-medium block mb-1">显示名称 *</label>
+            <label class="text-sm text-stone-600 font-medium block mb-1">显示名称 *</label>
             <UInput v-model="glbModal.name" placeholder="如：躺卧动画、喂食反馈动画" />
           </div>
           <div v-if="glbModal.editingId">
-            <label class="text-xs text-stone-500 font-medium block mb-1">状态</label>
+            <label class="text-sm text-stone-600 font-medium block mb-1">状态</label>
             <div class="flex gap-2">
               <button :class="stateBtnCls(glbModal.enabled === 1)" @click="glbModal.enabled = 1">✓ 启用</button>
               <button :class="stateBtnCls(glbModal.enabled === 0)" @click="glbModal.enabled = 0">× 停用</button>
             </div>
           </div>
         </div>
-        <div class="flex gap-2 pt-2">
-          <UButton label="取消" color="neutral" variant="outline" class="flex-1" @click="glbModal.show = false" />
-          <UButton :label="glbModal.editingId ? '保存修改' : '创建'" color="primary" class="flex-1" :loading="glbModal.saving" @click="saveGlb" />
-        </div>
-      </div>
-    </div>
+      <template #footer>
+        <UButton label="取消" color="neutral" variant="ghost" class="min-w-20" @click="glbModal.show = false" :disabled="glbModal.saving" />
+        <UButton :label="glbModal.editingId ? '保存修改' : '创建'" color="primary" class="min-w-20" :loading="glbModal.saving" @click="saveGlb" />
+      </template>
+    </AdminFormModal>
 
     <!-- ── 互动类型弹窗 ── -->
-    <div v-if="interactionModal.show" class="fixed inset-0 z-50 flex items-center justify-center" style="background: rgba(0,0,0,0.4)">
-      <div class="bg-white rounded-2xl shadow-xl w-[440px] p-6 space-y-4">
-        <h3 class="font-semibold text-stone-800">{{ interactionModal.editingId ? '编辑互动类型' : '新建互动类型' }}</h3>
-        <div class="space-y-3">
+    <AdminFormModal v-model:open="interactionModal.show" :title="interactionModal.editingId ? '编辑互动类型' : '新建互动类型'" :busy="interactionModal.saving">
+      <div class="space-y-4">
           <div v-if="!interactionModal.editingId">
-            <label class="text-xs text-stone-500 font-medium block mb-1">标识码 *（创建后不可改）</label>
+            <label class="text-sm text-stone-600 font-medium block mb-1">标识码 *（创建后不可改）</label>
             <UInput v-model="interactionModal.code" placeholder="如：feed / play / clean" />
           </div>
           <div>
-            <label class="text-xs text-stone-500 font-medium block mb-1">名称 *</label>
+            <label class="text-sm text-stone-600 font-medium block mb-1">名称 *</label>
             <UInput v-model="interactionModal.name" placeholder="显示名称" />
           </div>
           <div>
-            <label class="text-xs text-stone-500 font-medium block mb-1">关联 GLB 动作资源</label>
+            <label class="text-sm text-stone-600 font-medium block mb-1">关联 GLB 动作资源</label>
             <select v-model="interactionModal.glbActionId" class="admin-select w-full border rounded-lg px-3 py-2 text-sm text-stone-700 bg-white" style="border-color: #e5e7eb">
               <option value="">未映射</option>
               <option v-for="g in glbActions" :key="g.id" :value="g.id">{{ g.name }}（{{ g.code }}）</option>
@@ -272,32 +261,31 @@
           </div>
           <div class="grid grid-cols-3 gap-2">
             <div>
-              <label class="text-xs text-stone-500 font-medium block mb-1">饱腹度增减</label>
+              <label class="text-sm text-stone-600 font-medium block mb-1">饱腹度增减</label>
               <UInput v-model.number="interactionModal.satietyDelta" type="number" />
             </div>
             <div>
-              <label class="text-xs text-stone-500 font-medium block mb-1">心情值增减</label>
+              <label class="text-sm text-stone-600 font-medium block mb-1">心情值增减</label>
               <UInput v-model.number="interactionModal.moodDelta" type="number" />
             </div>
             <div>
-              <label class="text-xs text-stone-500 font-medium block mb-1">清洁度增减</label>
+              <label class="text-sm text-stone-600 font-medium block mb-1">清洁度增减</label>
               <UInput v-model.number="interactionModal.cleanlinessDelta" type="number" />
             </div>
           </div>
           <div v-if="interactionModal.editingId">
-            <label class="text-xs text-stone-500 font-medium block mb-1">状态</label>
+            <label class="text-sm text-stone-600 font-medium block mb-1">状态</label>
             <div class="flex gap-2">
               <button :class="stateBtnCls(interactionModal.enabled === 1)" @click="interactionModal.enabled = 1">✓ 启用</button>
               <button :class="stateBtnCls(interactionModal.enabled === 0)" @click="interactionModal.enabled = 0">× 停用</button>
             </div>
           </div>
         </div>
-        <div class="flex gap-2 pt-2">
-          <UButton label="取消" color="neutral" variant="outline" class="flex-1" @click="interactionModal.show = false" />
-          <UButton :label="interactionModal.editingId ? '保存修改' : '创建'" color="primary" class="flex-1" :loading="interactionModal.saving" @click="saveInteraction" />
-        </div>
-      </div>
-    </div>
+      <template #footer>
+        <UButton label="取消" color="neutral" variant="ghost" class="min-w-20" @click="interactionModal.show = false" :disabled="interactionModal.saving" />
+        <UButton :label="interactionModal.editingId ? '保存修改' : '创建'" color="primary" class="min-w-20" :loading="interactionModal.saving" @click="saveInteraction" />
+      </template>
+    </AdminFormModal>
   </div>
 </template>
 

@@ -1,14 +1,14 @@
 <template>
   <div class="space-y-4 text-sm text-stone-700">
-    <div class="flex items-center gap-3">
-      <h2 class="font-bold text-base">宠物形象分配</h2>
+    <div class="flex items-center gap-3 flex-wrap">
+      <AdminPageTitle>宠物形象分配</AdminPageTitle>
       <span class="text-xs text-stone-500">仅影响新宠物；已有形象保留</span>
       <UButton label="保存配置" color="primary" class="ml-auto" :loading="saving" :disabled="loading || !!loadError" @click="save" />
     </div>
     <p v-if="loadError" class="text-red-600">{{ loadError }} <button class="underline" @click="load">重试</button></p>
     <p v-if="loading">正在加载…</p>
     <template v-else-if="!loadError">
-      <section class="bg-white border border-orange-100 rounded-2xl p-5 space-y-3">
+      <section class="bg-white border border-stone-200 rounded-xl p-5 space-y-3">
         <h3 class="font-semibold">默认保底形象</h3>
         <p class="text-xs text-stone-500">未命中规则时，猫使用默认猫形象，狗使用默认狗形象。无法识别类型时才使用未知类型保底。各项均需选择启用形象，更换前不能删除或停用。</p>
         <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -23,7 +23,7 @@
           </select></label>
         </div>
       </section>
-      <section class="bg-white border border-orange-100 rounded-2xl p-5 space-y-3">
+      <section class="bg-white border border-stone-200 rounded-xl p-5 space-y-3">
         <div class="flex justify-between"><h3 class="font-semibold">匹配规则</h3><UButton label="新增规则" color="primary" variant="outline" size="sm" @click="addRule" /></div>
         <p class="text-xs text-stone-500">条件同时满足才命中。优先级数字越大越先匹配；相同优先级按规则 ID 固定排序。停用形象会被跳过。品种精确匹配，忽略首尾空格及英文大小写。</p>
         <p v-if="!config.rules.length" class="text-stone-500">暂无规则，全部使用默认形象。</p>
@@ -39,7 +39,7 @@
           <div class="flex items-center justify-between"><label><input v-model="r.enabled" type="checkbox" :true-value="1" :false-value="0" /> 启用</label><UButton label="移除规则" color="error" variant="ghost" size="xs" @click="config.rules.splice(i, 1)" /></div>
         </div>
       </section>
-      <section class="bg-white border border-orange-100 rounded-2xl p-5 space-y-3">
+      <section class="bg-white border border-stone-200 rounded-xl p-5 space-y-3">
         <div class="flex justify-between"><h3 class="font-semibold">品种与类型对照</h3><UButton label="新增品种" color="primary" variant="outline" size="sm" @click="config.breedMappings.push({ breed: '', species: 'cat' })" /></div>
         <p class="text-xs text-stone-500">对方接口未提供猫/狗类型时，按此表识别。品种别名可分别登记；未知类型仍可匹配“不限类型”的规则，否则使用保底。</p>
         <div v-for="(m, i) in config.breedMappings" :key="i" class="flex gap-3 items-center">
@@ -48,7 +48,7 @@
           <UButton label="移除" color="error" variant="ghost" @click="config.breedMappings.splice(i, 1)" />
         </div>
       </section>
-      <section class="bg-white border border-orange-100 rounded-2xl p-5 space-y-3">
+      <section class="bg-white border border-stone-200 rounded-xl p-5 space-y-3">
         <h3 class="font-semibold">匹配预览</h3>
         <p class="text-xs text-stone-500">使用已保存的配置。修改规则后请先保存，再预览。</p>
         <div class="flex gap-3">
@@ -57,8 +57,8 @@
           <select v-model="preview.gender" class="admin-select field"><option :value="0">未知性别</option><option :value="1">公</option><option :value="2">母</option></select>
           <UButton label="预览" color="primary" :loading="previewing" :disabled="dirty" @click="runPreview" />
         </div>
-        <p v-if="dirty" class="text-amber-600">配置有未保存的修改。</p>
-        <div v-if="result" class="flex gap-4 items-center bg-amber-50 p-4 rounded-xl">
+        <p v-if="dirty" class="text-primary">配置有未保存的修改。</p>
+        <div v-if="result" class="flex gap-4 items-center bg-primary/5 p-4 rounded-xl">
           <img v-if="result.model.thumbnail_url" :src="result.model.thumbnail_url" class="w-20 h-20 object-contain" alt="形象预览" />
           <div><p class="font-semibold">{{ result.model.name }}</p><p>{{ result.source === 'rule' ? `命中规则：${result.ruleName}` : `未命中有效规则，使用${result.species === 'cat' ? '默认猫形象' : result.species === 'dog' ? '默认狗形象' : '未知类型保底'}` }}</p><p>识别类型：{{ result.species === 'cat' ? '猫' : result.species === 'dog' ? '狗' : '未知' }}</p></div>
         </div>

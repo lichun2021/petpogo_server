@@ -1,7 +1,7 @@
 <template>
   <div class="space-y-5">
     <header class="flex flex-wrap items-center justify-between gap-3">
-      <div><h1 class="text-xl font-semibold text-stone-900">设备管理</h1><p class="mt-1 text-sm text-stone-500">查看设备状态与最近活动</p></div>
+      <div><AdminPageTitle>设备管理</AdminPageTitle><p class="mt-1 text-sm text-stone-500">查看设备状态与最近活动</p></div>
       <span v-if="!loadError && !loading" class="text-sm text-stone-500">共 <strong class="text-stone-800 font-semibold">{{ total }}</strong> 台设备</span>
     </header>
     <section class="admin-panel" aria-label="设备列表" :aria-busy="loading">
@@ -25,10 +25,10 @@
             <tr v-else-if="loadError"><td colspan="4"><AdminEmptyState title="设备加载失败" description="请检查网络后重试" icon="i-heroicons-exclamation-circle"><UButton label="重新加载" color="neutral" variant="outline" @click="loadList" /></AdminEmptyState></td></tr>
             <tr v-else-if="!list.length"><td colspan="4"><AdminEmptyState :title="appliedSearch || activeTab ? '没有符合条件的设备' : '暂无设备'" :description="appliedSearch || activeTab ? '调整搜索内容或状态筛选后再试' : '设备接入后，可在这里查看状态与最近活动'" icon="i-heroicons-cpu-chip"><UButton v-if="appliedSearch || activeTab" label="清除筛选" color="neutral" variant="outline" @click="reset" /></AdminEmptyState></td></tr>
             <tr v-for="row in (!loading && !loadError ? list : [])" :key="row.mac" class="border-b border-stone-100 last:border-0 hover:bg-stone-50/70 transition-colors">
-              <td class="py-4 px-5"><p class="text-stone-800 font-medium">{{ row.name || '未命名设备' }}</p><p class="mt-1 font-mono text-xs text-stone-500">{{ row.mac }}</p></td>
-              <td class="py-4 px-5"><UBadge :label="row.online_status ? '在线' : '离线'" :color="row.online_status ? 'success' : 'neutral'" variant="soft" size="sm" /></td>
-              <td class="py-4 px-5 text-stone-600 max-w-64 truncate" :title="row.address">{{ row.address || '—' }}</td>
-              <td class="py-4 px-5 text-stone-600 whitespace-nowrap">{{ formatDate(row.last_online_at) }}</td>
+              <td class="py-2 px-5"><p class="text-stone-800 font-medium">{{ row.name || '未命名设备' }}</p><p class="mt-0.5 font-mono text-xs text-stone-500">{{ row.mac }}</p></td>
+              <td class="py-2 px-5"><UBadge :label="row.online_status ? '在线' : '离线'" :color="row.online_status ? 'success' : 'neutral'" variant="soft" size="sm" /></td>
+              <td class="py-2 px-5 text-stone-600 max-w-64 truncate" :title="row.address">{{ row.address || '—' }}</td>
+              <td class="py-2 px-5 text-stone-600 whitespace-nowrap">{{ formatDate(row.last_online_at) }}</td>
             </tr>
           </tbody>
         </table>

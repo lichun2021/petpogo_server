@@ -1,9 +1,9 @@
 <template>
   <div class="space-y-4">
-    <h2 class="text-xl font-bold text-stone-800 flex items-center gap-2">
-      <UIcon name="i-heroicons-clock" class="w-5 h-5 text-amber-500" />
+    <AdminPageTitle class="flex items-center gap-2">
+      <UIcon name="i-heroicons-clock" class="w-5 h-5 text-primary" />
       宠物事件查询
-    </h2>
+    </AdminPageTitle>
 
     <!-- 筛选条 -->
     <div class="bg-white rounded-xl border p-4 space-y-3" style="border-color: #e7e5e4">
@@ -38,7 +38,7 @@
           </tr>
         </thead>
         <tbody>
-          <tr v-for="row in list" :key="row.id" class="border-b border-stone-100 hover:bg-amber-50/30 transition-colors">
+          <tr v-for="row in list" :key="row.id" class="border-b border-stone-100 hover:bg-primary/5 transition-colors">
             <td class="py-3 px-4">
               <UBadge :label="sourceLabel(row.source)" :color="row.source === 'interaction' ? 'primary' : 'info'" variant="subtle" size="xs" />
             </td>

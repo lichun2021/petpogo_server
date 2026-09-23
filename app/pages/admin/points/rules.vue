@@ -1,11 +1,11 @@
 <template>
   <div class="space-y-4">
-    <div class="flex items-center justify-between">
+    <div class="flex items-center justify-between flex-wrap gap-3">
       <div>
-        <h2 class="text-xl font-semibold text-stone-800">积分规则</h2>
+        <AdminPageTitle>积分规则</AdminPageTitle>
         <p class="text-xs text-stone-500 mt-0.5">配置各类 AI 消费行为对应的积分单价（AI 服务上报消费时按此扣分）</p>
       </div>
-      <div class="flex gap-2">
+      <div class="flex gap-2 flex-wrap">
         <UButton label="积分流水" color="neutral" variant="outline" icon="i-heroicons-clipboard-document-list" to="/admin/points/logs" />
         <UButton label="新增规则" color="primary" icon="i-heroicons-plus" @click="openModal()" />
       </div>
@@ -28,7 +28,7 @@
           </tr>
         </thead>
         <tbody>
-          <tr v-for="row in list" :key="row.id" class="border-b border-stone-100 hover:bg-amber-50/30 transition-colors">
+          <tr v-for="row in list" :key="row.id" class="border-b border-stone-100 hover:bg-primary/5 transition-colors">
             <td class="py-3 px-4 font-mono text-xs text-stone-600">{{ row.consume_type }}</td>
             <td class="py-3 px-4">{{ row.name }}</td>
             <td class="py-3 px-4">{{ row.unit_points }}</td>
@@ -48,40 +48,37 @@
     </div>
 
     <!-- 新建/编辑弹窗 -->
-    <div v-if="modal.show" class="fixed inset-0 z-50 flex items-center justify-center" style="background: rgba(0,0,0,0.4)">
-      <div class="bg-white rounded-2xl shadow-xl w-96 p-6 space-y-4">
-        <h3 class="font-semibold text-stone-800">{{ modal.editingId ? '编辑积分规则' : '新增积分规则' }}</h3>
-
-        <div class="space-y-3">
+    <AdminFormModal v-model:open="modal.show" :title="modal.editingId ? '编辑积分规则' : '新增积分规则'" :busy="modal.saving">
+      <div class="space-y-4">
           <div v-if="!modal.editingId">
-            <label class="text-xs text-stone-500 font-medium block mb-1">消费类型标识 *</label>
+            <label class="text-sm text-stone-600 font-medium block mb-1">消费类型标识 *</label>
             <UInput v-model="modal.consumeType" placeholder="如 image_analyze / consult_token" />
           </div>
           <div>
-            <label class="text-xs text-stone-500 font-medium block mb-1">展示名称 *</label>
+            <label class="text-sm text-stone-600 font-medium block mb-1">展示名称 *</label>
             <UInput v-model="modal.name" placeholder="如 图片情绪分析" />
           </div>
           <div>
-            <label class="text-xs text-stone-500 font-medium block mb-1">单价（积分）*</label>
+            <label class="text-sm text-stone-600 font-medium block mb-1">单价（积分）*</label>
             <UInput v-model.number="modal.unitPoints" type="number" />
           </div>
           <div>
-            <label class="text-xs text-stone-500 font-medium block mb-1">计费方式</label>
+            <label class="text-sm text-stone-600 font-medium block mb-1">计费方式</label>
             <div class="flex gap-2">
               <button
                 v-for="opt in [{v:'per_call',l:'按次'},{v:'per_unit',l:'按上报数量'}]" :key="opt.v"
                 :class="['flex-1 py-1.5 rounded-lg text-xs font-medium border transition-all',
-                  modal.unitBasis === opt.v ? 'bg-amber-500 text-white border-amber-500' : 'bg-white text-stone-500 border-stone-200']"
+                  modal.unitBasis === opt.v ? 'bg-primary text-white border-amber-500' : 'bg-white text-stone-500 border-stone-200']"
                 @click="modal.unitBasis = opt.v"
               >{{ opt.l }}</button>
             </div>
           </div>
           <div>
-            <label class="text-xs text-stone-500 font-medium block mb-1">排序（越小越靠前）</label>
+            <label class="text-sm text-stone-600 font-medium block mb-1">排序（越小越靠前）</label>
             <UInput v-model.number="modal.sortOrder" type="number" placeholder="0" />
           </div>
           <div v-if="modal.editingId">
-            <label class="text-xs text-stone-500 font-medium block mb-1">状态</label>
+            <label class="text-sm text-stone-600 font-medium block mb-1">状态</label>
             <div class="flex gap-2">
               <button
                 :class="['flex-1 py-1.5 rounded-lg text-xs font-medium border transition-all', modal.status === 1 ? 'bg-green-500 text-white border-green-500' : 'bg-white text-stone-500 border-stone-200']"
@@ -94,19 +91,17 @@
             </div>
           </div>
         </div>
-
-        <div class="flex gap-2 pt-2">
-          <UButton label="取消" color="neutral" variant="outline" class="flex-1" @click="modal.show = false" />
-          <UButton
+      <template #footer>
+        <UButton label="取消" color="neutral" variant="ghost" class="min-w-20" @click="modal.show = false" :disabled="modal.saving" />
+        <UButton
             :label="modal.editingId ? '保存修改' : '创建'"
-            color="primary" class="flex-1"
+            color="primary" class="min-w-20"
             :loading="modal.saving"
             :disabled="!modal.name.trim() || !modal.unitPoints"
             @click="save"
           />
-        </div>
-      </div>
-    </div>
+      </template>
+    </AdminFormModal>
   </div>
 </template>
 

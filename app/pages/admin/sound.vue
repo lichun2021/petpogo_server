@@ -1,6 +1,6 @@
 <template>
   <div class="space-y-4">
-    <h1 class="text-xl font-semibold text-stone-900">情绪声音</h1>
+    <AdminPageTitle>情绪声音</AdminPageTitle>
 
     <!-- 顶部：猫 / 狗 切换 + 新增 -->
     <div class="flex items-center gap-3">
@@ -19,7 +19,7 @@
       <div class="flex-1" />
       <button
         class="flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-sm font-semibold text-white transition-all"
-        style="background:linear-gradient(135deg,#f59e0b,#ea580c);box-shadow:0 2px 8px rgba(245,158,11,0.3)"
+        style="background:var(--ui-primary)"
         @click="openAdd"
       >
         <UIcon name="i-heroicons-plus" class="w-4 h-4" />
@@ -42,7 +42,7 @@
 
       <!-- 加载 -->
       <div v-if="loading" class="flex items-center justify-center py-16">
-        <UIcon name="i-heroicons-arrow-path" class="w-6 h-6 text-amber-400 animate-spin" />
+        <UIcon name="i-heroicons-arrow-path" class="w-6 h-6 text-primary animate-spin" />
       </div>
 
       <!-- 空 -->
@@ -54,7 +54,7 @@
       <!-- 行 -->
       <template v-else>
         <div v-for="item in list" :key="item.id"
-          class="grid px-5 py-3.5 border-b items-center hover:bg-amber-50/30 transition-colors"
+          class="grid px-5 py-3.5 border-b items-center hover:bg-primary/5 transition-colors"
           style="grid-template-columns:140px 1fr 110px 80px 120px;border-color:#f5f5f4">
 
           <!-- 情绪标签 -->
@@ -94,12 +94,12 @@
           <!-- 操作 -->
           <div class="flex items-center justify-end gap-1">
             <!-- 重新上传 -->
-            <label class="w-7 h-7 rounded-lg flex items-center justify-center text-stone-500 hover:text-amber-600 hover:bg-amber-50 transition-all cursor-pointer" :title="uploadingId===item.id?'上传中…':'重新上传'">
-              <UIcon v-if="uploadingId===item.id" name="i-heroicons-arrow-path" class="w-4 h-4 animate-spin text-amber-500" />
+            <label class="w-7 h-7 rounded-lg flex items-center justify-center text-stone-500 hover:text-primary hover:bg-primary/5 transition-all cursor-pointer" :title="uploadingId===item.id?'上传中…':'重新上传'">
+              <UIcon v-if="uploadingId===item.id" name="i-heroicons-arrow-path" class="w-4 h-4 animate-spin text-primary" />
               <UIcon v-else name="i-heroicons-arrow-up-tray" class="w-4 h-4" />
               <input type="file" accept="audio/*" class="hidden" @change="uploadSound($event, item)" />
             </label>
-            <button class="w-7 h-7 rounded-lg flex items-center justify-center text-stone-500 hover:text-amber-600 hover:bg-amber-50 transition-all" @click="openEdit(item)">
+            <button class="w-7 h-7 rounded-lg flex items-center justify-center text-stone-500 hover:text-primary hover:bg-primary/5 transition-all" @click="openEdit(item)">
               <UIcon name="i-heroicons-pencil-square" class="w-4 h-4" />
             </button>
             <button class="w-7 h-7 rounded-lg flex items-center justify-center text-stone-500 hover:text-red-500 hover:bg-red-50 transition-all" @click="confirmDelete(item)">
@@ -120,43 +120,31 @@
   </div>
 
   <!-- ═══ 新增/编辑弹窗 ═══ -->
-  <Teleport to="body">
-    <Transition name="modal">
-      <div v-if="modal.show" class="fixed inset-0 z-50 flex items-center justify-center p-4">
-        <div class="absolute inset-0 bg-black/30 backdrop-blur-sm" @click="closeModal" />
-        <div class="relative bg-white rounded-2xl shadow-2xl w-full max-w-md p-6" style="border:1px solid #e7e5e4">
-
-          <div class="flex items-center justify-between mb-5">
-            <p class="font-bold text-stone-800">{{ modal.isEdit ? '编辑预设声音' : '新增预设声音' }}</p>
-            <button class="text-stone-500 hover:text-stone-600" @click="closeModal">
-              <UIcon name="i-heroicons-x-mark" class="w-5 h-5" />
-            </button>
-          </div>
-
-          <div class="space-y-4">
+  <AdminFormModal :open="modal.show" @update:open="!$event && closeModal()" :title="modal.isEdit ? '编辑预设声音' : '新增预设声音'" :busy="saving || modalUploading">
+      <div class="space-y-4">
 
             <!-- 情绪标签（纯文本，自由填写） -->
             <div>
-              <label class="text-xs font-semibold text-stone-500 mb-1.5 block">情绪标签（英文，如 happy）</label>
+              <label class="text-sm font-medium text-stone-600 mb-1.5 block">情绪标签（英文，如 happy）</label>
               <input v-model="form.emotion" type="text" placeholder="happy / sad / calm …"
-                class="w-full px-3.5 py-2.5 text-sm rounded-xl border focus:outline-none focus:ring-2 focus:ring-amber-300 transition"
+                class="w-full px-3.5 py-2.5 text-sm rounded-xl border focus:outline-none focus:ring-2 focus:ring-primary transition"
                 style="border-color:#e2d9d0" />
             </div>
 
             <!-- 声音名称 -->
             <div>
-              <label class="text-xs font-semibold text-stone-500 mb-1.5 block">声音名称 <span class="text-red-400">*</span></label>
+              <label class="text-sm font-medium text-stone-600 mb-1.5 block">声音名称 <span class="text-red-400">*</span></label>
               <input v-model="form.name" type="text" placeholder="系统默认-开心"
-                class="w-full px-3.5 py-2.5 text-sm rounded-xl border focus:outline-none focus:ring-2 focus:ring-amber-300 transition"
+                class="w-full px-3.5 py-2.5 text-sm rounded-xl border focus:outline-none focus:ring-2 focus:ring-primary transition"
                 style="border-color:#e2d9d0" />
             </div>
 
             <!-- 声音 URL + 上传 -->
             <div>
-              <label class="text-xs font-semibold text-stone-500 mb-1.5 block">声音 URL <span class="text-red-400">*</span></label>
+              <label class="text-sm font-medium text-stone-600 mb-1.5 block">声音 URL <span class="text-red-400">*</span></label>
               <div class="flex gap-2">
                 <input v-model="form.url" type="text" placeholder="https://cdn.../sound.mp3"
-                  class="flex-1 px-3.5 py-2.5 text-sm rounded-xl border focus:outline-none focus:ring-2 focus:ring-amber-300 transition"
+                  class="flex-1 px-3.5 py-2.5 text-sm rounded-xl border focus:outline-none focus:ring-2 focus:ring-primary transition"
                   style="border-color:#e2d9d0" />
                 <!-- 试听 -->
                 <button v-if="form.url"
@@ -179,13 +167,13 @@
             <!-- 排序 & 状态 -->
             <div class="flex gap-3">
               <div class="flex-1">
-                <label class="text-xs font-semibold text-stone-500 mb-1.5 block">排序</label>
+                <label class="text-sm font-medium text-stone-600 mb-1.5 block">排序</label>
                 <input v-model.number="form.sortOrder" type="number" min="0"
-                  class="w-full px-3.5 py-2.5 text-sm rounded-xl border focus:outline-none focus:ring-2 focus:ring-amber-300 transition"
+                  class="w-full px-3.5 py-2.5 text-sm rounded-xl border focus:outline-none focus:ring-2 focus:ring-primary transition"
                   style="border-color:#e2d9d0" />
               </div>
               <div>
-                <label class="text-xs font-semibold text-stone-500 mb-1.5 block">状态</label>
+                <label class="text-sm font-medium text-stone-600 mb-1.5 block">状态</label>
                 <div class="flex gap-1.5 pt-0.5">
                   <button class="px-3 py-2.5 rounded-xl text-xs font-medium border transition-all"
                     :style="form.status===1 ? 'background:#d1fae5;border-color:#6ee7b7;color:#065f46' : 'background:#faf8f5;border-color:#e2d9d0;color:#78716c'"
@@ -198,20 +186,11 @@
             </div>
 
           </div>
-
-          <div class="flex gap-2 mt-6">
-            <button class="flex-1 py-2.5 rounded-xl text-sm font-medium border text-stone-600 hover:bg-stone-50 transition-all" style="border-color:#e2d9d0" @click="closeModal">取消</button>
-            <button class="flex-1 py-2.5 rounded-xl text-sm font-semibold text-white transition-all"
-              style="background:linear-gradient(135deg,#f59e0b,#ea580c);box-shadow:0 2px 8px rgba(245,158,11,0.3)"
-              :disabled="saving" @click="save">
-              <UIcon v-if="saving" name="i-heroicons-arrow-path" class="w-4 h-4 animate-spin mr-1" />
-              {{ saving ? '保存中…' : (modal.isEdit ? '保存修改' : '新增') }}
-            </button>
-          </div>
-        </div>
-      </div>
-    </Transition>
-  </Teleport>
+      <template #footer>
+        <UButton label="取消" color="neutral" variant="ghost" :disabled="saving || modalUploading" @click="closeModal" />
+        <UButton :label="modal.isEdit ? '保存修改' : '新增'" :loading="saving" :disabled="modalUploading" @click="save" />
+      </template>
+    </AdminFormModal>
 
   <audio ref="audioEl" @ended="playingId=null;previewPlaying=false" />
 </template>
@@ -370,8 +349,3 @@ async function save() {
   } finally { saving.value=false }
 }
 </script>
-
-<style scoped>
-.modal-enter-active,.modal-leave-active{transition:all 0.2s ease}
-.modal-enter-from,.modal-leave-to{opacity:0;transform:scale(0.96)}
-</style>

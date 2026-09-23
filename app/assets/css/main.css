@@ -19,7 +19,7 @@
 
 
 :root {
-  --ui-primary: var(--color-amber-700);
+  --ui-primary: #c25b19;
   --ui-success: var(--color-green-700);
   --ui-error: var(--color-red-600);
   --ui-info: var(--color-blue-700);
@@ -49,8 +49,13 @@ body { color: var(--ui-text); background: #f7f7f5; -webkit-font-smoothing: antia
 .admin-toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; padding: 16px; }
 .admin-segment { display: inline-flex; gap: 4px; padding: 4px; border-radius: 10px; background: #f5f5f4; }
 .admin-segment button { min-height: 32px; padding: 4px 14px; border-radius: 7px; color: #57534e; transition: background-color .15s; }
-.admin-segment button[aria-pressed="true"] { background: white; color: #92400e; box-shadow: 0 1px 3px #1c191714; font-weight: 600; }
+.admin-segment button[aria-pressed="true"] { background: white; color: var(--ui-primary); box-shadow: 0 1px 3px #1c191714; font-weight: 600; }
 .admin-segment button:focus-visible { outline: 2px solid var(--ui-primary); outline-offset: 2px; }
 @media (prefers-reduced-motion: reduce) {
   .admin-shell *, .admin-shell *::before, .admin-shell *::after { transition-duration: .01ms !important; animation-duration: .01ms !important; }
 }
+
+/* 弹窗内原生输入框与组件输入框保持同一规格。 */
+.admin-form-fields input:not([type="checkbox"]):not([type="radio"]):not([type="file"]),
+.admin-form-fields select, .admin-form-fields textarea { min-width: 0; border-radius: 8px; }
+.admin-form-fields input:not([type="checkbox"]):not([type="radio"]):not([type="file"]) { min-height: 36px; }

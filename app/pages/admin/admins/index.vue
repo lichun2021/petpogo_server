@@ -1,6 +1,6 @@
 <template>
   <div class="space-y-4">
-    <h1 class="text-xl font-semibold text-stone-900">管理员管理</h1>
+    <AdminPageTitle>管理员管理</AdminPageTitle>
 
     <!-- 顶部：搜索 + 新增 -->
     <div class="flex items-center gap-3">
@@ -8,14 +8,14 @@
         v-model="keyword"
         type="text"
         placeholder="搜索账号 / 昵称"
-        class="w-64 px-3.5 py-2.5 text-sm rounded-xl border focus:outline-none focus:ring-2 focus:ring-amber-300 transition"
+        class="w-64 px-3.5 py-2.5 text-sm rounded-xl border focus:outline-none focus:ring-2 focus:ring-primary transition"
         style="border-color:#e2d9d0"
         @keyup.enter="page = 1; loadData()"
       />
       <div class="flex-1" />
       <button
         class="flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-sm font-semibold text-white transition-all"
-        style="background:linear-gradient(135deg,#f59e0b,#ea580c);box-shadow:0 2px 8px rgba(245,158,11,0.3)"
+        style="background:var(--ui-primary)"
         @click="openAdd"
       >
         <UIcon name="i-heroicons-plus" class="w-4 h-4" />
@@ -36,7 +36,7 @@
       </div>
 
       <div v-if="loading" class="flex items-center justify-center py-16">
-        <UIcon name="i-heroicons-arrow-path" class="w-6 h-6 text-amber-400 animate-spin" />
+        <UIcon name="i-heroicons-arrow-path" class="w-6 h-6 text-primary animate-spin" />
       </div>
 
       <div v-else-if="!list.length" class="flex flex-col items-center justify-center py-16 text-stone-500">
@@ -46,7 +46,7 @@
 
       <template v-else>
         <div v-for="item in list" :key="item.id"
-          class="grid px-5 py-3.5 border-b items-center hover:bg-amber-50/30 transition-colors"
+          class="grid px-5 py-3.5 border-b items-center hover:bg-primary/5 transition-colors"
           style="grid-template-columns:1fr 100px 100px 160px 140px;border-color:#f5f5f4">
 
           <div class="min-w-0 pr-4">
@@ -75,7 +75,7 @@
           </div>
 
           <div class="flex items-center justify-end gap-1">
-            <button class="w-7 h-7 rounded-lg flex items-center justify-center text-stone-500 hover:text-amber-600 hover:bg-amber-50 transition-all" title="编辑" @click="openEdit(item)">
+            <button class="w-7 h-7 rounded-lg flex items-center justify-center text-stone-500 hover:text-primary hover:bg-primary/5 transition-all" title="编辑" @click="openEdit(item)">
               <UIcon name="i-heroicons-pencil-square" class="w-4 h-4" />
             </button>
             <button
@@ -102,45 +102,33 @@
   </div>
 
   <!-- ═══ 新增/编辑弹窗 ═══ -->
-  <Teleport to="body">
-    <Transition name="modal">
-      <div v-if="modal.show" class="fixed inset-0 z-50 flex items-center justify-center p-4">
-        <div class="absolute inset-0 bg-black/30 backdrop-blur-sm" @click="closeModal" />
-        <div class="relative bg-white rounded-2xl shadow-2xl w-full max-w-md p-6" style="border:1px solid #e7e5e4">
-
-          <div class="flex items-center justify-between mb-5">
-            <p class="font-bold text-stone-800">{{ modal.isEdit ? '编辑管理员' : '新增管理员' }}</p>
-            <button class="text-stone-500 hover:text-stone-600" @click="closeModal">
-              <UIcon name="i-heroicons-x-mark" class="w-5 h-5" />
-            </button>
-          </div>
-
-          <div class="space-y-4">
+  <AdminFormModal :open="modal.show" @update:open="!$event && closeModal()" :title="modal.isEdit ? '编辑管理员' : '新增管理员'" :busy="saving">
+      <div class="space-y-4">
             <div v-if="!modal.isEdit">
-              <label class="text-xs font-semibold text-stone-500 mb-1.5 block">登录账号 <span class="text-red-400">*</span></label>
+              <label class="text-sm font-medium text-stone-600 mb-1.5 block">登录账号 <span class="text-red-400">*</span></label>
               <input v-model="form.username" type="text" placeholder="登录用户名"
-                class="w-full px-3.5 py-2.5 text-sm rounded-xl border focus:outline-none focus:ring-2 focus:ring-amber-300 transition"
+                class="w-full px-3.5 py-2.5 text-sm rounded-xl border focus:outline-none focus:ring-2 focus:ring-primary transition"
                 style="border-color:#e2d9d0" />
             </div>
 
             <div>
-              <label class="text-xs font-semibold text-stone-500 mb-1.5 block">昵称</label>
+              <label class="text-sm font-medium text-stone-600 mb-1.5 block">昵称</label>
               <input v-model="form.nickname" type="text" placeholder="显示昵称"
-                class="w-full px-3.5 py-2.5 text-sm rounded-xl border focus:outline-none focus:ring-2 focus:ring-amber-300 transition"
+                class="w-full px-3.5 py-2.5 text-sm rounded-xl border focus:outline-none focus:ring-2 focus:ring-primary transition"
                 style="border-color:#e2d9d0" />
             </div>
 
             <div>
-              <label class="text-xs font-semibold text-stone-500 mb-1.5 block">
+              <label class="text-sm font-medium text-stone-600 mb-1.5 block">
                 {{ modal.isEdit ? '重置密码（留空则不修改）' : '登录密码' }} <span v-if="!modal.isEdit" class="text-red-400">*</span>
               </label>
               <input v-model="form.password" type="password" placeholder="至少6位"
-                class="w-full px-3.5 py-2.5 text-sm rounded-xl border focus:outline-none focus:ring-2 focus:ring-amber-300 transition"
+                class="w-full px-3.5 py-2.5 text-sm rounded-xl border focus:outline-none focus:ring-2 focus:ring-primary transition"
                 style="border-color:#e2d9d0" />
             </div>
 
             <div v-if="!(modal.isEdit && modal.editId === myAdminId)">
-              <label class="text-xs font-semibold text-stone-500 mb-1.5 block">角色</label>
+              <label class="text-sm font-medium text-stone-600 mb-1.5 block">角色</label>
               <div class="flex gap-1.5">
                 <button class="px-3 py-2.5 rounded-xl text-xs font-medium border transition-all"
                   :style="form.role==='admin' ? 'background:#e0f2fe;border-color:#7dd3fc;color:#075985' : 'background:#faf8f5;border-color:#e2d9d0;color:#78716c'"
@@ -153,20 +141,11 @@
           </div>
 
           <p v-if="errorMsg" class="text-xs text-red-500 mt-4">{{ errorMsg }}</p>
-
-          <div class="flex gap-2 mt-6">
-            <button class="flex-1 py-2.5 rounded-xl text-sm font-medium border text-stone-600 hover:bg-stone-50 transition-all" style="border-color:#e2d9d0" @click="closeModal">取消</button>
-            <button class="flex-1 py-2.5 rounded-xl text-sm font-semibold text-white transition-all"
-              style="background:linear-gradient(135deg,#f59e0b,#ea580c);box-shadow:0 2px 8px rgba(245,158,11,0.3)"
-              :disabled="saving" @click="save">
-              <UIcon v-if="saving" name="i-heroicons-arrow-path" class="w-4 h-4 animate-spin mr-1" />
-              {{ saving ? '保存中…' : (modal.isEdit ? '保存修改' : '新增') }}
-            </button>
-          </div>
-        </div>
-      </div>
-    </Transition>
-  </Teleport>
+      <template #footer>
+        <UButton label="取消" color="neutral" variant="ghost" :disabled="saving" @click="closeModal" />
+        <UButton :label="modal.isEdit ? '保存修改' : '新增'" :loading="saving" @click="save" />
+      </template>
+    </AdminFormModal>
 </template>
 
 <script setup lang="ts">
@@ -270,8 +249,3 @@ async function save() {
   } finally { saving.value = false }
 }
 </script>
-
-<style scoped>
-.modal-enter-active,.modal-leave-active{transition:all 0.2s ease}
-.modal-enter-from,.modal-leave-to{opacity:0;transform:scale(0.96)}
-</style>

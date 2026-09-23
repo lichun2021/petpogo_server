@@ -1,9 +1,9 @@
 <template>
   <div class="space-y-4">
-    <h1 class="text-xl font-semibold text-stone-900">帖子审核</h1>
+    <AdminPageTitle>帖子审核</AdminPageTitle>
     <!-- 待审提示 -->
     <div v-if="pendingCount > 0"
-      class="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 flex items-center gap-2 text-sm text-amber-700">
+      class="bg-primary/5 border border-primary/30 rounded-xl px-4 py-3 flex items-center gap-2 text-sm text-primary">
       <UIcon name="i-heroicons-clock" class="w-4 h-4 flex-shrink-0" />
       <span>有 <strong>{{ pendingCount }}</strong> 条帖子待审核</span>
     </div>
@@ -14,7 +14,7 @@
         v-for="(tab, i) in tabs" :key="tab.key"
         :class="[
           'px-4 py-1.5 rounded-lg text-sm font-medium transition-all',
-          activeTab === i ? 'bg-amber-500 text-white shadow-sm' : 'bg-white border text-stone-500 hover:text-stone-700 hover:border-amber-300'
+          activeTab === i ? 'bg-primary/10 text-primary font-medium' : 'bg-white border text-stone-500 hover:text-stone-700 hover:border-primary/30'
         ]"
         style="border-color: #e7e5e4"
         @click="activeTab = i; page = 1; mediaType = ''; loadList()"
@@ -82,7 +82,7 @@
         <!-- 行 -->
         <div
           v-for="p in list" :key="p.id"
-          class="grid grid-cols-[80px_1fr_120px_80px_100px_140px] gap-3 px-4 py-3 border-b border-stone-100 hover:bg-amber-50/20 transition-colors items-center cursor-pointer"
+          class="grid grid-cols-[80px_1fr_120px_80px_100px_140px] gap-3 px-4 py-3 border-b border-stone-100 hover:bg-primary/5 transition-colors items-center cursor-pointer"
           @click="openTab(`/admin/posts/${p.id}`)"
         >
           <!-- 封面 -->
@@ -166,14 +166,8 @@
     </div>
 
     <!-- 拒绝理由弹窗 -->
-    <div v-if="rejectModal.show"
-      class="fixed inset-0 z-50 flex items-center justify-center"
-      style="background: rgba(0,0,0,0.4)"
-      @click.self="rejectModal.show = false"
-    >
-      <div class="bg-white rounded-2xl shadow-xl w-80 p-5">
-        <h3 class="font-semibold text-stone-800 mb-1">标记违规</h3>
-        <p class="text-xs text-stone-500 mb-4">请选择违规原因（必填）</p>
+    <AdminFormModal v-model:open="rejectModal.show" title="标记违规" :busy="rejectModal.loading">
+      <p class="text-xs text-stone-500 mb-4">请选择违规原因（必填）</p>
 
         <div class="space-y-2 mb-4">
           <label
@@ -189,30 +183,22 @@
             <span class="text-sm">{{ r }}</span>
           </label>
         </div>
-
-        <div class="flex gap-2">
-          <UButton label="取消" color="neutral" variant="outline" class="flex-1" @click="rejectModal.show = false" />
-          <UButton
+      <template #footer>
+        <UButton label="取消" color="neutral" variant="ghost" class="min-w-20" @click="rejectModal.show = false" :disabled="rejectModal.loading" />
+        <UButton
             label="确认违规"
             color="error"
-            class="flex-1"
+            class="min-w-20"
             :disabled="!rejectModal.reason"
             :loading="rejectModal.loading"
             @click="confirmReject"
           />
-        </div>
-      </div>
-    </div>
+      </template>
+    </AdminFormModal>
 
     <!-- 标签修改弹窗 -->
-    <div v-if="tagModal.show"
-      class="fixed inset-0 z-50 flex items-center justify-center"
-      style="background: rgba(0,0,0,0.4)"
-      @click.self="tagModal.show = false"
-    >
-      <div class="bg-white rounded-2xl shadow-xl w-72 p-5">
-        <h3 class="font-semibold text-stone-800 mb-1">修改帖子标签</h3>
-        <p class="text-xs text-stone-500 mb-4">为帖子选择合适的分类标签</p>
+    <AdminFormModal v-model:open="tagModal.show" title="修改帖子标签" :busy="tagModal.loading">
+      <p class="text-xs text-stone-500 mb-4">为帖子选择合适的分类标签</p>
 
         <div class="space-y-2 mb-5">
           <label
@@ -220,28 +206,26 @@
             :class="[
               'flex items-center gap-3 px-3 py-2.5 rounded-xl border cursor-pointer transition-all',
               tagModal.tag === tg.value
-                ? 'border-amber-300 bg-amber-50'
+                ? 'border-primary/30 bg-primary/5'
                 : 'border-stone-200 hover:border-stone-300'
             ]"
           >
-            <input type="radio" v-model="tagModal.tag" :value="tg.value" class="accent-amber-500" />
+            <input type="radio" v-model="tagModal.tag" :value="tg.value" class="accent-primary" />
             <span class="text-lg">{{ tg.emoji }}</span>
             <span class="text-sm font-medium text-stone-700">{{ tg.label }}</span>
           </label>
         </div>
-
-        <div class="flex gap-2">
-          <UButton label="取消" color="neutral" variant="outline" class="flex-1" @click="tagModal.show = false" />
-          <UButton
+      <template #footer>
+        <UButton label="取消" color="neutral" variant="ghost" class="min-w-20" @click="tagModal.show = false" :disabled="tagModal.loading" />
+        <UButton
             label="保存"
             color="primary"
-            class="flex-1"
+            class="min-w-20"
             :loading="tagModal.loading"
             @click="confirmTag"
           />
-        </div>
-      </div>
-    </div>
+      </template>
+    </AdminFormModal>
   </div>
 </template>
 
@@ -267,7 +251,7 @@ const typeOpts = [
 const tagOpts = [
   { label: '全部', value: '',      emoji: '📋', activeCls: 'bg-stone-500' },
   { label: '猫',   value: 'cat',   emoji: '🐱', activeCls: 'bg-orange-400' },
-  { label: '狗',   value: 'dog',   emoji: '🐶', activeCls: 'bg-amber-500'  },
+  { label: '狗',   value: 'dog',   emoji: '🐶', activeCls: 'bg-primary'  },
   { label: '其他', value: 'other', emoji: '🐾', activeCls: 'bg-stone-400'  },
 ]
 
@@ -318,7 +302,7 @@ function tagEmoji(tag: string) {
 function tagBadgeCls(tag: string) {
   return ({
     cat:   'bg-orange-100 text-orange-600',
-    dog:   'bg-amber-100  text-amber-600',
+    dog:   'bg-primary/10  text-primary',
     other: 'bg-stone-100  text-stone-500',
   } as any)[tag] ?? 'bg-stone-100 text-stone-500'
 }

@@ -2,7 +2,7 @@
   <div class="admin-shell flex h-screen overflow-hidden bg-[#f7f7f5]">
     <aside class="w-16 lg:w-52 shrink-0 flex flex-col border-r border-stone-200 bg-white">
       <div class="h-16 flex items-center gap-3 px-4 shrink-0">
-        <div class="size-8 rounded-xl flex items-center justify-center bg-amber-600 text-white shrink-0">
+        <div class="size-8 rounded-xl flex items-center justify-center bg-primary text-white shrink-0">
           <UIcon name="i-heroicons-heart" class="size-5" />
         </div>
         <div class="hidden lg:block">
@@ -11,15 +11,19 @@
         </div>
       </div>
       <nav aria-label="后台导航" class="flex-1 overflow-y-auto px-2 pb-4 space-y-4">
-        <section v-for="section in navSections" :key="section.label">
-          <p class="hidden lg:block px-3 pt-2 pb-1.5 text-xs text-stone-500">{{ section.label }}</p>
+        <section v-for="(section, index) in navSections" :key="section.label">
+          <button class="hidden lg:flex w-full items-center justify-between px-3 py-2 text-xs text-stone-500 hover:text-stone-800 rounded-lg focus-visible:outline-2 focus-visible:outline-primary" :aria-expanded="!!expandedSections[section.label]" :aria-controls="'admin-nav-group-' + index" @click="expandedSections[section.label] = !expandedSections[section.label]">
+            {{ section.label }}<UIcon name="i-heroicons-chevron-down" :class="['size-3 transition-transform', expandedSections[section.label] ? '' : '-rotate-90']" />
+          </button>
+          <div :id="'admin-nav-group-' + index" :class="expandedSections[section.label] ? '' : 'lg:hidden'">
           <button v-for="item in section.items" :key="item.to" :title="item.label"
             :aria-current="isNavActive(item.to) ? 'page' : undefined"
-            :class="['w-full flex items-center justify-center lg:justify-start gap-2.5 px-3 py-2 rounded-lg text-sm transition-colors text-left focus-visible:outline-2 focus-visible:outline-amber-700', isNavActive(item.to) ? 'bg-amber-50 text-amber-800 font-semibold' : 'text-stone-600 hover:bg-stone-50 hover:text-stone-900']"
+            :class="['w-full flex items-center justify-center lg:justify-start gap-2.5 px-3 py-2 rounded-lg text-sm transition-colors text-left focus-visible:outline-2 focus-visible:outline-primary', isNavActive(item.to) ? 'bg-primary/10 text-primary font-semibold' : 'text-stone-600 hover:bg-stone-50 hover:text-stone-900']"
             @click="openTab(item.to)">
             <UIcon :name="item.icon" class="size-4 shrink-0" />
             <span class="hidden lg:inline">{{ item.label }}</span>
           </button>
+          </div>
         </section>
       </nav>
       <div class="p-3 border-t border-stone-200 shrink-0 flex items-center gap-2">
@@ -31,11 +35,11 @@
     <div class="flex-1 flex flex-col min-w-0 overflow-hidden">
       <nav aria-label="已打开页面" class="h-12 shrink-0 flex items-center border-b border-stone-200 bg-white px-3 gap-2">
         <div class="flex-1 min-w-0 overflow-x-auto h-full flex items-center gap-1">
-          <div v-for="tab in tabs" :key="tab.path" :class="['group flex items-center h-9 rounded-lg shrink-0', activeTab === tab.path ? 'bg-amber-50 text-amber-800' : 'text-stone-500 hover:bg-stone-50']" @contextmenu.prevent="openContextMenu($event, tab)">
-            <button class="flex items-center gap-2 h-full pl-3 pr-2 text-sm rounded-lg focus-visible:outline-2 focus-visible:outline-amber-700" :aria-current="activeTab === tab.path ? 'page' : undefined" @click="switchTab(tab.path)">
+          <div v-for="tab in tabs" :key="tab.path" :class="['group flex items-center h-9 rounded-lg shrink-0', activeTab === tab.path ? 'bg-primary/10 text-primary' : 'text-stone-500 hover:bg-stone-50']" @contextmenu.prevent="openContextMenu($event, tab)">
+            <button class="flex items-center gap-2 h-full pl-3 pr-2 text-sm rounded-lg focus-visible:outline-2 focus-visible:outline-primary" :aria-current="activeTab === tab.path ? 'page' : undefined" @click="switchTab(tab.path)">
               <UIcon :name="tab.icon || 'i-heroicons-document'" class="size-4 shrink-0" /><span class="max-w-40 truncate">{{ tab.title }}</span>
             </button>
-            <button v-if="tab.closable" class="mr-1 p-1 rounded text-stone-500 hover:bg-stone-200/60 hover:text-stone-900 focus-visible:outline-2 focus-visible:outline-amber-700" :aria-label="`关闭${tab.title}`" @click="closeTab(tab.path)"><UIcon name="i-heroicons-x-mark" class="size-3 block" /></button>
+            <button v-if="tab.closable" class="mr-1 p-1 rounded text-stone-500 hover:bg-stone-200/60 hover:text-stone-900 focus-visible:outline-2 focus-visible:outline-primary" :aria-label="`关闭${tab.title}`" @click="closeTab(tab.path)"><UIcon name="i-heroicons-x-mark" class="size-3 block" /></button>
           </div>
         </div>
         <UButton icon="i-heroicons-x-mark" color="neutral" variant="ghost" size="xs" title="关闭所有标签" aria-label="关闭所有标签" @click="closeAll()" />
@@ -99,6 +103,14 @@ const navSections = computed(() => {
   ]
   return groups.map(group => ({ ...group, items: nav.value.filter(item => group.paths.includes(item.to)) }))
 })
+
+const expandedSections = useState<Record<string, boolean>>('admin-nav-expanded', () => ({}))
+// 路由变化时展开当前分组，其余分组保留用户的选择。
+watch([() => route.path, navSections], () => {
+  for (const section of navSections.value) {
+    if (section.items.some(item => isNavActive(item.to))) expandedSections.value[section.label] = true
+  }
+}, { immediate: true })
 
 // KeepAlive 配置：缓存所有已打开的 tab 页面组件
 const keepAliveOptions = computed(() => ({

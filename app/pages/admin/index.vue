@@ -1,11 +1,11 @@
 <template>
   <div class="space-y-5">
-    <h1 class="text-xl font-semibold text-stone-900">数据概览</h1>
+    <AdminPageTitle>数据概览</AdminPageTitle>
     <!-- 统计卡片 -->
     <div class="grid grid-cols-2 xl:grid-cols-4 gap-4">
       <div
         v-for="s in stats" :key="s.label"
-        class="bg-white rounded-2xl p-5 border flex items-start justify-between"
+        class="bg-white rounded-xl p-5 border flex items-start justify-between"
         style="border-color: #e7e5e4; box-shadow: 0 1px 4px rgba(0,0,0,0.04)"
       >
         <div>
@@ -43,7 +43,7 @@
       <div class="bg-white rounded-xl border overflow-hidden" style="border-color: #e7e5e4; box-shadow: 0 1px 4px rgba(0,0,0,0.04)">
         <div class="flex items-center justify-between px-5 py-3.5 border-b" style="border-color: #e7e5e4">
           <h3 class="text-base font-semibold text-stone-700">最新帖子</h3>
-          <NuxtLink to="/admin/posts" class="text-xs text-amber-600 hover:text-amber-700">查看全部 →</NuxtLink>
+          <NuxtLink to="/admin/posts" class="text-xs text-primary hover:text-primary">查看全部 →</NuxtLink>
         </div>
         <div class="divide-y" style="divide-color: #faf6f2">
           <div v-if="!recentPosts.length" class="px-5 py-8 text-center text-sm text-stone-500">暂无帖子数据</div>
@@ -73,7 +73,7 @@ const stats = ref([
   { label: '总用户数', value: '--', icon: 'i-heroicons-users',              bg: 'bg-blue-50',   color: 'text-blue-500' },
   { label: '在线设备', value: '--', icon: 'i-heroicons-cpu-chip',            bg: 'bg-green-50',  color: 'text-green-500' },
   { label: '今日发帖', value: '--', icon: 'i-heroicons-photo',               bg: 'bg-purple-50', color: 'text-purple-500' },
-  { label: '门店数量', value: '--', icon: 'i-heroicons-building-storefront', bg: 'bg-amber-50',  color: 'text-amber-500' },
+  { label: '门店数量', value: '--', icon: 'i-heroicons-building-storefront', bg: 'bg-primary/5',  color: 'text-primary' },
 ])
 const onlineCount   = ref(0)
 const recentDevices = ref<any[]>([])

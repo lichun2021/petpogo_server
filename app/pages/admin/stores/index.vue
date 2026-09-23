@@ -1,6 +1,6 @@
 <template>
   <div class="space-y-4">
-    <h1 class="text-xl font-semibold text-stone-900">门店管理</h1>
+    <AdminPageTitle>门店管理</AdminPageTitle>
     <!-- 搜索 -->
     <div class="bg-white rounded-xl border p-4 flex flex-wrap items-center gap-3" style="border-color: #e7e5e4">
       <UInput v-model="search" placeholder="搜索门店名称 / 地址..." icon="i-heroicons-magnifying-glass" class="w-full sm:max-w-sm" @keyup.enter="() => { page = 1; loadList() }" />
@@ -16,8 +16,8 @@
         :class="[
           'px-4 py-1.5 rounded-lg text-sm font-medium transition-all',
           activeTab === i
-            ? 'bg-amber-500 text-white shadow-sm'
-            : 'bg-white border text-stone-500 hover:text-stone-700 hover:border-amber-300'
+            ? 'bg-primary/10 text-primary font-medium'
+            : 'bg-white border text-stone-500 hover:text-stone-700 hover:border-primary/30'
         ]"
         style="border-color: #e7e5e4"
         @click="activeTab = i; page = 1; loadList()"
@@ -49,7 +49,7 @@
         <tbody>
           <tr
             v-for="row in list" :key="row.id"
-            class="border-b border-stone-100 hover:bg-amber-50/30 transition-colors"
+            class="border-b border-stone-100 hover:bg-primary/5 transition-colors"
           >
             <td class="py-3 px-4">
               <p class="text-stone-800 font-medium">{{ row.name }}</p>
@@ -60,7 +60,7 @@
             </td>
             <td class="py-3 px-4">
               <div class="flex items-center gap-1">
-                <UIcon name="i-heroicons-star-solid" class="w-3.5 h-3.5 text-amber-400" />
+                <UIcon name="i-heroicons-star-solid" class="w-3.5 h-3.5 text-primary" />
                 <span class="text-stone-700 text-xs">{{ row.rating || '-' }}</span>
               </div>
             </td>

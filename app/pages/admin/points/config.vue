@@ -1,11 +1,11 @@
 <template>
   <div class="space-y-4">
-    <div class="flex items-center justify-between">
+    <div class="flex items-center justify-between flex-wrap gap-3">
       <div>
-        <h2 class="text-xl font-semibold text-stone-800">积分类型</h2>
+        <AdminPageTitle>积分类型</AdminPageTitle>
         <p class="text-xs text-stone-500 mt-0.5">配置积分类型与有效期（有效期=获得后N天到期，0=永不过期）。数量在各业务页（计划/签到）单独配置</p>
       </div>
-      <div class="flex gap-2">
+      <div class="flex gap-2 flex-wrap">
         <UButton label="积分流水" color="neutral" variant="outline" icon="i-heroicons-clipboard-document-list" to="/admin/points/logs" />
         <UButton label="积分规则" color="neutral" variant="outline" icon="i-heroicons-currency-yen" to="/admin/points/rules" />
         <UButton label="新增类型" color="primary" icon="i-heroicons-plus" @click="openModal()" />
@@ -28,7 +28,7 @@
           </tr>
         </thead>
         <tbody>
-          <tr v-for="row in list" :key="row.id" class="border-b border-stone-100 hover:bg-amber-50/30 transition-colors">
+          <tr v-for="row in list" :key="row.id" class="border-b border-stone-100 hover:bg-primary/5 transition-colors">
             <td class="py-3 px-4 font-mono text-xs text-stone-600">{{ row.type_code }}</td>
             <td class="py-3 px-4">{{ row.name }}</td>
             <td class="py-3 px-4">
@@ -50,31 +50,28 @@
     </div>
 
     <!-- 新建/编辑弹窗 -->
-    <div v-if="modal.show" class="fixed inset-0 z-50 flex items-center justify-center" style="background: rgba(0,0,0,0.4)">
-      <div class="bg-white rounded-2xl shadow-xl w-96 p-6 space-y-4">
-        <h3 class="font-semibold text-stone-800">{{ modal.editingId ? '编辑积分类型' : '新增积分类型' }}</h3>
-
-        <div class="space-y-3">
+    <AdminFormModal v-model:open="modal.show" :title="modal.editingId ? '编辑积分类型' : '新增积分类型'" :busy="modal.saving">
+      <div class="space-y-4">
           <div v-if="!modal.editingId">
-            <label class="text-xs text-stone-500 font-medium block mb-1">类型标识 type_code *</label>
+            <label class="text-sm text-stone-600 font-medium block mb-1">类型标识 type_code *</label>
             <UInput v-model="modal.typeCode" placeholder="如 plan_vip / activity" />
             <p class="text-xs text-stone-500 mt-1">程序内引用，创建后不可改，建议用英文小写+下划线</p>
           </div>
           <div>
-            <label class="text-xs text-stone-500 font-medium block mb-1">显示名称 *</label>
+            <label class="text-sm text-stone-600 font-medium block mb-1">显示名称 *</label>
             <UInput v-model="modal.name" placeholder="如 VIP计划积分" />
           </div>
           <div>
-            <label class="text-xs text-stone-500 font-medium block mb-1">有效期天数 *</label>
+            <label class="text-sm text-stone-600 font-medium block mb-1">有效期天数 *</label>
             <UInput v-model.number="modal.expireDays" type="number" :min="0" placeholder="0 = 永不过期" />
             <p class="text-xs text-stone-500 mt-1">每笔该类型积分从获得时刻起 N 天后到期，0 表示永久</p>
           </div>
           <div>
-            <label class="text-xs text-stone-500 font-medium block mb-1">排序（越小越靠前）</label>
+            <label class="text-sm text-stone-600 font-medium block mb-1">排序（越小越靠前）</label>
             <UInput v-model.number="modal.sortOrder" type="number" placeholder="0" />
           </div>
           <div v-if="modal.editingId">
-            <label class="text-xs text-stone-500 font-medium block mb-1">状态</label>
+            <label class="text-sm text-stone-600 font-medium block mb-1">状态</label>
             <div class="flex gap-2">
               <button
                 :class="['flex-1 py-1.5 rounded-lg text-xs font-medium border transition-all', modal.status === 1 ? 'bg-green-500 text-white border-green-500' : 'bg-white text-stone-500 border-stone-200']"
@@ -87,19 +84,17 @@
             </div>
           </div>
         </div>
-
-        <div class="flex gap-2 pt-2">
-          <UButton label="取消" color="neutral" variant="outline" class="flex-1" @click="modal.show = false" />
-          <UButton
+      <template #footer>
+        <UButton label="取消" color="neutral" variant="ghost" class="min-w-20" @click="modal.show = false" :disabled="modal.saving" />
+        <UButton
             :label="modal.editingId ? '保存修改' : '创建'"
-            color="primary" class="flex-1"
+            color="primary" class="min-w-20"
             :loading="modal.saving"
             :disabled="!modal.name.trim() || (!modal.editingId && !modal.typeCode.trim())"
             @click="save"
           />
-        </div>
-      </div>
-    </div>
+      </template>
+    </AdminFormModal>
   </div>
 </template>
 

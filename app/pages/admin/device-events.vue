@@ -1,6 +1,6 @@
 <template>
   <div class="space-y-4">
-    <h1 class="text-xl font-semibold text-stone-900">设备事件</h1>
+    <AdminPageTitle>设备事件</AdminPageTitle>
     <!-- 筛选条 -->
     <div class="bg-white rounded-xl border p-4 space-y-3" style="border-color: #e7e5e4">
       <div class="flex items-center gap-3">
@@ -37,7 +37,7 @@
           </tr>
         </thead>
         <tbody>
-          <tr v-for="row in list" :key="row.id" class="border-b border-stone-100 hover:bg-amber-50/30 transition-colors">
+          <tr v-for="row in list" :key="row.id" class="border-b border-stone-100 hover:bg-primary/5 transition-colors">
             <td class="py-3 px-4">
               <p class="text-stone-800 font-medium">{{ row.nickname || '未设置' }}</p>
               <p class="text-xs text-stone-500">{{ row.phone }}</p>

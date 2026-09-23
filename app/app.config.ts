@@ -1,6 +1,6 @@
 export default defineAppConfig({
   ui: {
-    colors: { primary: 'amber', secondary: 'violet', neutral: 'stone' },
+    colors: { primary: 'orange', secondary: 'violet', neutral: 'stone' },
     button: {
       slots: { base: 'rounded-lg cursor-pointer justify-center' },
       variants: { size: {
@@ -9,9 +9,10 @@ export default defineAppConfig({
         md: { base: 'min-h-9 px-3.5 text-sm' },
       } },
     },
-    input: { slots: { base: 'rounded-lg' }, variants: { size: { sm: { base: 'min-h-9 text-sm' }, md: { base: 'min-h-9 text-sm' } } } },
-    textarea: { slots: { base: 'rounded-lg text-sm' } },
+    input: { slots: { root: 'w-full', base: 'rounded-lg' }, variants: { size: { sm: { base: 'min-h-9 text-sm' }, md: { base: 'min-h-9 text-sm' } } } },
+    textarea: { slots: { root: 'w-full', base: 'rounded-lg text-sm' } },
     selectMenu: { slots: { base: 'min-h-9 rounded-lg text-sm' } },
+    modal: { slots: { overlay: 'bg-stone-950/25', content: 'bg-white rounded-2xl', title: 'text-base font-semibold', header: 'border-b border-stone-100', footer: 'border-t border-stone-100' } },
     slideover: { slots: { overlay: 'bg-stone-950/25', content: 'bg-white', header: 'border-b border-stone-200', footer: 'border-t border-stone-200' } },
     // 密度影响内边距，不再把分类、状态等文字缩到8/10px。
     badge: {

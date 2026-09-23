@@ -1,8 +1,8 @@
 <template>
   <div class="space-y-4">
-    <div class="flex items-center justify-between">
+    <div class="flex items-center justify-between flex-wrap gap-3">
       <div>
-        <h2 class="text-xl font-semibold text-stone-800">签到奖励档位</h2>
+        <AdminPageTitle>签到奖励档位</AdminPageTitle>
         <p class="text-xs text-stone-500 mt-0.5">配置每日签到奖励与连续签到奖励档位</p>
       </div>
       <UButton label="新增档位" color="primary" icon="i-heroicons-plus" @click="openModal()" />
@@ -26,7 +26,7 @@
           </tr>
         </thead>
         <tbody>
-          <tr v-for="row in list" :key="row.id" class="border-b border-stone-100 hover:bg-amber-50/30 transition-colors">
+          <tr v-for="row in list" :key="row.id" class="border-b border-stone-100 hover:bg-primary/5 transition-colors">
             <td class="py-3 px-4">
               <UBadge :label="row.rule_type === 1 ? '每日签到' : '连续签到'" :color="row.rule_type === 1 ? 'info' : 'primary'" variant="subtle" size="xs" />
             </td>
@@ -49,41 +49,38 @@
     </div>
 
     <!-- 新建/编辑弹窗 -->
-    <div v-if="modal.show" class="fixed inset-0 z-50 flex items-center justify-center" style="background: rgba(0,0,0,0.4)">
-      <div class="bg-white rounded-2xl shadow-xl w-96 p-6 space-y-4">
-        <h3 class="font-semibold text-stone-800">{{ modal.editingId ? '编辑签到档位' : '新增签到档位' }}</h3>
-
-        <div class="space-y-3">
+    <AdminFormModal v-model:open="modal.show" :title="modal.editingId ? '编辑签到档位' : '新增签到档位'" :busy="modal.saving">
+      <div class="space-y-4">
           <div>
-            <label class="text-xs text-stone-500 font-medium block mb-1">档位类型</label>
+            <label class="text-sm text-stone-600 font-medium block mb-1">档位类型</label>
             <div class="flex gap-2">
               <button
-                :class="['flex-1 py-1.5 rounded-lg text-xs font-medium border transition-all', modal.ruleType === 1 ? 'bg-amber-500 text-white border-amber-500' : 'bg-white text-stone-500 border-stone-200']"
+                :class="['flex-1 py-1.5 rounded-lg text-xs font-medium border transition-all', modal.ruleType === 1 ? 'bg-primary text-white border-amber-500' : 'bg-white text-stone-500 border-stone-200']"
                 @click="modal.ruleType = 1"
               >每日签到奖励</button>
               <button
-                :class="['flex-1 py-1.5 rounded-lg text-xs font-medium border transition-all', modal.ruleType === 2 ? 'bg-amber-500 text-white border-amber-500' : 'bg-white text-stone-500 border-stone-200']"
+                :class="['flex-1 py-1.5 rounded-lg text-xs font-medium border transition-all', modal.ruleType === 2 ? 'bg-primary text-white border-amber-500' : 'bg-white text-stone-500 border-stone-200']"
                 @click="modal.ruleType = 2"
               >连续签到奖励</button>
             </div>
           </div>
           <div>
-            <label class="text-xs text-stone-500 font-medium block mb-1">名称 *</label>
+            <label class="text-sm text-stone-600 font-medium block mb-1">名称 *</label>
             <UInput v-model="modal.name" placeholder="如 连续7天" />
           </div>
           <div v-if="modal.ruleType === 2">
-            <label class="text-xs text-stone-500 font-medium block mb-1">连续天数门槛 *</label>
+            <label class="text-sm text-stone-600 font-medium block mb-1">连续天数门槛 *</label>
             <UInput v-model.number="modal.streakDays" type="number" />
           </div>
           <div>
-            <label class="text-xs text-stone-500 font-medium block mb-1">奖励积分 *</label>
+            <label class="text-sm text-stone-600 font-medium block mb-1">奖励积分 *</label>
             <UInput v-model.number="modal.pointsAmount" type="number" />
           </div>
           <div>
-            <label class="text-xs text-stone-500 font-medium block mb-1">积分类型</label>
+            <label class="text-sm text-stone-600 font-medium block mb-1">积分类型</label>
             <select
               v-model="modal.pointsTypeCode"
-              class="admin-select w-full rounded-lg text-sm py-1.5 px-2 focus:border-amber-400 focus:ring-amber-400"
+              class="admin-select w-full rounded-lg text-sm py-1.5 px-2 focus:border-primary/30 focus:ring-primary"
               style="border-color: #e7e5e4"
             >
               <option v-for="t in pointTypes" :key="t.type_code" :value="t.type_code">
@@ -92,11 +89,11 @@
             </select>
           </div>
           <div>
-            <label class="text-xs text-stone-500 font-medium block mb-1">排序（越小越靠前）</label>
+            <label class="text-sm text-stone-600 font-medium block mb-1">排序（越小越靠前）</label>
             <UInput v-model.number="modal.sortOrder" type="number" placeholder="0" />
           </div>
           <div v-if="modal.editingId">
-            <label class="text-xs text-stone-500 font-medium block mb-1">状态</label>
+            <label class="text-sm text-stone-600 font-medium block mb-1">状态</label>
             <div class="flex gap-2">
               <button
                 :class="['flex-1 py-1.5 rounded-lg text-xs font-medium border transition-all', modal.status === 1 ? 'bg-green-500 text-white border-green-500' : 'bg-white text-stone-500 border-stone-200']"
@@ -109,19 +106,17 @@
             </div>
           </div>
         </div>
-
-        <div class="flex gap-2 pt-2">
-          <UButton label="取消" color="neutral" variant="outline" class="flex-1" @click="modal.show = false" />
-          <UButton
+      <template #footer>
+        <UButton label="取消" color="neutral" variant="ghost" class="min-w-20" @click="modal.show = false" :disabled="modal.saving" />
+        <UButton
             :label="modal.editingId ? '保存修改' : '创建'"
-            color="primary" class="flex-1"
+            color="primary" class="min-w-20"
             :loading="modal.saving"
             :disabled="!modal.name.trim() || !modal.pointsAmount"
             @click="save"
           />
-        </div>
-      </div>
-    </div>
+      </template>
+    </AdminFormModal>
   </div>
 </template>
 
