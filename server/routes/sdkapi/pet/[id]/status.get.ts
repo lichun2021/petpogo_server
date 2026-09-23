@@ -19,6 +19,11 @@ export default defineEventHandler(async (event) => {
   )
   if (!pet) throw createError({ statusCode: 404, message: '宠物不存在' })
 
+  // 历史记录可能从未分配形象，补齐并固化快照；已有快照不随后台规则变化。
+  if (!pet.model_snapshot) {
+    Object.assign(pet, await withTransaction(db => ensurePetModelSnapshot(db, String(id), user.userId)))
+  }
+
   const stats = computeDecayedStats(
     { satiety: pet.satiety, mood: pet.mood, cleanliness: pet.cleanliness },
     pet.stats_updated_at

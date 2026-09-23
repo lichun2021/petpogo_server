@@ -17,6 +17,7 @@ CREATE TABLE IF NOT EXISTS t_user (
   avatar             VARCHAR(500),
   gender             TINYINT      DEFAULT 0   COMMENT '0未知 1男 2女',
   birthday           DATE,
+  email              VARCHAR(254) NULL COMMENT '联系邮箱，非登录凭证',
   bio                VARCHAR(200),
   status             TINYINT      DEFAULT 1   COMMENT '1正常 2禁用',
   plan_type             TINYINT      DEFAULT 0   COMMENT '0=Free 1=Pro 2=ProMax',

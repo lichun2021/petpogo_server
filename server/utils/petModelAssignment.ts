@@ -41,6 +41,22 @@ export async function savePetModelSnapshot(db: Db, petId: string, assignment: an
     [assignment.model.id, JSON.stringify({ ...assignment.model, rule_id: assignment.ruleId || null }), assignment.source, assignment.ruleName, petId])
 }
 
+/** 历史宠物首次读取时补齐形象；调用者须开启事务，持锁复核以免覆盖并发手动选择。 */
+export async function ensurePetModelSnapshot(db: PoolConnection, petId: string, userId: string) {
+  const [[pet]]: any = await db.query('SELECT id,species,breed,gender,model_id,model_snapshot,model_assignment_source,model_rule_name,model_assigned_at FROM t_pet WHERE id=? AND user_id=? AND deleted=0 FOR UPDATE', [petId, userId])
+  if (!pet) throw createError({ statusCode: 404, message: '宠物不存在' })
+  if (pet.model_snapshot) return pet
+  let assignment
+  if (pet.model_id) {
+    const [[model]]: any = await db.query('SELECT id,name,glb_url,thumbnail_url FROM t_pet_model WHERE id=? AND deleted=0', [String(pet.model_id)])
+    if (model) assignment = { model: { ...model, id: String(model.id) }, source: 'legacy', ruleName: null }
+  }
+  if (!assignment) assignment = await selectPetModel(db, pet)
+  await savePetModelSnapshot(db, petId, assignment)
+  const [[saved]]: any = await db.query('SELECT model_snapshot,model_assignment_source,model_rule_name,model_assigned_at FROM t_pet WHERE id=? AND user_id=?', [petId, userId])
+  return saved
+}
+
 /** 新增前确认三类保底均有效，避免上游已创建后本地分配失败。 */
 export async function assertPetModelDefaults(db: Db) {
   const config = await getPetModelConfig(db)

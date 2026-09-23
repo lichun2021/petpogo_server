@@ -38,3 +38,4 @@ ecosystem.config.js.bak
 
 # ── 压缩包（部署中间产物）────────────────────────
 *.zip
+/tests

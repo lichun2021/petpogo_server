@@ -1,86 +1,151 @@
 #!/bin/bash
-# 本地校验后发布到独立目录。默认只检查数据库；--migrate 明确执行待升级迁移。
-set -euo pipefail
-SSH_HOST="115.29.196.61"
-SSH_USER="root"
-REMOTE_PATH="/data/petpogo-server"
-PM2_NAME="petpogo-server"
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# =====================================================
+# petpogo-server 一键构建 + 部署脚本
+# 用法:
+#   ./deploy.sh          # 构建并部署到服务器
+#   ./deploy.sh --build  # 仅本地构建，不上传
+# =====================================================
+
+# ============ 配置（按需修改）============
+SSH_HOST="115.29.196.61"           # 服务器 IP
+SSH_USER="root"                    # 登录用户名
+SSH_PORT="22"                      # SSH 端口
+SSH_KEY="lc.pem"                   # 证书文件路径（相对或绝对路径）
+REMOTE_PATH="/data/petpogo-server" # 服务器上的目录
+PM2_NAME="petpogo-server"          # PM2 进程名
+# =========================================
+
+# SSH / SCP 公共参数
+SSH_OPTS="-i $SSH_KEY -o StrictHostKeyChecking=no -p $SSH_PORT"
+SCP_OPTS="-i $SSH_KEY -o StrictHostKeyChecking=no -P $SSH_PORT"
+
+# 颜色
+RED='\033[0;31m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'
+BLUE='\033[0;34m'; CYAN='\033[0;36m'; BOLD='\033[1m'; NC='\033[0m'
+
+log_info()    { echo -e "${BLUE}[INFO]${NC} $1"; }
+log_success() { echo -e "${GREEN}[✓]${NC} $1"; }
+log_warn()    { echo -e "${YELLOW}[!]${NC} $1"; }
+log_error()   { echo -e "${RED}[✗]${NC} $1"; exit 1; }
+log_step()    { echo -e "\n${BOLD}${CYAN}>>> $1${NC}"; }
+
+START_TIME=$(date +%s)
 BUILD_ONLY=false
-MIGRATE=false
-for arg in "$@"; do
-  case "$arg" in --build) BUILD_ONLY=true ;; --migrate) MIGRATE=true ;; *) echo "未知参数: $arg"; exit 1 ;; esac
-done
-cd "$SCRIPT_DIR"
-npm run check
-if "$BUILD_ONLY"; then echo '构建与检查完成'; exit 0; fi
-SSH_KEY="$SCRIPT_DIR/lc.pem"
-test -f "$SSH_KEY" || { echo '缺少部署 SSH key'; exit 1; }
-RELEASE_ID="$(date -u +%Y%m%d%H%M%S)-$RANDOM"
-mkdir -p .output/server/scripts .output/server/migrations
-cp scripts/migrate.mjs scripts/start.mjs .output/server/scripts/
-cp migrations/*.mjs .output/server/migrations/
-ARCHIVE="$(mktemp /tmp/petpogo-release.XXXXXX)"
-trap 'rm -f "$ARCHIVE"' EXIT
-# macOS 的扩展属性/AppleDouble 元数据不属于部署文件，避免 Linux 解压警告。
-# 按 tar 实现区分参数，兼容 macOS bsdtar 和 Linux GNU tar。
-TAR_METADATA_FLAGS=()
-if [[ "$(tar --version)" == *bsdtar* ]]; then
-  TAR_METADATA_FLAGS=(--no-xattrs --no-acls --no-fflags --no-mac-metadata)
+[ "$1" = "--build" ] && BUILD_ONLY=true
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+ZIP_NAME="petpogo-server.zip"
+
+# 解析 SSH_KEY 为绝对路径（相对路径以脚本目录为基准）
+if [[ "$SSH_KEY" != /* ]]; then
+  SSH_KEY="$SCRIPT_DIR/$SSH_KEY"
 fi
-COPYFILE_DISABLE=1 tar -czf "$ARCHIVE" "${TAR_METADATA_FLAGS[@]}" -C .output .
-# 使用已有 known_hosts，不自动跳过服务器身份验证。
-ssh -i "$SSH_KEY" -o BatchMode=yes "$SSH_USER@$SSH_HOST" "mkdir -p '$REMOTE_PATH/releases/$RELEASE_ID' '$REMOTE_PATH/shared'"
-scp -i "$SSH_KEY" -o BatchMode=yes "$ARCHIVE" "$SSH_USER@$SSH_HOST:$REMOTE_PATH/releases/$RELEASE_ID/release.tar.gz"
-ssh -i "$SSH_KEY" -o BatchMode=yes "$SSH_USER@$SSH_HOST" bash -s -- "$REMOTE_PATH" "$RELEASE_ID" "$PM2_NAME" "$MIGRATE" <<'REMOTE'
-set -euo pipefail
-base="$1"; release="$base/releases/$2"; name="$3"; migrate="$4"
-cd "$release"
-tar -xzf release.tar.gz
-rm release.tar.gz
-# 配置与发布包分离；第一次升级沿用服务器已有配置。
-if [ ! -f "$base/shared/.env" ] && [ -f "$base/.env" ]; then
-  cp "$base/.env" "$base/shared/.env"
-  chmod 600 "$base/shared/.env"
+
+# 检查 pem 文件并自动修权限
+if [ ! -f "$SSH_KEY" ]; then
+  log_error "证书文件不存在: $SSH_KEY\n  请将 lc.pem 放在项目根目录，或修改脚本中 SSH_KEY 的路径"
 fi
-test -f "$base/shared/.env" || { echo '请先配置 shared/.env'; exit 1; }
-ln -s "$base/shared/.env" .env
-command -v pm2 >/dev/null
-previous="$(readlink "$base/current" || true)"
-old_exists=false
-if pm2 describe "$name" >/dev/null 2>&1; then old_exists=true; fi
-# 不自动恢复到旧账务写入代码：迁移之后失败时保持停机，按恢复说明选择兼容版本。
-if [ "$migrate" = true ]; then
-  echo '即将迁移；请确认外部周期任务已暂停，数据库备份已完成。'
-  if "$old_exists"; then pm2 stop "$name"; fi
-  node server/scripts/migrate.mjs
-else
-  node server/scripts/migrate.mjs --check
+chmod 600 "$SSH_KEY" 2>/dev/null
+
+# 重建 SSH_OPTS（使用绝对路径）
+SSH_OPTS="-i $SSH_KEY -o StrictHostKeyChecking=no -p $SSH_PORT"
+SCP_OPTS="-i $SSH_KEY -o StrictHostKeyChecking=no -P $SSH_PORT"
+
+echo ""
+echo -e "${BOLD}======================================${NC}"
+echo -e "${BOLD}  petpogo-server 部署脚本 (Nuxt 4)${NC}"
+echo -e "${BOLD}======================================${NC}"
+echo -e "  本地路径 : ${CYAN}$SCRIPT_DIR${NC}"
+echo -e "  目标服务器: ${CYAN}$SSH_HOST → $REMOTE_PATH${NC}"
+echo -e "  PM2 进程  : ${CYAN}$PM2_NAME${NC}"
+echo ""
+
+cd "$SCRIPT_DIR" || log_error "无法进入项目目录"
+
+# ── 步骤 1: 构建 ──────────────────────────────────
+log_step "步骤 1/5 · 本地构建"
+log_info "清理旧产物..."
+rm -rf .output .nuxt
+
+log_info "执行 npm run build..."
+npm run build
+[ $? -ne 0 ] && log_error "构建失败！请检查错误信息"
+[ ! -d ".output" ] && log_error ".output 目录不存在，构建异常"
+log_success "构建完成"
+
+# 仅构建模式：到此结束
+if [ "$BUILD_ONLY" = true ]; then
+  echo -e "\n${GREEN}仅构建模式，跳过上传。产物在 .output/${NC}"
+  exit 0
 fi
-# 只读健康探针；不触发登录、消费或其他业务写入。
-NODE_ENV=production PORT=3101 NITRO_PORT=3101 NITRO_HOST=127.0.0.1 node --env-file=.env server/scripts/start.mjs > preflight.log 2>&1 &
-candidate=$!
-trap 'kill "$candidate" 2>/dev/null || true' EXIT
-ready=false
-for attempt in $(seq 1 30); do
-  if curl -fsS http://127.0.0.1:3101/api/health/ready >/dev/null; then ready=true; break; fi
-  kill -0 "$candidate" 2>/dev/null || break
-  sleep 1
-done
-"$ready" || { echo '新版本健康检查失败，未切换；检查 preflight.log'; exit 1; }
-kill "$candidate"; wait "$candidate" 2>/dev/null || true
-trap - EXIT
-if "$old_exists"; then pm2 stop "$name"; fi
-ln -sfn "$release" "$base/current.next"
-mv -Tf "$base/current.next" "$base/current"
-if "$old_exists"; then pm2 delete "$name"; fi
-NODE_ENV=production PORT=3000 NITRO_HOST=0.0.0.0 pm2 start server/scripts/start.mjs --name "$name" --cwd "$release" --node-args="--env-file=$base/shared/.env"
-healthy=false
-for attempt in $(seq 1 30); do
-  if curl -fsS http://127.0.0.1:3000/api/health/ready >/dev/null; then healthy=true; break; fi
-  sleep 1
-done
-"$healthy" || { echo "新进程健康检查失败；上一发布目录: $previous。不要回退到旧账务/默认密码代码。"; exit 1; }
-pm2 save
-echo "发布完成: $release"
-REMOTE
+
+# ── 步骤 2: 打包 ──────────────────────────────────
+log_step "步骤 2/5 · 打包 .output + 运维脚本 + package.json"
+rm -f "$ZIP_NAME"
+# 打包 .output 目录内容 + 根目录的运维文件和环境变量文件
+(cd .output && zip -r "../$ZIP_NAME" . -q)
+# 追加 .env, ecosystem, package.json 和 shell 脚本到 zip 根目录
+zip -j "$ZIP_NAME" .env ecosystem.config.js package.json package-lock.json start.sh stop.sh restart.sh -q 2>/dev/null || true
+ZIP_SIZE=$(du -sh "$ZIP_NAME" | cut -f1)
+log_success "打包完成：$ZIP_NAME ($ZIP_SIZE)"
+
+# ── 步骤 3: 上传 ──────────────────────────────────
+log_step "步骤 3/5 · 上传到 $SSH_USER@$SSH_HOST"
+ssh $SSH_OPTS $SSH_USER@$SSH_HOST "mkdir -p $REMOTE_PATH"
+scp $SCP_OPTS "$ZIP_NAME" "$SSH_USER@$SSH_HOST:$REMOTE_PATH/"
+[ $? -ne 0 ] && log_error "上传失败，请检查 SSH 连接和证书 ($SSH_KEY)"
+log_success "上传完成"
+
+# ── 步骤 4: 服务器解压 ────────────────────────────
+log_step "步骤 4/5 · 服务器解压 + 安装依赖"
+ssh $SSH_OPTS $SSH_USER@$SSH_HOST "
+  set -e
+  cd $REMOTE_PATH
+  echo '清理旧文件...'
+  find . -type f ! -name '$ZIP_NAME' -delete 2>/dev/null || true
+  find . -mindepth 1 -type d -empty -delete 2>/dev/null || true
+  unzip -oq $ZIP_NAME -d .
+  rm -f $ZIP_NAME
+  echo '解压完成'
+
+  # 如果有 package.json，安装生产依赖
+  if [ -f package.json ]; then
+    echo '安装依赖（sharp 等）...'
+    npm install --include=optional --production --no-save sharp 2>&1 | tail -5
+    echo '依赖安装完成'
+  fi
+"
+[ $? -ne 0 ] && log_error "服务器解压或依赖安装失败"
+log_success "解压和依赖安装完成"
+
+# ── 步骤 5: 重启 PM2 ─────────────────────────────
+log_step "步骤 5/5 · 重启 PM2 ($PM2_NAME)"
+ssh $SSH_OPTS $SSH_USER@$SSH_HOST "
+  if ! command -v pm2 &>/dev/null; then
+    echo '[WARN] pm2 未安装，请先在服务器执行: npm i -g pm2'
+    exit 0
+  fi
+  if pm2 list | grep -q '$PM2_NAME'; then
+    pm2 restart $PM2_NAME
+  else
+    echo '首次启动 $PM2_NAME...'
+    cd $REMOTE_PATH
+    PORT=3000 pm2 start server/index.mjs --name $PM2_NAME
+  fi
+  pm2 save
+"
+log_success "PM2 重启完成"
+
+# ── 清理本地 zip ──────────────────────────────────
+rm -f "$ZIP_NAME"
+
+END_TIME=$(date +%s)
+ELAPSED=$((END_TIME - START_TIME))
+
+echo ""
+echo -e "${BOLD}======================================${NC}"
+echo -e "${GREEN}${BOLD}  部署成功！✓${NC}"
+echo -e "  耗时: $((ELAPSED/60))m $((ELAPSED%60))s"
+echo -e "  访问: http://${SSH_HOST}:3000"
+echo -e "${BOLD}======================================${NC}"
+echo ""
