@@ -8,6 +8,7 @@ export default defineNitroPlugin(async () => {
     if (Number(cnt) > 0) return
 
     const config = useRuntimeConfig()
+    if (!config.adminPassword || config.adminPassword.length < 12) throw new Error('初始化管理员需要显式设置至少12位 ADMIN_PASSWORD')
     const id = generateId()
 
     await db.query(

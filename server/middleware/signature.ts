@@ -1,4 +1,5 @@
 import crypto from 'node:crypto'
+import { verifyRequestSignatureV2 } from '../utils/requestSignature'
 
 // 需要跳过签名的路径，例如后台管理接口、上传接口等
 export default defineEventHandler(async (event) => {
@@ -9,6 +10,10 @@ export default defineEventHandler(async (event) => {
     return
   }
 
+  const config = useRuntimeConfig()
+  if (await verifyRequestSignatureV2(event,'sdkapi',config.appApiSecret)) return
+  if (config.signatureV2Required) throw createError({ statusCode: 403, message: '请升级 App 请求签名至 v2' })
+  if (!config.appApiSecret) throw createError({ statusCode: 503, message: '签名密钥未配置' })
   // 获取请求头中的 timestamp 和 signature
   // App端请求头要求：
   // x-timestamp: 1680000000000 (毫秒)
@@ -33,7 +38,6 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 403, message: '请求时间戳过期或误差过大 (Request expired)' })
   }
 
-  const config = useRuntimeConfig()
   const secret = config.appApiSecret
 
   // 计算签名： md5(timestamp + secret)

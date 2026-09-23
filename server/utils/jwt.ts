@@ -2,7 +2,8 @@ import { SignJWT, jwtVerify } from 'jose'
 
 const getSecret = () => {
   const config = useRuntimeConfig()
-  return new TextEncoder().encode(config.jwtSecret || 'petpogo_default_secret')
+  if (!config.jwtSecret) throw createError({statusCode:503,message:'管理员签名密钥未配置'})
+  return new TextEncoder().encode(config.jwtSecret)
 }
 
 export interface JwtPayload {

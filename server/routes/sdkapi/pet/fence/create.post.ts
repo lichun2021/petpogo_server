@@ -4,6 +4,7 @@ export default defineEventHandler(async (event) => {
   const { deviceId, fenceName, radius, longitude, latitude, address } = await readBody(event)
   if (!deviceId || !longitude || !latitude) throw createError({ statusCode: 400, message: '缺少必要参数' })
 
+  await assertDeviceAccess(event,deviceId,true)
   const db = useDb()
   const [result]: any = await db.query(
     `INSERT INTO t_pet_fence(device_id,user_id,fence_name,radius,longitude,latitude,address,created_at)

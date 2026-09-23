@@ -14,6 +14,7 @@ export default defineEventHandler(async (event) => {
   if (!pet.device_id) return { code: null, reportedAt: null, clipCode: null }
 
   const deviceId = String(pet.device_id)
+  await assertDeviceAccess(event,deviceId)
   const redis = useRedis()
   const cached = await redis.get(RedisKey.petAction(deviceId))
 

@@ -19,6 +19,9 @@ export function useRedis(): Redis {
 }
 
 export const RedisKey = {
+  refreshProof: (hash: string) => `refresh_proof:${hash}`,
+  smsPassword: (phone: string) => `sms:password:${phone}`,
+  signatureNonce: (surface: string, keyId: string, nonce: string) => `nonce:v2:${surface}:${keyId}:${nonce}`,
   smsCode:        (phone: string)            => `sms:code:${phone}`,
   smsLock:        (phone: string)            => `sms:lock:${phone}`,
   session:        (userId: string)           => `session:${userId}`,

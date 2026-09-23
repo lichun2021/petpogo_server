@@ -28,6 +28,10 @@ const connection = {
       const value = { user: params[1], device: params[2], mac: params[3], nickname: params[4], type: params[5] }
       const existing = state.links.find(d => d.user === value.user && d.device === value.device)
       if (existing) Object.assign(existing, value); else state.links.push(value)
+    } else if (sql.startsWith('SELECT * FROM t_pet_model_assignment')) return [[{ default_model_id: '42', default_cat_model_id: '42', default_dog_model_id: '42', rules: [], breed_mappings: [] }]]
+    else if (sql.startsWith('SELECT * FROM t_pet_model')) return [[{ id: '42', name: '默认形象', glb_url: '/default.glb', enabled: 1 }]]
+    else if (sql.startsWith('UPDATE t_pet SET model_id=')) {
+      const p = state.pets.find(p => p.id === params[4]); Object.assign(p, { model: params[0], model_snapshot: JSON.parse(params[1]) })
     } else if (sql.startsWith('SELECT id FROM t_pet_model')) return [[{ id: '42' }]]
     else if (sql.startsWith('INSERT INTO t_pet(')) {
       if (!state.pets.some(p => p.id === params[0])) state.pets.push({ id: params[0], user_id: params[1], name: params[2], species: params[4], model: params[8], mood: 100 })

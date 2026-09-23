@@ -11,7 +11,7 @@ export function normalizePetSpecies(value: unknown): string {
 export async function getPetModelConfig(db: Db, lock = false) {
   const [[row]]: any = await db.query('SELECT * FROM t_pet_model_assignment WHERE id=1' + (lock ? ' FOR UPDATE' : ''))
   if (!row) throw createError({ statusCode: 503, message: '请先初始化形象分配配置' })
-  return { defaultModelId: row.default_model_id ? String(row.default_model_id) : '',
+  return { revision: Number(row.revision || 0), defaultModelId: row.default_model_id ? String(row.default_model_id) : '',
     defaultCatModelId: row.default_cat_model_id ? String(row.default_cat_model_id) : '',
     defaultDogModelId: row.default_dog_model_id ? String(row.default_dog_model_id) : '', rules: parsePetJson(row.rules), breedMappings: parsePetJson(row.breed_mappings), updatedAt: row.updated_at }
 }

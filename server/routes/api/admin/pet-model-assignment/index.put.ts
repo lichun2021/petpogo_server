@@ -24,11 +24,13 @@ export default defineEventHandler(async event => {
   const db = await useDb().getConnection()
   try {
     await db.beginTransaction()
-    await getPetModelConfig(db, true)
-    const [models]: any = await db.query('SELECT id,enabled,deleted FROM t_pet_model FOR UPDATE')
+    const current = await getPetModelConfig(db, true)
+    if (!Number.isSafeInteger(body.revision) || body.revision !== current.revision) throw createError({statusCode:409,message:'配置已变化，请刷新后再保存'})
+    const references = [...new Set([body.defaultModelId,body.defaultCatModelId,body.defaultDogModelId,...rules.filter((r:any)=>r.enabled).map((r:any)=>r.modelId)])]
+    const [models]: any = await db.query(`SELECT id,enabled,deleted FROM t_pet_model WHERE id IN (${references.map(()=>'?').join(',')}) FOR UPDATE`, references)
     const valid = (id: string) => models.some((m: any) => String(m.id) === id && m.enabled && !m.deleted)
     if (![body.defaultModelId, body.defaultCatModelId, body.defaultDogModelId].every(valid) || rules.some((r: any) => r.enabled && !valid(r.modelId))) throw createError({ statusCode: 400, message: '默认形象和启用规则必须选择有效的启用形象' })
-    await db.query('UPDATE t_pet_model_assignment SET default_model_id=?,default_cat_model_id=?,default_dog_model_id=?,rules=?,breed_mappings=? WHERE id=1', [body.defaultModelId, body.defaultCatModelId, body.defaultDogModelId, JSON.stringify(rules), JSON.stringify(breedMappings)])
+    await db.query('UPDATE t_pet_model_assignment SET revision=revision+1,default_model_id=?,default_cat_model_id=?,default_dog_model_id=?,rules=?,breed_mappings=? WHERE id=1', [body.defaultModelId, body.defaultCatModelId, body.defaultDogModelId, JSON.stringify(rules), JSON.stringify(breedMappings)])
     await db.commit()
     return { success: true }
   } catch (e) { await db.rollback(); throw e } finally { db.release() }

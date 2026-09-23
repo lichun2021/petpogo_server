@@ -74,7 +74,7 @@ export async function generateSlideCaptcha(): Promise<CaptchaResult> {
     console.warn('[captcha] 背景图目录不存在或读取失败，将生成纯色背景')
   }
 
-  let bgImage: sharp.Sharp
+  let bgImage: ReturnType<typeof sharp>
   if (bgFiles.length > 0) {
     const randomBg = bgFiles[Math.floor(Math.random() * bgFiles.length)]
     bgImage = sharp(path.join(BG_DIR, randomBg)).resize(IMAGE_WIDTH, IMAGE_HEIGHT, { fit: 'cover' })

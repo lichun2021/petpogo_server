@@ -6,6 +6,11 @@ export const PROXY_RESPONSE_LIMIT = 4 * 1024 * 1024
 // 在收包时限量，不等待无限 body 读完；rawBody 是 h3 支持的缓存入口。
 export async function readProxyBody(event: H3Event) {
   const req = event.node.req
+  const cached = (req as typeof req & { rawBody?: Buffer }).rawBody
+  if (Buffer.isBuffer(cached)) {
+    if (cached.length > PROXY_BODY_LIMIT) throw createError({ statusCode: 413, message: '请求体超过 128 KiB' })
+    return cached
+  }
   const rejectBody = () => {
     req.pause()
     setHeader(event, 'Connection', 'close')

@@ -1,13 +1,19 @@
 import assert from 'node:assert/strict'
-import { test } from 'node:test'
-import { matchPetModel } from '../server/utils/petModelAssignment.ts'
+import { test, before, after } from 'node:test'
+import { build } from 'esbuild'
+import { mkdtemp,rm } from 'node:fs/promises'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
+let matchPetModel,temp
+before(async()=>{temp=await mkdtemp(join(tmpdir(),'pet-match-'));await build({entryPoints:['server/utils/petModelAssignment.ts'],bundle:true,platform:'node',format:'cjs',outfile:join(temp,'match.cjs'),logLevel:'silent'});matchPetModel=(await import(join(temp,'match.cjs'))).default.matchPetModel})
+after(async()=>rm(temp,{recursive:true,force:true}))
 const models = [
   { id: '1234647089750028288', name: '保底', glb_url: '/default.glb', enabled: 1 },
   { id: '2', name: '布偶', glb_url: '/ragdoll.glb', enabled: 1 },
   { id: '3', name: '停用', glb_url: '/off.glb', enabled: 0 },
 ]
 const rule = (changes = {}) => ({ id: '10', name: '布偶规则', modelId: '2', species: 'cat', breeds: ['布偶', 'ragdoll'], gender: null, priority: 100, enabled: 1, ...changes })
-const config = (rules = [rule()]) => ({ defaultModelId: models[0].id, breedMappings: [{ breed: '布偶', species: 'cat' }, { breed: 'ragdoll', species: 'cat' }], rules })
+const config = (rules = [rule()]) => ({ defaultModelId: models[0].id, defaultCatModelId: models[0].id, defaultDogModelId: models[0].id, breedMappings: [{ breed: '布偶', species: 'cat' }, { breed: 'ragdoll', species: 'cat' }], rules })
 test('品种映射、别名、大小写空格、未知性别均按同一规则匹配', () => {
   for (const breed of ['布偶', ' Ragdoll ']) {
     const result = matchPetModel(config(), models, { breed })

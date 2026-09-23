@@ -1,4 +1,4 @@
-import crypto from 'node:crypto'
+
 
 // 密码登录
 export default defineEventHandler(async (event) => {
@@ -18,7 +18,7 @@ export default defineEventHandler(async (event) => {
   const db = useDb()
 
   const [rows]: any = await db.query(
-    'SELECT id, phone, nickname, avatar, password, status, plan_type, plan_expire_at FROM t_user WHERE phone=? AND deleted=0 LIMIT 1',
+    'SELECT id, phone, nickname, avatar, password, credential_version, status, plan_type, plan_expire_at FROM t_user WHERE phone=? AND deleted=0 LIMIT 1',
     [normalizedPhone]
   )
   const user = rows[0]
@@ -30,15 +30,14 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 403, message: '账号已被禁用' })
   }
 
-  const passwordHash = crypto.createHash('md5').update(password).digest('hex')
-
-  // 若账号从未设置密码（password 为空/null），视同初始密码 md5(123456)
-  const DEFAULT_PWD = 'e10adc3949ba59abbe56e057f20f883e'
-  const storedPwd = (user.password && user.password.length > 0) ? user.password : DEFAULT_PWD
-
-  if (storedPwd !== passwordHash) {
+  if (needsPasswordSetup(user.password)) throw createError({ statusCode: 403, message: '请使用短信登录并设置个人密码', data: { code: 'PASSWORD_SETUP_REQUIRED' } })
+  if (!await verifyUserPassword(password, user.password)) {
     await recordLoginFailure(rateKey)
     throw createError({ statusCode: 400, message: '密码错误' })
+  }
+  if (!user.password.startsWith('scrypt:')) {
+    const upgraded = await hashUserPassword(password)
+    await db.query('UPDATE t_user SET password=? WHERE id=? AND password=?', [upgraded, String(user.id), user.password])
   }
 
   await clearLoginFailures(rateKey)
@@ -53,8 +52,9 @@ export default defineEventHandler(async (event) => {
 
   // ── 写入 Redis Session ────────────────────────────────────────
   const sessionKey = tokenSessionKey(peerInfo.ipet_token)
-  await redis.setex(sessionKey, tokenTtl, JSON.stringify({ userId, phone }))
+  await redis.setex(sessionKey, tokenTtl, JSON.stringify({ userId, phone: normalizedPhone, credentialVersion: Number(user.credential_version || 0) }))
 
+  if (peerInfo.refresh_token) await redis.setex(RedisKey.refreshProof(tokenSessionKey(peerInfo.refresh_token)), 30 * 86400, JSON.stringify({ userId, credentialVersion: Number(user.credential_version || 0) }))
   // ── 腾讯 IM ──────────────────────────────────────────────────
   const sigKey = RedisKey.imUserSig(userId)
   let userSig = await redis.get(sigKey)

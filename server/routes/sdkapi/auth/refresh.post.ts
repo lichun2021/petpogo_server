@@ -17,6 +17,12 @@ export default defineEventHandler(async (event) => {
 
   const redis = useRedis()
 
+  const proofKey = RedisKey.refreshProof(tokenSessionKey(String(refreshToken)))
+  const rawProof = await redis.get(proofKey)
+  if (!rawProof) throw createError({ statusCode: 401, message: '请重新登录' })
+  const proof = JSON.parse(rawProof)
+  const [[current]]: any = await useDb().query('SELECT credential_version,status FROM t_user WHERE id=? AND deleted=0', [proof.userId])
+  if (!current || current.status === 2 || Number(current.credential_version || 0) !== Number(proof.credentialVersion || 0)) throw createError({ statusCode: 401, message: '登录凭证已失效' })
   // ── 同步调用对方后台换新 Token ────────────────────────────────
   // 对方返回完整的登录信息（含新 ipet_token + 新 refresh_token + 新 AWS 凭证）
   const peerInfo = await peerRefreshToken(refreshToken)
@@ -27,18 +33,23 @@ export default defineEventHandler(async (event) => {
   const phone = peerInfo.account
   const db = useDb()
   const [[user]]: any = await db.query(
-    'SELECT id FROM t_user WHERE phone=? AND deleted=0 LIMIT 1',
+    'SELECT id,credential_version,status FROM t_user WHERE phone=? AND deleted=0 LIMIT 1',
     [phone]
   )
   if (!user) {
     throw createError({ statusCode: 404, message: '账号不存在' })
   }
   const userId = String(user.id)
+  if (userId !== proof.userId || user.status === 2 || Number(user.credential_version || 0) !== Number(proof.credentialVersion || 0)) throw createError({ statusCode: 401, message: '登录凭证已失效' })
 
   // ── 写入新的 Redis Session ────────────────────────────────────
   const newSessionKey = tokenSessionKey(peerInfo.ipet_token)
-  await redis.setex(newSessionKey, tokenTtl, JSON.stringify({ userId, phone }))
+  await redis.setex(newSessionKey, tokenTtl, JSON.stringify({ userId, phone, credentialVersion: Number(user.credential_version || 0) }))
 
+  if (peerInfo.refresh_token) {
+    await redis.setex(RedisKey.refreshProof(tokenSessionKey(peerInfo.refresh_token)), 30 * 86400, JSON.stringify(proof))
+    if (peerInfo.refresh_token !== refreshToken) await redis.del(proofKey)
+  }
   return {
     // 返回新 token，前端替换本地存储
     token: peerInfo.ipet_token,

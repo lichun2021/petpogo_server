@@ -70,7 +70,7 @@
 defineOptions({ name: 'AdminPetModelAssignment' })
 definePageMeta({ layout: 'admin' })
 const toast = useToast()
-const config = reactive<any>({ defaultModelId: '', defaultCatModelId: '', defaultDogModelId: '', rules: [], breedMappings: [] })
+const config = reactive<any>({ revision: 0, defaultModelId: '', defaultCatModelId: '', defaultDogModelId: '', rules: [], breedMappings: [] })
 const models = ref<any[]>([])
 const available = computed(() => models.value.filter(m => m.enabled))
 const loading = ref(true), saving = ref(false), previewing = ref(false), loadError = ref(''), saved = ref('')
@@ -84,7 +84,7 @@ async function load() {
   loadError.value = ''
   try {
     const [c, m] = await Promise.all([$fetch<any>('/api/admin/pet-model-assignment'), $fetch<any>('/api/admin/pet-models/list')])
-    Object.assign(config, { defaultModelId: c.defaultModelId, defaultCatModelId: c.defaultCatModelId, defaultDogModelId: c.defaultDogModelId, rules: c.rules.map((r: any) => ({ ...r, breedText: r.breeds.join('，') })), breedMappings: c.breedMappings })
+    Object.assign(config, { revision: c.revision, defaultModelId: c.defaultModelId, defaultCatModelId: c.defaultCatModelId, defaultDogModelId: c.defaultDogModelId, rules: c.rules.map((r: any) => ({ ...r, breedText: r.breeds.join('，') })), breedMappings: c.breedMappings })
     models.value = m.list
     saved.value = JSON.stringify(config)
   } catch (e) { loadError.value = error(e) } finally { loading.value = false }

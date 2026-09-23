@@ -12,8 +12,9 @@ const OpenApiConfig = (OpenApiPkg as any).Config
 
 // 发送短信验证码 (阿里云 SMS)
 export default defineEventHandler(async (event) => {
-  const { phone, nationNum = '86' } = await readBody(event)
+  const { phone, nationNum = '86', purpose = 'login' } = await readBody(event)
 
+  if (!['login', 'password_reset'].includes(purpose)) throw createError({ statusCode: 400, message: '验证码用途无效' })
   // 规范化区号（去掉可能带的 +）
   const dialCode = String(nationNum).replace(/^\+/, '')
   const isChinese = dialCode === '86'
@@ -64,7 +65,7 @@ export default defineEventHandler(async (event) => {
 
   // 开发模式或网关关闭时跳过短信；验证码仅在开发响应中返回，不写日志。
   if (process.env.NODE_ENV !== 'production' || !smsEnabled) {
-    await redis.setex(RedisKey.smsCode(normalizedPhone), codeExpireSec, JSON.stringify({ code, attempts: 0 }))
+    await redis.setex((purpose === 'password_reset' ? RedisKey.smsPassword(normalizedPhone) : RedisKey.smsCode(normalizedPhone)), codeExpireSec, JSON.stringify({ code, attempts: 0 }))
     await redis.setex(lockKey, 60, '1')
     return { success: true, ...(process.env.NODE_ENV !== 'production' ? { dev_code: code } : {}) }
   }
@@ -102,7 +103,7 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 500, message: '短信发送失败，请稍后重试' })
   }
 
-  await redis.setex(RedisKey.smsCode(normalizedPhone), codeExpireSec, JSON.stringify({ code, attempts: 0 }))
+  await redis.setex((purpose === 'password_reset' ? RedisKey.smsPassword(normalizedPhone) : RedisKey.smsCode(normalizedPhone)), codeExpireSec, JSON.stringify({ code, attempts: 0 }))
   await redis.setex(lockKey, 60, '1')
 
   // 每日计数 +1

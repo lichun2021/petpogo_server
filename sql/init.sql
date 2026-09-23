@@ -11,7 +11,8 @@ USE petpogo;
 CREATE TABLE IF NOT EXISTS t_user (
   id                 BIGINT       PRIMARY KEY COMMENT 'SnowflakeID',
   phone              VARCHAR(20)  UNIQUE NOT NULL,
-  password           VARCHAR(100) COMMENT 'Login password, hashed',
+  password           VARCHAR(255) COMMENT 'Login password, hashed',
+  credential_version INT UNSIGNED NOT NULL DEFAULT 0,
   nickname           VARCHAR(50),
   avatar             VARCHAR(500),
   gender             TINYINT      DEFAULT 0   COMMENT '0未知 1男 2女',
@@ -583,11 +584,14 @@ CREATE TABLE IF NOT EXISTS t_sound_user (
 ) ENGINE=InnoDB COMMENT='用户自定义声音表';
 
 -- 为预设声音表增加宠物类型字段（历史迁移）
-ALTER TABLE t_sound_preset ADD COLUMN IF NOT EXISTS pet_type VARCHAR(10) NOT NULL DEFAULT 'cat' COMMENT '宠物类型: cat/dog' AFTER emotion;
-ALTER TABLE t_sound_preset ADD INDEX IF NOT EXISTS idx_pet_type (pet_type);
+SET @init_ddl=IF(EXISTS(SELECT 1 FROM information_schema.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='t_sound_preset' AND COLUMN_NAME='pet_type'),'SELECT 1','ALTER TABLE t_sound_preset ADD COLUMN pet_type VARCHAR(10) NOT NULL DEFAULT ''cat'' COMMENT ''宠物类型: cat/dog'' AFTER emotion');
+PREPARE init_stmt FROM @init_ddl; EXECUTE init_stmt; DEALLOCATE PREPARE init_stmt;
+SET @init_ddl=IF(EXISTS(SELECT 1 FROM information_schema.STATISTICS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='t_sound_preset' AND INDEX_NAME='idx_pet_type'),'SELECT 1','ALTER TABLE t_sound_preset ADD INDEX idx_pet_type (pet_type)');
+PREPARE init_stmt FROM @init_ddl; EXECUTE init_stmt; DEALLOCATE PREPARE init_stmt;
 
 -- 同一物种下情绪标签唯一（一个物种只能有一个 happy）
-ALTER TABLE t_sound_preset ADD UNIQUE INDEX IF NOT EXISTS uk_pet_emotion (pet_type, emotion);
+SET @init_ddl=IF(EXISTS(SELECT 1 FROM information_schema.STATISTICS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='t_sound_preset' AND INDEX_NAME='uk_pet_emotion'),'SELECT 1','ALTER TABLE t_sound_preset ADD UNIQUE INDEX uk_pet_emotion (pet_type, emotion)');
+PREPARE init_stmt FROM @init_ddl; EXECUTE init_stmt; DEALLOCATE PREPARE init_stmt;
 
 -- ===========================
 -- 管理后台账号模块
@@ -802,20 +806,26 @@ CREATE TABLE IF NOT EXISTS t_checkin_claim_log (
   claimed_at  DATETIME DEFAULT CURRENT_TIMESTAMP,
   UNIQUE KEY uk_user_rule_period (user_id, rule_id, period_key)
 ) ENGINE=InnoDB COMMENT='签到奖励领取记录表';
-) ENGINE=InnoDB COMMENT='签到奖励领取记录表';
 
 -- ===========================
 -- 电子宠物模块（养成属性 / 资源库 / 互动 / 硬件动作 / 统一事件日志）
 -- ===========================
 
 -- t_pet 增加养成属性与形象/背景引用字段
-ALTER TABLE t_pet ADD COLUMN IF NOT EXISTS satiety INT NOT NULL DEFAULT 100 COMMENT '饱腹度 0-100';
-ALTER TABLE t_pet ADD COLUMN IF NOT EXISTS mood INT NOT NULL DEFAULT 100 COMMENT '心情值 0-100';
-ALTER TABLE t_pet ADD COLUMN IF NOT EXISTS cleanliness INT NOT NULL DEFAULT 100 COMMENT '清洁度 0-100';
-ALTER TABLE t_pet ADD COLUMN IF NOT EXISTS background_id BIGINT NULL COMMENT '当前背景，引用 t_pet_background.id';
-ALTER TABLE t_pet ADD COLUMN IF NOT EXISTS model_id BIGINT NULL COMMENT '当前形象，引用 t_pet_model.id';
-ALTER TABLE t_pet ADD COLUMN IF NOT EXISTS stats_updated_at DATETIME NULL COMMENT '养成属性最后一次写入/衰减基准时间';
-ALTER TABLE t_pet ADD COLUMN IF NOT EXISTS updated_at DATETIME NULL ON UPDATE CURRENT_TIMESTAMP COMMENT '最后更新时间';
+SET @init_ddl=IF(EXISTS(SELECT 1 FROM information_schema.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='t_pet' AND COLUMN_NAME='satiety'),'SELECT 1','ALTER TABLE t_pet ADD COLUMN satiety INT NOT NULL DEFAULT 100 COMMENT ''饱腹度 0-100''');
+PREPARE init_stmt FROM @init_ddl; EXECUTE init_stmt; DEALLOCATE PREPARE init_stmt;
+SET @init_ddl=IF(EXISTS(SELECT 1 FROM information_schema.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='t_pet' AND COLUMN_NAME='mood'),'SELECT 1','ALTER TABLE t_pet ADD COLUMN mood INT NOT NULL DEFAULT 100 COMMENT ''心情值 0-100''');
+PREPARE init_stmt FROM @init_ddl; EXECUTE init_stmt; DEALLOCATE PREPARE init_stmt;
+SET @init_ddl=IF(EXISTS(SELECT 1 FROM information_schema.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='t_pet' AND COLUMN_NAME='cleanliness'),'SELECT 1','ALTER TABLE t_pet ADD COLUMN cleanliness INT NOT NULL DEFAULT 100 COMMENT ''清洁度 0-100''');
+PREPARE init_stmt FROM @init_ddl; EXECUTE init_stmt; DEALLOCATE PREPARE init_stmt;
+SET @init_ddl=IF(EXISTS(SELECT 1 FROM information_schema.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='t_pet' AND COLUMN_NAME='background_id'),'SELECT 1','ALTER TABLE t_pet ADD COLUMN background_id BIGINT NULL COMMENT ''当前背景，引用 t_pet_background.id''');
+PREPARE init_stmt FROM @init_ddl; EXECUTE init_stmt; DEALLOCATE PREPARE init_stmt;
+SET @init_ddl=IF(EXISTS(SELECT 1 FROM information_schema.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='t_pet' AND COLUMN_NAME='model_id'),'SELECT 1','ALTER TABLE t_pet ADD COLUMN model_id BIGINT NULL COMMENT ''当前形象，引用 t_pet_model.id''');
+PREPARE init_stmt FROM @init_ddl; EXECUTE init_stmt; DEALLOCATE PREPARE init_stmt;
+SET @init_ddl=IF(EXISTS(SELECT 1 FROM information_schema.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='t_pet' AND COLUMN_NAME='stats_updated_at'),'SELECT 1','ALTER TABLE t_pet ADD COLUMN stats_updated_at DATETIME NULL COMMENT ''养成属性最后一次写入/衰减基准时间''');
+PREPARE init_stmt FROM @init_ddl; EXECUTE init_stmt; DEALLOCATE PREPARE init_stmt;
+SET @init_ddl=IF(EXISTS(SELECT 1 FROM information_schema.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='t_pet' AND COLUMN_NAME='updated_at'),'SELECT 1','ALTER TABLE t_pet ADD COLUMN updated_at DATETIME NULL ON UPDATE CURRENT_TIMESTAMP COMMENT ''最后更新时间''');
+PREPARE init_stmt FROM @init_ddl; EXECUTE init_stmt; DEALLOCATE PREPARE init_stmt;
 
 -- GLB 动作标识库：动作是内嵌在各宠物形象 GLB 模型里的动画片段（clip），所有形象通用同一套命名，
 -- 因此本表只登记"动作标识码"，不上传任何文件；互动类型 / 硬件动作码引用它决定用哪个片段名播放动画
@@ -932,6 +942,7 @@ CREATE TABLE IF NOT EXISTS t_pet_event (
 -- 形象分配配置：单行配置，规则整体原子保存。
 CREATE TABLE IF NOT EXISTS t_pet_model_assignment (
   id TINYINT PRIMARY KEY,
+  revision INT UNSIGNED NOT NULL DEFAULT 0,
   default_model_id BIGINT NULL COMMENT '未知类型保底',
   default_cat_model_id BIGINT NULL COMMENT '默认猫形象',
   default_dog_model_id BIGINT NULL COMMENT '默认狗形象',
@@ -940,3 +951,12 @@ CREATE TABLE IF NOT EXISTS t_pet_model_assignment (
   updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 ) ENGINE=InnoDB COMMENT='宠物形象分配规则';
 INSERT IGNORE INTO t_pet_model_assignment(id, rules, breed_mappings) VALUES(1, JSON_ARRAY(), JSON_ARRAY());
+
+CREATE TABLE IF NOT EXISTS t_points_operation (
+ id BIGINT PRIMARY KEY AUTO_INCREMENT,
+ source VARCHAR(40) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ event_id VARCHAR(100) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ user_id BIGINT NOT NULL,request_hash CHAR(64) NOT NULL,amount INT NULL,rule_snapshot JSON NULL,result JSON NULL,
+ created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+ UNIQUE KEY uk_source_event(source,event_id),INDEX idx_user(user_id)
+) ENGINE=InnoDB;

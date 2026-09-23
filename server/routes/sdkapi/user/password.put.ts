@@ -1,35 +1,22 @@
-import crypto from 'node:crypto'
-
-export default defineEventHandler(async (event) => {
+export default defineEventHandler(async event => {
   const user = await requireAuth(event)
-  const { oldPassword, newPassword } = await readBody(event)
-
-  if (!oldPassword || !newPassword) {
-    throw createError({ statusCode: 400, message: '旧密码和新密码不能为空' })
+  const { oldPassword, newPassword, code } = await readBody(event)
+  validateUserPassword(newPassword)
+  const [[current]]: any = await useDb().query('SELECT password,phone,credential_version FROM t_user WHERE id=? AND deleted=0', [user.userId])
+  if (!current) throw createError({ statusCode: 404, message: '用户不存在' })
+  if (code !== undefined) {
+    if (typeof code !== 'string' || !/^\d{6}$/.test(code)) throw createError({ statusCode: 400, message: '验证码格式无效' })
+    // 验证、次数递增、成功消费均原子执行；只能使用 password_reset 用途验证码。
+    const ok = await useRedis().eval(`local raw=redis.call('GET',KEYS[1]); if not raw then return 0 end
+      local d=cjson.decode(raw); if tonumber(d.attempts or 0)>=5 then redis.call('DEL',KEYS[1]); return 0 end
+      if d.code==ARGV[1] then redis.call('DEL',KEYS[1]); return 1 end
+      d.attempts=tonumber(d.attempts or 0)+1; local ttl=redis.call('TTL',KEYS[1]); if ttl>0 then redis.call('SET',KEYS[1],cjson.encode(d),'EX',ttl) end; return 0`, 1, RedisKey.smsPassword(current.phone), code)
+    if (Number(ok) !== 1) throw createError({ statusCode: 400, message: '验证码错误或已过期' })
+  } else if (!await verifyUserPassword(oldPassword, current.password)) {
+    throw createError({ statusCode: 400, message: '旧密码错误或尚未设置，请使用短信验证设置密码' })
   }
-  if (newPassword.length < 6) {
-    throw createError({ statusCode: 400, message: '新密码不能少于6位' })
-  }
-
-  const db = useDb()
-  const [rows]: any = await db.query(
-    'SELECT password FROM t_user WHERE id=? AND deleted=0 LIMIT 1',
-    [user.userId]
-  )
-  const currentUser = rows[0]
-  if (!currentUser) {
-    throw createError({ statusCode: 404, message: '用户不存在' })
-  }
-
-  // 校验旧密码
-  const oldPasswordHash = crypto.createHash('md5').update(oldPassword).digest('hex')
-  if (currentUser.password && currentUser.password !== oldPasswordHash) {
-    throw createError({ statusCode: 400, message: '旧密码错误' })
-  }
-
-  // 更新本后台密码（对方后台密码固定为 12345678，无需同步）
-  const newPasswordHash = crypto.createHash('md5').update(newPassword).digest('hex')
-  await db.query('UPDATE t_user SET password=? WHERE id=?', [newPasswordHash, user.userId])
-
-  return { success: true }
+  const hash = await hashUserPassword(newPassword)
+  const [result]: any = await useDb().query('UPDATE t_user SET password=?,credential_version=credential_version+1 WHERE id=? AND credential_version=?', [hash, user.userId, Number(current.credential_version || 0)])
+  if (result.affectedRows !== 1) throw createError({ statusCode: 409, message: '凭证已更新，请重新验证' })
+  return { success: true, reLoginRequired: true }
 })

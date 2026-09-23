@@ -6,7 +6,8 @@ export default defineNuxtPlugin(() => {
   const wrapped = $fetch.create({
     onRequest({ request, options }) {
       const url = typeof request === 'string' ? request : request.url
-      if (!url.includes('/api/admin/')) return
+      const target = new URL(url, window.location.origin)
+      if (target.origin !== window.location.origin || !target.pathname.startsWith('/api/admin/')) return
       if (url.includes('/api/admin/login') || url.includes('/api/admin/captcha')) return
 
       const token = localStorage.getItem('admin_token')
@@ -22,7 +23,9 @@ export default defineNuxtPlugin(() => {
       if (response.status !== 401) return
 
       const url = typeof request === 'string' ? request : request.url
-      if (url.includes('/api/admin/login')) return // 登录失败本身也是 401，不应触发跳转
+      const target = new URL(url, window.location.origin)
+      if (target.origin !== window.location.origin || !target.pathname.startsWith('/api/admin/')) return
+      if (target.pathname === '/api/admin/login') return // 登录失败本身也是 401，不应触发跳转
 
       localStorage.removeItem('admin_token')
       localStorage.removeItem('admin_id')

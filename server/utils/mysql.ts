@@ -24,6 +24,11 @@ export function useDb(): mysql.Pool {
       // DATE/DATETIME 列以字符串返回，避免 mysql2 将其转成 JS Date 对象产生时区偏移
       dateStrings:       true,
     })
+    _pool.on('connection', (connection) => {
+      // mysql2 PromisePool 转发的是底层回调连接事件。
+      const raw = connection as unknown as import('mysql2').PoolConnection
+      raw.query("SET time_zone='+08:00'", (error) => { if (error) raw.destroy() })
+    })
   }
   return _pool
 }

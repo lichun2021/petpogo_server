@@ -15,6 +15,7 @@ let requests = [], responseBody = '{"code":0,"info":{}}', responseStatus = 200, 
 let banned = false
 let accountResponses = {}
 let sessionWrites = []
+let loginHash
 let syncConnection
 const nonces = new Set()
 const config = { peerBackendUrl: '', peerBackendTimeoutMs: 20000, peerBackendMerchantId: 1, appApiSecret: 'local-test-secret', signatureNonceRequired: true }
@@ -24,7 +25,7 @@ const close = server => new Promise(resolve => { if (!server) return resolve(); 
 before(async () => {
   temp = await mkdtemp(join(tmpdir(), 'petpogo-peer-test-'))
   const output = join(temp, 'peer.cjs')
-  await build({ stdin: { contents: `export * from './server/integrations/peer/handler.ts'; export * from './server/integrations/peer/endpoints.ts'; export * from './server/utils/peerBackend.ts'; export { default as signature } from './server/middleware/signature.ts'; export { default as loginPwd } from './server/routes/sdkapi/auth/login-pwd.post.ts';`, resolveDir: process.cwd(), loader: 'ts' }, bundle: true, platform: 'node', format: 'cjs', outfile: output, logLevel: 'silent' })
+  await build({ stdin: { contents: `export * from './server/integrations/peer/handler.ts'; export * from './server/integrations/peer/endpoints.ts'; export * from './server/utils/peerBackend.ts'; export * from './server/utils/userPassword.ts'; export { default as signature } from './server/middleware/signature.ts'; export { default as loginPwd } from './server/routes/sdkapi/auth/login-pwd.post.ts';`, resolveDir: process.cwd(), loader: 'ts' }, bundle: true, platform: 'node', format: 'cjs', outfile: output, logLevel: 'silent' })
   Object.assign(globalThis, {
     useRuntimeConfig: () => config,
     readBody: h3.readBody, getHeader: h3.getHeader, createError: h3.createError, defineEventHandler: h3.defineEventHandler,
@@ -37,9 +38,11 @@ before(async () => {
       expire: async () => 1,
       setex: async (...args) => { sessionWrites.push(args) },
     }),
-    useDb: () => ({ query: async () => [[{ id: '123', phone: '13800138000', password: null, status: banned ? 2 : 1 }]], getConnection: async () => { if (!syncConnection) throw new Error('local database unavailable'); return syncConnection } }),
+    useDb: () => ({ query: async () => [[{ id: '123', phone: '13800138000', password: loginHash, status: banned ? 2 : 1 }]], getConnection: async () => { if (!syncConnection) throw new Error('local database unavailable'); return syncConnection } }),
   })
   modules = (await import(pathToFileURL(output))).default
+  loginHash = await modules.hashUserPassword('Individual!2026')
+  for (const name of ['needsPasswordSetup','verifyUserPassword','hashUserPassword']) globalThis[name] = modules[name]
   for (const key of ['peerEnsureRegistered', 'peerLogin', 'tokenSessionKey', 'getPeerPublicUrl']) globalThis[key] = modules[key]
   upstream = createServer(async (req, res) => {
     let body = ''
@@ -176,7 +179,7 @@ async function loginPwd() {
       'Content-Type': 'application/json', 'x-timestamp': ts,
       'x-signature': crypto.createHash('md5').update(ts + config.appApiSecret).digest('hex'),
       'x-nonce': crypto.randomUUID(),
-    }, body: JSON.stringify({ phone: '13800138000', password: '123456' }),
+    }, body: JSON.stringify({ phone: '13800138000', password: 'Individual!2026' }),
   })
 }
 

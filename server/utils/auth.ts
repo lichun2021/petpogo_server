@@ -4,6 +4,7 @@ import { tokenSessionKey } from './peerBackend'
 export interface SessionUser {
   userId: string
   phone: string
+  credentialVersion?: number
   role?: string
 }
 
@@ -49,7 +50,7 @@ export async function requireAuth(event: H3Event): Promise<SessionUser> {
   // 校验用户是否存在且未被封号（本后台 DB 二次校验）
   const db = useDb()
   const [[dbUser]]: any = await db.query(
-    'SELECT id, status FROM t_user WHERE id=? AND deleted=0 LIMIT 1',
+    'SELECT id, status, credential_version FROM t_user WHERE id=? AND deleted=0 LIMIT 1',
     [user.userId]
   )
 
@@ -59,6 +60,8 @@ export async function requireAuth(event: H3Event): Promise<SessionUser> {
   if (dbUser.status === 2) {
     throw createError({ statusCode: 403, message: '账号已被封禁，无法执行此操作' })
   }
+
+  if (Number(user.credentialVersion || 0) !== Number(dbUser.credential_version || 0)) throw createError({ statusCode: 401, message: '登录凭证已失效，请重新登录' })
 
   // 用 DB 中的精确 ID 覆盖（防止 Snowflake ID 精度问题）
   const accurateUser: SessionUser = { ...user, userId: String(dbUser.id) }

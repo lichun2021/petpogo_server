@@ -7,8 +7,9 @@
 //   x-signature:  md5(apiKey + timestamp + apiSecret)
 
 import crypto from 'node:crypto'
+import { verifyRequestSignatureV2 } from '../utils/requestSignature'
 
-export default defineEventHandler((event) => {
+export default defineEventHandler(async (event) => {
   const path = event.path.split('?')[0]
   if (!path.startsWith('/openapi/')) return
 
@@ -16,7 +17,6 @@ export default defineEventHandler((event) => {
   const timestamp = getHeader(event, 'x-timestamp') || ''
   const signature = getHeader(event, 'x-signature') || ''
 
-  console.log(`[OpenAPI] ${event.method} ${path} | key=${apiKey || '(empty)'} ts=${timestamp || '(empty)'} sig=${signature ? signature.substring(0, 8) + '...' : '(empty)'}`)
 
   if (!apiKey || !timestamp || !signature) {
     throw createError({
@@ -32,6 +32,9 @@ export default defineEventHandler((event) => {
     throw createError({ statusCode: 403, message: 'API Key 无效' })
   }
 
+  if (!config.openapiSecret) throw createError({statusCode:503,message:'OpenAPI 密钥未配置'})
+  if (await verifyRequestSignatureV2(event,'openapi',config.openapiSecret)) return
+  if (config.openapiSignatureV2Required) throw createError({statusCode:403,message:'请升级 OpenAPI 签名至 v2'})
   // 校验时间戳（5 分钟内有效，防重放）
   const ts = parseInt(timestamp, 10)
   if (isNaN(ts) || Math.abs(Date.now() - ts) > 5 * 60 * 1000) {

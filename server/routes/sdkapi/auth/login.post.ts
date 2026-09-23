@@ -37,7 +37,7 @@ export default defineEventHandler(async (event) => {
 
   // 查询用户（用规范化手机号）
   const [rows]: any = await db.query(
-    'SELECT id, phone, nickname, avatar, status, plan_type, plan_expire_at FROM t_user WHERE phone=? AND deleted=0 LIMIT 1',
+    'SELECT id, phone, nickname, avatar, credential_version, status, plan_type, plan_expire_at FROM t_user WHERE phone=? AND deleted=0 LIMIT 1',
     [normalizedPhone]
   )
   let user = rows[0]
@@ -54,7 +54,8 @@ export default defineEventHandler(async (event) => {
     isNewUser = true
     const id = generateId()
     const nickname = `宠友${normalizedPhone.slice(-4)}`
-    const defaultPassword = 'e10adc3949ba59abbe56e057f20f883e' // md5(123456)
+    // 新账号保留业务约定的初始密码；每个账号使用独立盐，不存明文或 MD5。
+    const defaultPassword = await hashUserPassword('123456')
 
     await db.query(
       'INSERT INTO t_user(id, phone, password, nickname, status, plan_type, created_at) VALUES(?,?,?,?,1,0,NOW())',
@@ -79,8 +80,9 @@ export default defineEventHandler(async (event) => {
   // ── 将 ipet_token → 用户信息的映射写入 Redis ─────────────────
   // 前端用此 token 访问本后台时，通过 Redis 反查 userId
   const sessionKey = tokenSessionKey(peerInfo.ipet_token)
-  await redis.setex(sessionKey, tokenTtl, JSON.stringify({ userId, phone }))
+  await redis.setex(sessionKey, tokenTtl, JSON.stringify({ userId, phone: normalizedPhone, credentialVersion: Number(user.credential_version || 0) }))
 
+  if (peerInfo.refresh_token) await redis.setex(RedisKey.refreshProof(tokenSessionKey(peerInfo.refresh_token)), 30 * 86400, JSON.stringify({ userId, credentialVersion: Number(user.credential_version || 0) }))
   // ── 腾讯 IM UserSig（异步，不阻塞主流程）────────────────────────
   const sigKey = RedisKey.imUserSig(userId)
   let userSig = await redis.get(sigKey)

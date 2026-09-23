@@ -7,6 +7,7 @@ export default defineEventHandler(async (event) => {
   const { name, avatar, species, breed, gender, birthday, weight, bio, deviceId, backgroundId, modelId } = await readBody(event)
   if (!name) throw createError({ statusCode: 400, message: '宠物名称不能为空' })
 
+  if (deviceId !== undefined && deviceId !== null) await assertDeviceAccess(event,deviceId,true)
   const db = await useDb().getConnection()
   try {
     await db.beginTransaction()
@@ -28,9 +29,9 @@ export default defineEventHandler(async (event) => {
 
     await db.query(
       `UPDATE t_pet
-          SET name=?, avatar=?, species=?, breed=?, gender=?, birthday=?, weight=?, bio=?, device_id=?, background_id=?, updated_at=NOW()
+          SET name=?, avatar=?, species=?, breed=?, gender=?, birthday=?, weight=?, bio=?, device_id=CASE WHEN ? THEN ? ELSE device_id END, background_id=CASE WHEN ? THEN ? ELSE background_id END, updated_at=NOW()
         WHERE id=? AND user_id=?`,
-      [name, avatar || null, species || null, breed || null, gender ?? 0, birthday || null, weight || null, bio || null, deviceId || null, backgroundId || null, id, user.userId]
+      [name, avatar || null, species || null, breed || null, gender ?? 0, birthday || null, weight || null, bio || null, deviceId !== undefined, deviceId || null, backgroundId !== undefined, backgroundId || null, id, user.userId]
     )
     await db.commit()
     return { success: true }

@@ -65,12 +65,10 @@ export default defineEventHandler(async (event) => {
   }
   const query = getQuery(event)
   if (query.token !== callbackToken) {
-    console.warn(`[MPS] 回调鉴权失败 token=${(query.token as string)?.substring(0, 6) ?? '(empty)'}...`)
     throw createError({ statusCode: 403, message: '回调鉴权失败' })
   }
 
   const raw = await readBody(event)
-  console.log('[MPS Raw]', JSON.stringify(raw))
 
   // 1. 解包 MNS Message 字段（JSON 字符串）
   let msg: any = {}

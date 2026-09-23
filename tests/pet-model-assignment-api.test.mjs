@@ -14,7 +14,7 @@ const connection = {
   async query(sql, params = []) {
     queries.push({ sql, params })
     assert.equal((sql.match(/\?/g) || []).length, params.length)
-    if (sql.startsWith('SELECT * FROM t_pet_model_assignment')) return [[{ default_model_id: '2', rules: [], breed_mappings: [] }]]
+    if (sql.startsWith('SELECT * FROM t_pet_model_assignment')) return [[{ default_model_id: '2', default_cat_model_id: '2', default_dog_model_id: '2', revision: 0, rules: [], breed_mappings: [] }]]
     if (sql.startsWith('SELECT') && sql.includes('FROM t_pet_model')) return [[model]]
     if (sql.startsWith('SELECT') && sql.includes('FROM t_pet')) return [[{ id: '2' }]]
     return [{ affectedRows: 1 }]
@@ -69,16 +69,22 @@ test('后台重新匹配和手动指定与资料同事务提交', async () => {
 test('配置拒绝无效优先级、重复 ID、重复品种映射和不存在的保底', async () => {
   const r = { id: '10', name: '猫', modelId: '2', species: 'cat', gender: null, breeds: [], priority: 1, enabled: 1 }
   for (const override of [{ rules: [{ ...r, priority: 1.5 }] }, { rules: [r,r] }, { breedMappings: [{ breed: 'Cat', species: 'cat' }, { breed: ' cat ', species: 'dog' }] }, { defaultModelId: '999' }]) {
-    reset({ defaultModelId: '2', rules: [r], breedMappings: [], ...override })
+    reset({ defaultModelId: '2', defaultCatModelId: '2', defaultDogModelId: '2', revision: 0, rules: [r], breedMappings: [], ...override })
     await assert.rejects(routes.saveConfig({}), e => e.statusCode === 400)
     assert.ok(!queries.some(q => q.sql.startsWith('UPDATE')))
   }
 })
 test('有效配置原子保存，品种规范化，新规则取得稳定 ID', async () => {
-  reset({ defaultModelId: '2', rules: [{ name: '猫', modelId: '2', species: 'cat', gender: null, breeds: [' Ragdoll '], priority: 1, enabled: 1 }], breedMappings: [] })
+  reset({ defaultModelId: '2', defaultCatModelId: '2', defaultDogModelId: '2', revision: 0, rules: [{ name: '猫', modelId: '2', species: 'cat', gender: null, breeds: [' Ragdoll '], priority: 1, enabled: 1 }], breedMappings: [] })
   await routes.saveConfig({})
   const write = queries.find(q => q.sql.startsWith('UPDATE'))
-  const rules = JSON.parse(write.params[1])
+  const rules = JSON.parse(write.params[3])
   assert.deepEqual(rules[0].breeds, ['ragdoll']); assert.match(rules[0].id, /^\d+$/)
   assert.deepEqual(tx, ['begin','commit','release'])
+})
+
+test('旧版本配置保存返回冲突，不覆盖新配置',async()=>{
+  reset({defaultModelId:'2',defaultCatModelId:'2',defaultDogModelId:'2',rules:[],breedMappings:[],revision:99})
+  await assert.rejects(routes.saveConfig({}),e=>e.statusCode===409)
+  assert.ok(!queries.some(q=>q.sql.startsWith('UPDATE')))
 })

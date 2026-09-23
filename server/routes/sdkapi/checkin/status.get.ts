@@ -4,10 +4,8 @@ export default defineEventHandler(async (event) => {
   const user = await requireAuth(event)
   const db = useDb()
 
-  const today = new Date().toISOString().slice(0, 10)
-  const yesterday = new Date()
-  yesterday.setDate(yesterday.getDate() - 1)
-  const yesterdayStr = yesterday.toISOString().slice(0, 10)
+  const today = businessDate()
+  const yesterdayStr = addBusinessDays(today,-1)
 
   const [[todayRow]]: any = await db.query(
     `SELECT streak_count FROM t_checkin_log WHERE user_id = ? AND checkin_date = ?`,
@@ -22,9 +20,7 @@ export default defineEventHandler(async (event) => {
   const currentStreak = todayRow ? todayRow.streak_count : (yesterdayRow ? yesterdayRow.streak_count : 0)
 
   // 本次连续签到的起始日期（用于连续奖励的领取记录 period_key）
-  const streakStart = new Date(signedInToday ? Date.now() : yesterday.getTime())
-  streakStart.setDate(streakStart.getDate() - (Math.max(currentStreak, 1) - 1))
-  const streakStartStr = streakStart.toISOString().slice(0, 10)
+  const streakStartStr = addBusinessDays(signedInToday ? today : yesterdayStr, -(Math.max(currentStreak,1)-1))
 
   const [rules]: any = await db.query(
     `SELECT id, rule_type, streak_days, points_amount, points_type_code, name

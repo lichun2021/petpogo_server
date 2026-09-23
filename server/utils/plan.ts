@@ -46,38 +46,14 @@ export async function getPlanById(planId: string | number): Promise<PlanRow | nu
  *
  * @param period  购买档位：'monthly' / 'yearly'（决定订阅周期长度；Free 忽略）
  */
-export async function applyPlan(
-  userId: string | bigint,
-  planId: string | number,
-  reason = '购买计划',
-  period: 'monthly' | 'yearly' = 'monthly'
-): Promise<void> {
-  const plan = await getPlanById(planId)
+export async function applyPlanTx(db: import('mysql2/promise').PoolConnection, userId: string | bigint, planId: string | number, reason = '购买计划', period: 'monthly' | 'yearly' = 'monthly', orderId?: string): Promise<void> {
+  const [[plan]]: any = await db.query('SELECT * FROM t_plan WHERE id=? AND status=1', [String(planId)])
   if (!plan) throw createError({ statusCode: 404, message: '计划不存在' })
-
-  const db = useDb()
-
-  // 订阅周期：付费计划按购买档位（月=30天 / 年=365天）；Free 无到期（NULL=永久）
-  let expireAt: string | null = null
-  if (plan.plan_type !== 0) {
-    const durationDays = period === 'yearly' ? 365 : 30
-    const d = new Date()
-    d.setDate(d.getDate() + durationDays)
-    expireAt = d.toISOString().slice(0, 19).replace('T', ' ')
-  }
-
-  // 更新计划类型与到期时间（不再覆盖积分余额，积分走批次表）
-  await db.query(
-    `UPDATE t_user SET plan_type=?, plan_expire_at=? WHERE id=?`,
-    [plan.plan_type, expireAt, userId]
-  )
-
-  // 立即累加发放本周期积分（一批），置 last_grant_at=NOW() 避免本周期再被 cron/ensurePeriodGrant 重复发
-  // 注意：积分类型由计划 period_grant_type_code 决定，配成 permanent 即发永久积分，无需单独的 permanent grant
-  const periodAmount = Number(plan.period_grant_amount) || 0
-  const typeCode = plan.period_grant_type_code || 'plan_free'
-  if (periodAmount > 0) {
-    await grantPointsBatch(userId, periodAmount, typeCode, `${reason}(${plan.name})赠送周期积分`, 'plan_order', String(planId))
-    await db.query(`UPDATE t_user SET last_grant_at=NOW() WHERE id=?`, [userId])
-  }
+  const expireAt = plan.plan_type === 0 ? null : businessDateTime(Date.now() + (period === 'yearly' ? 365 : 30) * 86400000)
+  await db.query('UPDATE t_user SET plan_type=?,plan_expire_at=?,last_grant_at=NOW() WHERE id=?', [plan.plan_type, expireAt, String(userId)])
+  const amount = Number(plan.period_grant_amount || 0)
+  if (amount > 0) await grantPointsBatchTx(db,userId,amount,plan.period_grant_type_code || 'plan_free',`${reason}(${plan.name})赠送周期积分`,'plan_order',orderId || String(planId))
+}
+export async function applyPlan(userId:string|bigint,planId:string|number,reason='购买计划',period:'monthly'|'yearly'='monthly'):Promise<void>{
+  await withTransaction(async db=>{await lockPointsUser(db,userId);await applyPlanTx(db,userId,planId,reason,period)})
 }
