@@ -2,6 +2,13 @@ export default defineNuxtConfig({
   compatibilityDate: '2026-04-30',
   telemetry: false,
 
+  app: {
+    head: {
+      title: '宠联芯管理后台',
+      link: [{ rel: 'icon', type: 'image/svg+xml', href: '/admin-favicon.svg' }],
+    },
+  },
+
   colorMode: {
     preference: 'light',
     fallback: 'light',

@@ -3,10 +3,10 @@
     <aside class="w-16 lg:w-52 shrink-0 flex flex-col border-r border-stone-200 bg-white">
       <div class="h-16 flex items-center gap-3 px-4 shrink-0">
         <div class="size-8 rounded-xl flex items-center justify-center bg-primary text-white shrink-0">
-          <UIcon name="i-heroicons-heart" class="size-5" />
+          <img src="/admin-favicon.svg" alt="宠联芯" class="size-8 rounded-xl" />
         </div>
         <div class="hidden lg:block">
-          <p class="font-semibold text-base text-stone-900">萌宠帮</p>
+          <p class="font-semibold text-base text-stone-900">宠联芯</p>
           <p class="text-xs text-stone-500">管理后台</p>
         </div>
       </div>

@@ -197,7 +197,7 @@
 
 <script setup lang="ts">
 definePageMeta({ layout: 'admin' })
-useHead({ title: '预设声音管理 — 萌宠帮后台' })
+useHead({ title: '预设声音管理 — 宠联芯管理后台' })
 
 const authHeader = () => ({ Authorization: `Bearer ${localStorage.getItem('admin_token')}` })
 

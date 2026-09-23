@@ -13,9 +13,9 @@
       <div class="text-center mb-5 sm:mb-8">
         <div class="inline-flex items-center justify-center w-14 h-14 sm:w-16 sm:h-16 mb-3 sm:mb-5 rounded-2xl shadow-2xl shadow-amber-500/30"
           style="background: linear-gradient(135deg, #f59e0b, #ea580c)">
-          <span class="text-3xl">🐾</span>
+          <img src="/admin-favicon.svg" alt="宠联芯" class="size-12 rounded-xl" />
         </div>
-        <h1 class="text-xl font-bold text-gray-700 tracking-tight">萌宠帮管理后台</h1>
+        <h1 class="text-xl font-bold text-gray-700 tracking-tight">宠联芯管理后台</h1>
         <p class="text-sm text-gray-500 mt-1.5">使用管理员账号登录</p>
       </div>
 
@@ -172,7 +172,7 @@
         </button>
       </div>
 
-      <p class="text-center text-xs text-gray-400 mt-5 sm:mt-8">PetPogo 宠物管理平台 © 2026</p>
+      <p class="text-center text-xs text-gray-400 mt-5 sm:mt-8">宠联芯管理后台 © 2026</p>
     </div>
   </div>
 </template>
