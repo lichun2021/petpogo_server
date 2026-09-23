@@ -82,10 +82,13 @@ fi
 # ── 步骤 2: 打包 ──────────────────────────────────
 log_step "步骤 2/5 · 打包 .output + 运维脚本 + package.json"
 rm -f "$ZIP_NAME"
-# 打包 .output 目录内容 + 根目录的运维文件和环境变量文件
+# 打包启动包装和版本检查工具；保留服务器 .env，不用本地配置覆盖。
+mkdir -p .output/server/scripts .output/server/migrations
+cp scripts/start.mjs scripts/migrate.mjs .output/server/scripts/ || log_error "复制启动脚本失败"
+cp migrations/*.mjs .output/server/migrations/ || log_error "复制迁移文件失败"
 (cd .output && zip -r "../$ZIP_NAME" . -q)
-# 追加 .env, ecosystem, package.json 和 shell 脚本到 zip 根目录
-zip -j "$ZIP_NAME" .env ecosystem.config.js package.json package-lock.json start.sh stop.sh restart.sh -q 2>/dev/null || true
+# 追加运维文件；环境配置仅保留在线上
+zip -j "$ZIP_NAME" ecosystem.config.js package.json package-lock.json start.sh stop.sh restart.sh -q 2>/dev/null || true
 ZIP_SIZE=$(du -sh "$ZIP_NAME" | cut -f1)
 log_success "打包完成：$ZIP_NAME ($ZIP_SIZE)"
 
@@ -99,11 +102,13 @@ log_success "上传完成"
 # ── 步骤 4: 服务器解压 ────────────────────────────
 log_step "步骤 4/5 · 服务器解压 + 安装依赖"
 ssh $SSH_OPTS $SSH_USER@$SSH_HOST "
-  set -e
+  set -euo pipefail
   cd $REMOTE_PATH
-  echo '清理旧文件...'
-  find . -type f ! -name '$ZIP_NAME' -delete 2>/dev/null || true
-  find . -mindepth 1 -type d -empty -delete 2>/dev/null || true
+  test -f .env || { echo '缺少线上 .env，请先配置'; exit 1; }
+  command -v pm2 >/dev/null
+  if pm2 describe '$PM2_NAME' >/dev/null 2>&1; then pm2 stop '$PM2_NAME'; fi
+  echo '替换应用产物，保留配置和历史发布目录...'
+  rm -rf server public
   unzip -oq $ZIP_NAME -d .
   rm -f $ZIP_NAME
   echo '解压完成'
@@ -121,19 +126,21 @@ log_success "解压和依赖安装完成"
 # ── 步骤 5: 重启 PM2 ─────────────────────────────
 log_step "步骤 5/5 · 重启 PM2 ($PM2_NAME)"
 ssh $SSH_OPTS $SSH_USER@$SSH_HOST "
-  if ! command -v pm2 &>/dev/null; then
-    echo '[WARN] pm2 未安装，请先在服务器执行: npm i -g pm2'
-    exit 0
-  fi
-  if pm2 list | grep -q '$PM2_NAME'; then
-    pm2 restart $PM2_NAME
-  else
-    echo '首次启动 $PM2_NAME...'
-    cd $REMOTE_PATH
-    PORT=3000 pm2 start server/index.mjs --name $PM2_NAME
-  fi
+  set -euo pipefail
+  cd '$REMOTE_PATH'
+  node server/scripts/migrate.mjs --check
+  # restart 会保留旧路径；重新注册为实际部署目录的入口。
+  if pm2 describe '$PM2_NAME' >/dev/null 2>&1; then pm2 delete '$PM2_NAME'; fi
+  NODE_ENV=production PORT=3000 NITRO_PORT=3000 NITRO_HOST=0.0.0.0 pm2 start '$REMOTE_PATH/server/scripts/start.mjs' --name '$PM2_NAME' --cwd '$REMOTE_PATH' --node-args='--env-file=$REMOTE_PATH/.env'
+  healthy=false
+  for attempt in \$(seq 1 30); do
+    if curl --max-time 2 -fsS http://127.0.0.1:3000/api/health/ready >/dev/null; then healthy=true; break; fi
+    sleep 1
+  done
+  \"\$healthy\" || { echo '健康检查失败，请检查 PM2 日志'; exit 1; }
   pm2 save
 "
+[ $? -ne 0 ] && log_error "启动或健康检查失败，部署未完成"
 log_success "PM2 重启完成"
 
 # ── 清理本地 zip ──────────────────────────────────
