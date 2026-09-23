@@ -2,20 +2,20 @@
   <div class="space-y-5">
     <!-- 返回 + 操作栏 -->
     <div class="flex items-center gap-3">
-      <UButton icon="i-heroicons-arrow-left" color="gray" variant="ghost" @click="$router.back()" />
-      <h2 class="text-base font-semibold text-stone-700 flex-1">帖子详情</h2>
+      <UButton icon="i-heroicons-arrow-left" color="neutral" variant="ghost" @click="$router.back()" />
+      <h2 class="text-xl font-semibold text-stone-700 flex-1">帖子详情</h2>
       <UBadge
         :label="statusLabel"
         :color="statusColor"
         variant="subtle"
       />
-      <UButton v-if="post?.status !== 1 && post?.status !== 0" label="通过" color="green" size="sm" :loading="acting" @click="setStatus(1)" />
-      <UButton v-if="post?.status !== 3 && post?.status !== 0" label="标记违规" color="red"   size="sm" variant="outline" :loading="acting" @click="setStatus(3)" />
-      <UButton label="删除帖子" color="red" variant="ghost" size="sm" :loading="deleting" @click="deletePost" />
+      <UButton v-if="post?.status !== 1 && post?.status !== 0" label="通过" color="success" size="sm" :loading="acting" @click="setStatus(1)" />
+      <UButton v-if="post?.status !== 3 && post?.status !== 0" label="标记违规" color="error"   size="sm" variant="outline" :loading="acting" @click="setStatus(3)" />
+      <UButton label="删除帖子" color="error" variant="ghost" size="sm" :loading="deleting" @click="deletePost" />
     </div>
 
     <div v-if="pending" class="flex justify-center py-20">
-      <UIcon name="i-heroicons-arrow-path" class="w-6 h-6 text-stone-400 animate-spin" />
+      <UIcon name="i-heroicons-arrow-path" class="w-6 h-6 text-stone-500 animate-spin" />
     </div>
 
     <template v-else-if="post">
@@ -23,27 +23,27 @@
         <!-- 左：内容预览 -->
         <div class="lg:col-span-2 space-y-4">
           <!-- 发帖人 -->
-          <div class="bg-white rounded-2xl border p-4 flex items-center gap-3" style="border-color:#f0e6d8">
+          <div class="bg-white rounded-xl border p-4 flex flex-wrap items-center gap-3" style="border-color:#e7e5e4">
             <UAvatar :src="post.user_avatar" :alt="post.nickname" size="md" />
             <div>
               <p class="font-medium text-stone-800">{{ post.nickname }}</p>
-              <p class="text-xs text-stone-400">{{ post.phone }} · {{ formatDate(post.created_at) }}</p>
+              <p class="text-xs text-stone-500">{{ post.phone }} · {{ formatDate(post.created_at) }}</p>
             </div>
             <UBadge
               :label="post.media_type === 0 ? '文字' : post.media_type === 1 ? '图片' : '视频'"
-              :color="post.media_type === 0 ? 'gray' : post.media_type === 1 ? 'blue' : 'purple'"
+              :color="post.media_type === 0 ? 'neutral' : post.media_type === 1 ? 'info' : 'secondary'"
               variant="subtle" size="xs" class="ml-auto"
             />
           </div>
 
           <!-- 正文 -->
-          <div class="bg-white rounded-2xl border p-4" style="border-color:#f0e6d8">
+          <div class="bg-white rounded-xl border p-4" style="border-color:#e7e5e4">
             <p class="text-stone-700 text-sm leading-relaxed whitespace-pre-wrap">{{ post.content || '（无文字内容）' }}</p>
           </div>
 
           <!-- 图片 -->
-          <div v-if="post.media_urls?.length" class="bg-white rounded-2xl border p-4" style="border-color:#f0e6d8">
-            <p class="text-xs text-stone-400 mb-3">图片 ({{ post.media_urls.length }})</p>
+          <div v-if="post.media_urls?.length" class="bg-white rounded-xl border p-4" style="border-color:#e7e5e4">
+            <p class="text-xs text-stone-500 mb-3">图片 ({{ post.media_urls.length }})</p>
             <div class="grid grid-cols-3 gap-2">
               <a v-for="(url, i) in post.media_urls" :key="i" :href="url" target="_blank">
                 <img :src="url" class="w-full aspect-square object-cover rounded-lg hover:opacity-80 transition-opacity" />
@@ -52,8 +52,8 @@
           </div>
 
           <!-- 视频 -->
-          <div v-if="post.video_url" class="bg-white rounded-2xl border p-4" style="border-color:#f0e6d8">
-            <p class="text-xs text-stone-400 mb-3">视频</p>
+          <div v-if="post.video_url" class="bg-white rounded-xl border p-4" style="border-color:#e7e5e4">
+            <p class="text-xs text-stone-500 mb-3">视频</p>
             <div class="relative rounded-xl overflow-hidden bg-black aspect-video">
               <video
                 :src="post.video_url"
@@ -68,13 +68,13 @@
         <!-- 右：标签 + 数据 + 评论 -->
         <div class="space-y-4">
           <!-- 标签编辑 -->
-          <div class="bg-white rounded-2xl border p-4" style="border-color:#f0e6d8">
-            <p class="text-xs text-stone-400 mb-3 font-medium">帖子标签</p>
+          <div class="bg-white rounded-xl border p-4" style="border-color:#e7e5e4">
+            <p class="text-xs text-stone-500 mb-3 font-medium">帖子标签</p>
             <div class="flex gap-2 flex-wrap">
               <button
                 v-for="tg in tagOpts" :key="tg.value"
                 :class="[
-                  'flex items-center gap-1 px-3 py-1.5 rounded-full text-sm font-medium border transition-all',
+                  'flex items-center gap-1 px-3 py-1.5 rounded-lg text-sm font-medium border transition-all',
                   localTag === tg.value
                     ? `${tg.activeCls} text-white border-transparent`
                     : 'bg-white border-stone-200 text-stone-500 hover:border-amber-300'
@@ -86,7 +86,7 @@
             </div>
             <UButton
               label="保存标签"
-              color="amber"
+              color="primary"
               size="xs"
               class="mt-3 w-full"
               :loading="savingTag"
@@ -96,30 +96,30 @@
           </div>
 
           <!-- 数据统计 -->
-          <div class="bg-white rounded-2xl border p-4" style="border-color:#f0e6d8">
-            <p class="text-xs text-stone-400 mb-3 font-medium">数据统计</p>
+          <div class="bg-white rounded-xl border p-4" style="border-color:#e7e5e4">
+            <p class="text-xs text-stone-500 mb-3 font-medium">数据统计</p>
             <div class="grid grid-cols-3 gap-3 text-center">
               <div>
-                <p class="text-xl font-bold text-amber-600">{{ post.like_count }}</p>
-                <p class="text-xs text-stone-400 mt-0.5">点赞</p>
+                <p class="text-2xl font-bold text-amber-600">{{ post.like_count }}</p>
+                <p class="text-xs text-stone-500 mt-0.5">点赞</p>
               </div>
               <div>
-                <p class="text-xl font-bold text-amber-600">{{ post.comment_count }}</p>
-                <p class="text-xs text-stone-400 mt-0.5">评论</p>
+                <p class="text-2xl font-bold text-amber-600">{{ post.comment_count }}</p>
+                <p class="text-xs text-stone-500 mt-0.5">评论</p>
               </div>
               <div>
-                <p class="text-xl font-bold text-amber-600">{{ post.view_count }}</p>
-                <p class="text-xs text-stone-400 mt-0.5">浏览</p>
+                <p class="text-2xl font-bold text-amber-600">{{ post.view_count }}</p>
+                <p class="text-xs text-stone-500 mt-0.5">浏览</p>
               </div>
             </div>
           </div>
 
           <!-- 评论列表 -->
-          <div class="bg-white rounded-2xl border overflow-hidden" style="border-color:#f0e6d8">
+          <div class="bg-white rounded-xl border overflow-hidden" style="border-color:#e7e5e4">
             <div class="px-4 py-3 border-b border-stone-100 flex items-center justify-between">
               <p class="text-sm font-medium text-stone-700">评论 ({{ post.comments?.length || 0 }})</p>
             </div>
-            <div v-if="!post.comments?.length" class="py-8 text-center text-sm text-stone-400">暂无评论</div>
+            <div v-if="!post.comments?.length" class="py-8 text-center text-sm text-stone-500">暂无评论</div>
             <div v-else class="divide-y divide-stone-100 max-h-[560px] overflow-y-auto">
               <div
                 v-for="c in post.comments" :key="c.id"
@@ -131,15 +131,15 @@
                   <div class="flex items-center gap-1.5 mb-0.5">
                     <span class="text-xs font-medium text-stone-700">{{ c.nickname }}</span>
                     <span class="text-xs text-stone-300">·</span>
-                    <span class="text-xs text-stone-400">{{ formatDate(c.created_at) }}</span>
-                    <UBadge v-if="c.deleted" label="已删除" color="red" variant="subtle" size="xs" class="ml-1" />
+                    <span class="text-xs text-stone-500">{{ formatDate(c.created_at) }}</span>
+                    <UBadge v-if="c.deleted" label="已删除" color="error" variant="subtle" size="xs" class="ml-1" />
                   </div>
                   <p class="text-sm text-stone-600 break-words">{{ c.content }}</p>
                 </div>
                 <UButton
                   v-if="!c.deleted"
                   icon="i-heroicons-trash"
-                  color="red" variant="ghost" size="xs"
+                  color="error" variant="ghost" size="xs"
                   :loading="c._deleting"
                   @click="deleteComment(c)"
                 />
@@ -179,7 +179,7 @@ const statusLabel = computed(() => {
   return ({ 0: '转码中', 1: '已通过', 2: '待审核', 3: '已违规' } as any)[post.value.status] || ''
 })
 const statusColor = computed(() => {
-  return ({ 0: 'gray', 1: 'green', 2: 'yellow', 3: 'red' } as any)[post.value?.status] || 'gray'
+  return ({ 0: 'neutral', 1: 'success', 2: 'warning', 3: 'error' } as any)[post.value?.status] || 'neutral'
 })
 
 async function setStatus(status: number) {
@@ -187,8 +187,8 @@ async function setStatus(status: number) {
   try {
     await $fetch(`/api/admin/posts/${route.params.id}/status`, { method: 'PUT', body: { status } })
     if (post.value) post.value.status = status
-    toast.add({ title: status === 1 ? '已通过' : '已标记违规', color: status === 1 ? 'green' : 'red' })
-  } catch { toast.add({ title: '操作失败', color: 'red' }) }
+    toast.add({ title: status === 1 ? '已通过' : '已标记违规', color: status === 1 ? 'success' : 'error' })
+  } catch { toast.add({ title: '操作失败', color: 'error' }) }
   finally { acting.value = false }
 }
 
@@ -198,8 +198,8 @@ async function saveTag() {
     await $fetch(`/api/admin/posts/${route.params.id}/tag`, { method: 'PUT', body: { tag: localTag.value } })
     if (post.value) post.value.tag = localTag.value
     const label = ({ cat: '猫', dog: '狗', other: '其他' } as any)[localTag.value]
-    toast.add({ title: `标签已更新为「${label}」`, color: 'green' })
-  } catch { toast.add({ title: '操作失败', color: 'red' }) }
+    toast.add({ title: `标签已更新为「${label}」`, color: 'success' })
+  } catch { toast.add({ title: '操作失败', color: 'error' }) }
   finally { savingTag.value = false }
 }
 
@@ -208,10 +208,10 @@ async function deletePost() {
   deleting.value = true
   try {
     await $fetch(`/api/admin/posts/${route.params.id}/status`, { method: 'PUT', body: { status: 3 } })
-    toast.add({ title: '已删除', color: 'green' })
+    toast.add({ title: '已删除', color: 'success' })
     closeTab(route.path)
     navigateTo('/admin/posts')
-  } catch { toast.add({ title: '操作失败', color: 'red' }) }
+  } catch { toast.add({ title: '操作失败', color: 'error' }) }
   finally { deleting.value = false }
 }
 
@@ -221,8 +221,8 @@ async function deleteComment(c: any) {
     await $fetch(`/api/admin/comments/${c.id}`, { method: 'DELETE' })
     c.deleted = true
     if (post.value) post.value.comment_count = Math.max(0, post.value.comment_count - 1)
-    toast.add({ title: '评论已删除', color: 'green' })
-  } catch { toast.add({ title: '操作失败', color: 'red' }) }
+    toast.add({ title: '评论已删除', color: 'success' })
+  } catch { toast.add({ title: '操作失败', color: 'error' }) }
   finally { c._deleting = false }
 }
 

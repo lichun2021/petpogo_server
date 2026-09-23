@@ -2,29 +2,29 @@
   <div class="space-y-4">
     <div class="flex items-center justify-between">
       <div>
-        <h2 class="text-base font-semibold text-stone-800">积分类型</h2>
-        <p class="text-xs text-stone-400 mt-0.5">配置积分类型与有效期（有效期=获得后N天到期，0=永不过期）。数量在各业务页（计划/签到）单独配置</p>
+        <h2 class="text-xl font-semibold text-stone-800">积分类型</h2>
+        <p class="text-xs text-stone-500 mt-0.5">配置积分类型与有效期（有效期=获得后N天到期，0=永不过期）。数量在各业务页（计划/签到）单独配置</p>
       </div>
       <div class="flex gap-2">
-        <UButton label="积分流水" color="gray" variant="outline" icon="i-heroicons-clipboard-document-list" to="/admin/points/logs" />
-        <UButton label="积分规则" color="gray" variant="outline" icon="i-heroicons-currency-yen" to="/admin/points/rules" />
-        <UButton label="新增类型" color="amber" icon="i-heroicons-plus" @click="openModal()" />
+        <UButton label="积分流水" color="neutral" variant="outline" icon="i-heroicons-clipboard-document-list" to="/admin/points/logs" />
+        <UButton label="积分规则" color="neutral" variant="outline" icon="i-heroicons-currency-yen" to="/admin/points/rules" />
+        <UButton label="新增类型" color="primary" icon="i-heroicons-plus" @click="openModal()" />
       </div>
     </div>
 
-    <div class="bg-white rounded-2xl border overflow-hidden" style="border-color: #f0e6d8; box-shadow: 0 1px 4px rgba(0,0,0,0.04)">
+    <div class="bg-white rounded-xl border overflow-hidden" style="border-color: #e7e5e4; box-shadow: 0 1px 4px rgba(0,0,0,0.04)">
       <div v-if="loading" class="flex justify-center py-10">
-        <UIcon name="i-heroicons-arrow-path" class="w-5 h-5 text-stone-400 animate-spin" />
+        <UIcon name="i-heroicons-arrow-path" class="w-5 h-5 text-stone-500 animate-spin" />
       </div>
-      <div v-else-if="!list.length" class="py-10 text-center text-sm text-stone-400">暂无数据</div>
+      <div v-else-if="!list.length" class="py-10 text-center text-sm text-stone-500">暂无数据</div>
       <table v-else class="w-full text-sm">
         <thead>
-          <tr class="bg-amber-50/50 border-b border-orange-100">
-            <th class="text-left text-xs text-stone-500 font-medium py-3 px-4">类型标识</th>
-            <th class="text-left text-xs text-stone-500 font-medium py-3 px-4">显示名称</th>
-            <th class="text-left text-xs text-stone-500 font-medium py-3 px-4">有效期（天）</th>
-            <th class="text-left text-xs text-stone-500 font-medium py-3 px-4">状态</th>
-            <th class="text-left text-xs text-stone-500 font-medium py-3 px-4">操作</th>
+          <tr class="bg-stone-50 border-b border-stone-200">
+            <th class="text-left text-sm text-stone-500 font-medium py-3 px-4">类型标识</th>
+            <th class="text-left text-sm text-stone-500 font-medium py-3 px-4">显示名称</th>
+            <th class="text-left text-sm text-stone-500 font-medium py-3 px-4">有效期（天）</th>
+            <th class="text-left text-sm text-stone-500 font-medium py-3 px-4">状态</th>
+            <th class="text-left text-sm text-stone-500 font-medium py-3 px-4">操作</th>
           </tr>
         </thead>
         <tbody>
@@ -36,12 +36,12 @@
               <span v-else>{{ row.expire_days }} 天</span>
             </td>
             <td class="py-3 px-4">
-              <UBadge :label="row.status === 1 ? '启用' : '停用'" :color="row.status === 1 ? 'green' : 'red'" variant="subtle" size="xs" />
+              <UBadge :label="row.status === 1 ? '启用' : '停用'" :color="row.status === 1 ? 'success' : 'error'" variant="subtle" size="xs" />
             </td>
             <td class="py-3 px-4">
               <div class="flex gap-2">
-                <UButton label="编辑" color="gray" variant="subtle" size="xs" @click="openModal(row)" />
-                <UButton label="删除" color="red" variant="subtle" size="xs" @click="remove(row)" />
+                <UButton label="编辑" color="neutral" variant="subtle" size="xs" @click="openModal(row)" />
+                <UButton label="删除" color="error" variant="subtle" size="xs" @click="remove(row)" />
               </div>
             </td>
           </tr>
@@ -58,7 +58,7 @@
           <div v-if="!modal.editingId">
             <label class="text-xs text-stone-500 font-medium block mb-1">类型标识 type_code *</label>
             <UInput v-model="modal.typeCode" placeholder="如 plan_vip / activity" />
-            <p class="text-[10px] text-stone-400 mt-1">程序内引用，创建后不可改，建议用英文小写+下划线</p>
+            <p class="text-xs text-stone-500 mt-1">程序内引用，创建后不可改，建议用英文小写+下划线</p>
           </div>
           <div>
             <label class="text-xs text-stone-500 font-medium block mb-1">显示名称 *</label>
@@ -67,7 +67,7 @@
           <div>
             <label class="text-xs text-stone-500 font-medium block mb-1">有效期天数 *</label>
             <UInput v-model.number="modal.expireDays" type="number" :min="0" placeholder="0 = 永不过期" />
-            <p class="text-[10px] text-stone-400 mt-1">每笔该类型积分从获得时刻起 N 天后到期，0 表示永久</p>
+            <p class="text-xs text-stone-500 mt-1">每笔该类型积分从获得时刻起 N 天后到期，0 表示永久</p>
           </div>
           <div>
             <label class="text-xs text-stone-500 font-medium block mb-1">排序（越小越靠前）</label>
@@ -89,10 +89,10 @@
         </div>
 
         <div class="flex gap-2 pt-2">
-          <UButton label="取消" color="gray" variant="outline" class="flex-1" @click="modal.show = false" />
+          <UButton label="取消" color="neutral" variant="outline" class="flex-1" @click="modal.show = false" />
           <UButton
             :label="modal.editingId ? '保存修改' : '创建'"
-            color="amber" class="flex-1"
+            color="primary" class="flex-1"
             :loading="modal.saving"
             :disabled="!modal.name.trim() || (!modal.editingId && !modal.typeCode.trim())"
             @click="save"
@@ -162,11 +162,11 @@ async function save() {
       method: isEdit ? 'PUT' : 'POST',
       body,
     })
-    toast.add({ title: '保存成功', color: 'green' })
+    toast.add({ title: '保存成功', color: 'success' })
     modal.show = false
     loadList()
   } catch (e: any) {
-    toast.add({ title: '保存失败', description: e?.data?.message, color: 'red' })
+    toast.add({ title: '保存失败', description: e?.data?.message, color: 'error' })
   } finally {
     modal.saving = false
   }
@@ -175,10 +175,10 @@ async function save() {
 async function remove(row: any) {
   try {
     await $fetch(`/api/admin/points/config/${row.id}`, { method: 'DELETE' })
-    toast.add({ title: '删除成功', color: 'green' })
+    toast.add({ title: '删除成功', color: 'success' })
     loadList()
   } catch (e: any) {
-    toast.add({ title: '删除失败', description: e?.data?.message, color: 'red' })
+    toast.add({ title: '删除失败', description: e?.data?.message, color: 'error' })
   }
 }
 

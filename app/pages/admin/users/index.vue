@@ -1,44 +1,39 @@
 <template>
   <div class="space-y-4">
+    <h1 class="text-xl font-semibold text-stone-900">用户管理</h1>
     <!-- 搜索栏 -->
-    <div class="bg-white rounded-2xl border p-4 flex items-center gap-3" style="border-color: #f0e6d8">
-      <UInput v-model="search" placeholder="搜索手机号 / 昵称..." icon="i-heroicons-magnifying-glass" class="flex-1" @keyup.enter="() => { page = 1; loadList() }" />
-      <UButton label="搜索" color="amber" @click="() => { page = 1; loadList() }" />
-      <UButton label="重置" color="gray" variant="outline" @click="reset" />
-      <UBadge :label="`共 ${total} 人`" color="amber" variant="subtle" size="xs" class="ml-auto" />
+    <div class="bg-white rounded-xl border p-4 flex flex-wrap items-center gap-3" style="border-color: #e7e5e4">
+      <UInput v-model="search" placeholder="搜索手机号 / 昵称..." icon="i-heroicons-magnifying-glass" class="w-full sm:max-w-sm" @keyup.enter="() => { page = 1; loadList() }" />
+      <UButton label="搜索" color="primary" @click="() => { page = 1; loadList() }" />
+      <UButton label="重置" color="neutral" variant="outline" @click="reset" />
+      <UBadge :label="`共 ${total} 人`" color="primary" variant="subtle" size="xs" class="ml-auto" />
     </div>
 
     <!-- 状态筛选 Tab -->
-    <div class="flex gap-2">
+    <div class="admin-segment" aria-label="状态筛选">
       <button
         v-for="(tab, i) in tabs" :key="tab.key"
-        :class="[
-          'px-4 py-1.5 rounded-full text-sm font-medium transition-all',
-          activeTab === i
-            ? 'bg-amber-500 text-white shadow-sm'
-            : 'bg-white border text-stone-500 hover:text-stone-700 hover:border-amber-300'
-        ]"
-        style="border-color: #f0e6d8"
+        :aria-pressed="activeTab === i"
         @click="activeTab = i; page = 1; loadList()"
       >{{ tab.label }}</button>
     </div>
 
     <!-- 表格 -->
-    <div class="bg-white rounded-2xl border overflow-hidden" style="border-color: #f0e6d8; box-shadow: 0 1px 4px rgba(0,0,0,0.04)">
+    <div class="bg-white rounded-xl border overflow-hidden" style="border-color: #e7e5e4; box-shadow: 0 1px 4px rgba(0,0,0,0.04)">
       <div v-if="loading" class="flex justify-center py-10">
-        <UIcon name="i-heroicons-arrow-path" class="w-5 h-5 text-stone-400 animate-spin" />
+        <UIcon name="i-heroicons-arrow-path" class="w-5 h-5 text-stone-500 animate-spin" />
       </div>
-      <div v-else-if="!list.length" class="py-10 text-center text-sm text-stone-400">暂无数据</div>
+      <div v-else-if="!list.length" class="py-10 text-center text-sm text-stone-500">暂无数据</div>
       <table v-else class="w-full text-sm">
         <thead>
-          <tr class="bg-amber-50/50 border-b border-orange-100">
-            <th class="text-left text-xs text-stone-500 font-medium py-3 px-4 w-10"></th>
-            <th class="text-left text-xs text-stone-500 font-medium py-3 px-4">用户信息</th>
-            <th class="text-left text-xs text-stone-500 font-medium py-3 px-4">计划</th>
-            <th class="text-left text-xs text-stone-500 font-medium py-3 px-4">积分</th>
-            <th class="text-left text-xs text-stone-500 font-medium py-3 px-4">状态</th>
-            <th class="text-left text-xs text-stone-500 font-medium py-3 px-4">注册时间</th>
-            <th class="text-left text-xs text-stone-500 font-medium py-3 px-4">操作</th>
+          <tr class="bg-stone-50 border-b border-stone-200">
+            <th class="text-left text-sm text-stone-500 font-medium py-3 px-4 w-10"></th>
+            <th class="text-left text-sm text-stone-500 font-medium py-3 px-4">用户信息</th>
+            <th class="text-left text-sm text-stone-500 font-medium py-3 px-4">计划</th>
+            <th class="text-left text-sm text-stone-500 font-medium py-3 px-4">积分</th>
+            <th class="text-left text-sm text-stone-500 font-medium py-3 px-4">状态</th>
+            <th class="text-left text-sm text-stone-500 font-medium py-3 px-4">注册时间</th>
+            <th class="text-left text-sm text-stone-500 font-medium py-3 px-4">操作</th>
           </tr>
         </thead>
         <tbody>
@@ -51,34 +46,34 @@
             </td>
             <td class="py-3 px-4">
               <p class="text-stone-800 font-medium">{{ row.nickname || '未设置' }}</p>
-              <p class="text-xs text-stone-400">{{ row.phone }}</p>
+              <p class="text-xs text-stone-500">{{ row.phone }}</p>
             </td>
             <td class="py-3 px-4">
               <UBadge
                 :label="planLabel(row.plan_type)"
-                :color="row.plan_type === 2 ? 'purple' : row.plan_type === 1 ? 'amber' : 'gray'"
+                :color="row.plan_type === 2 ? 'secondary' : row.plan_type === 1 ? 'primary' : 'neutral'"
                 variant="subtle" size="xs"
               />
             </td>
             <td class="py-3 px-4">
               <div class="flex items-center gap-1.5">
                 <span class="text-stone-800 font-semibold text-sm">{{ row.points_total }}</span>
-                <span class="text-xs text-stone-400">分</span>
+                <span class="text-xs text-stone-500">分</span>
               </div>
               <div class="flex gap-2 mt-0.5">
-                <span class="text-[10px] text-amber-500">期 {{ row.points_expiring }}</span>
-                <span class="text-[10px] text-stone-400">永 {{ row.points_permanent }}</span>
+                <span class="text-xs text-amber-500">期 {{ row.points_expiring }}</span>
+                <span class="text-xs text-stone-500">永 {{ row.points_permanent }}</span>
               </div>
             </td>
             <td class="py-3 px-4">
-              <UBadge :label="row.status === 1 ? '正常' : '禁用'" :color="row.status === 1 ? 'green' : 'red'" variant="subtle" size="xs" />
+              <UBadge :label="row.status === 1 ? '正常' : '禁用'" :color="row.status === 1 ? 'success' : 'error'" variant="subtle" size="xs" />
             </td>
-            <td class="py-3 px-4 text-xs text-stone-400">{{ formatDate(row.created_at) }}</td>
+            <td class="py-3 px-4 text-xs text-stone-500">{{ formatDate(row.created_at) }}</td>
             <td class="py-3 px-4">
               <div class="flex items-center gap-2">
                 <UButton
                   label="流水"
-                  color="amber"
+                  color="primary"
                   variant="ghost"
                   size="xs"
                   icon="i-heroicons-receipt-refund"
@@ -86,7 +81,7 @@
                 />
                 <UButton
                   :label="row.status === 1 ? '禁用' : '启用'"
-                  :color="row.status === 1 ? 'red' : 'green'"
+                  :color="row.status === 1 ? 'error' : 'success'"
                   variant="subtle" size="xs"
                   :loading="row._loading"
                   @click="toggleStatus(row)"
@@ -99,37 +94,38 @@
 
       <!-- 分页 -->
       <div v-if="total > pageSize" class="flex justify-center py-4 border-t border-stone-100">
-        <UPagination v-model="page" :page-count="pageSize" :total="total" @update:model-value="loadList" />
+        <UPagination v-model:page="page" :items-per-page="pageSize" :total="total" @update:page="loadList" />
       </div>
     </div>
 
     <!-- 积分流水侧边栏 -->
-    <USlideover v-model="showLog" side="right" :ui="{ width: 'max-w-lg' }">
-      <div class="flex flex-col h-full">
+    <USlideover v-model:open="showLog" title="积分流水" description="查看用户积分变动记录" side="right" :ui="{ content: 'max-w-xl' }">
+      <template #content>
+      <div class="flex flex-col h-full min-h-0">
         <!-- 侧边栏头部 -->
         <div class="flex items-center justify-between px-5 py-4 border-b border-stone-100">
           <div>
             <p class="text-sm font-semibold text-stone-800">积分流水</p>
-            <p class="text-xs text-stone-400 mt-0.5">{{ logUser?.nickname || logUser?.phone }}</p>
+            <p class="text-xs text-stone-500 mt-0.5">{{ logUser?.nickname || logUser?.phone }}</p>
           </div>
           <!-- 积分总览 -->
           <div class="flex items-center gap-3 mr-4">
             <div class="text-center">
-              <p class="text-xs text-stone-400">有期限</p>
+              <p class="text-xs text-stone-500">有期限</p>
               <p class="text-sm font-bold text-amber-500">{{ logUser?.points_expiring ?? 0 }}</p>
             </div>
             <div class="w-px h-8 bg-stone-100" />
             <div class="text-center">
-              <p class="text-xs text-stone-400">永久积分</p>
+              <p class="text-xs text-stone-500">永久积分</p>
               <p class="text-sm font-bold text-stone-700">{{ logUser?.points_permanent ?? 0 }}</p>
             </div>
             <div class="w-px h-8 bg-stone-100" />
             <div class="text-center">
-              <p class="text-xs text-stone-400">合计</p>
+              <p class="text-xs text-stone-500">合计</p>
               <p class="text-sm font-bold text-green-600">{{ logUser?.points_total ?? 0 }}</p>
             </div>
           </div>
-          <UButton icon="i-heroicons-x-mark" color="gray" variant="ghost" size="sm" @click="showLog = false" />
+          <UButton icon="i-heroicons-x-mark" aria-label="关闭" color="neutral" variant="ghost" size="sm" @click="showLog = false" />
         </div>
 
         <!-- 方向筛选 -->
@@ -137,7 +133,7 @@
           <button
             v-for="f in logFilters" :key="f.value"
             :class="[
-              'px-3 py-1 rounded-full text-xs font-medium transition-all',
+              'px-3 py-1 rounded-lg text-xs font-medium transition-all',
               logDirection === f.value
                 ? 'bg-amber-500 text-white'
                 : 'bg-stone-100 text-stone-500 hover:bg-amber-50'
@@ -149,9 +145,9 @@
         <!-- 流水列表 -->
         <div class="flex-1 overflow-y-auto px-5 pb-4">
           <div v-if="logLoading" class="flex justify-center py-10">
-            <UIcon name="i-heroicons-arrow-path" class="w-5 h-5 text-stone-400 animate-spin" />
+            <UIcon name="i-heroicons-arrow-path" class="w-5 h-5 text-stone-500 animate-spin" />
           </div>
-          <div v-else-if="!logList.length" class="py-10 text-center text-sm text-stone-400">暂无记录</div>
+          <div v-else-if="!logList.length" class="py-10 text-center text-sm text-stone-500">暂无记录</div>
           <div v-else class="space-y-2 mt-1">
             <div
               v-for="row in logList" :key="row.id"
@@ -173,11 +169,11 @@
               <div class="flex-1 min-w-0">
                 <p class="text-xs text-stone-700 font-medium leading-snug">{{ row.reason }}</p>
                 <div class="flex items-center gap-2 mt-1">
-                  <span class="text-[10px] px-1.5 py-0.5 rounded bg-stone-100 text-stone-500">
+                  <span class="text-xs px-1.5 py-0.5 rounded bg-stone-100 text-stone-500">
                     {{ row.type_code || (row.points_type === 1 ? '周积分' : '永久积分') }}
                   </span>
-                  <span class="text-[10px] text-stone-400">余 {{ row.balance_after }}</span>
-                  <span class="text-[10px] text-stone-300">{{ formatTime(row.created_at) }}</span>
+                  <span class="text-xs text-stone-500">余 {{ row.balance_after }}</span>
+                  <span class="text-xs text-stone-300">{{ formatTime(row.created_at) }}</span>
                 </div>
               </div>
               <!-- 金额 -->
@@ -191,13 +187,14 @@
           <div v-if="logList.length < logTotal" class="pt-3 flex justify-center">
             <UButton
               label="加载更多"
-              color="gray" variant="outline" size="xs"
+              color="neutral" variant="outline" size="xs"
               :loading="logLoading"
               @click="loadMoreLog"
             />
           </div>
         </div>
       </div>
+          </template>
     </USlideover>
   </div>
 </template>
@@ -259,8 +256,8 @@ async function toggleStatus(row: any) {
   try {
     await $fetch(`/api/admin/users/${row.id}/status`, { method: 'PUT', body: { status: row.status === 1 ? 2 : 1 } })
     row.status = row.status === 1 ? 2 : 1
-    toast.add({ title: '操作成功', color: 'green' })
-  } catch { toast.add({ title: '操作失败', color: 'red' }) }
+    toast.add({ title: '操作成功', color: 'success' })
+  } catch { toast.add({ title: '操作失败', color: 'error' }) }
   finally { row._loading = false }
 }
 

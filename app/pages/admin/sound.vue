@@ -1,5 +1,6 @@
 <template>
   <div class="space-y-4">
+    <h1 class="text-xl font-semibold text-stone-900">情绪声音</h1>
 
     <!-- 顶部：猫 / 狗 切换 + 新增 -->
     <div class="flex items-center gap-3">
@@ -27,11 +28,11 @@
     </div>
 
     <!-- 声音列表 -->
-    <div class="bg-white rounded-2xl border overflow-hidden" style="border-color:#f0e6d8;box-shadow:0 1px 4px rgba(0,0,0,0.04)">
+    <div class="bg-white rounded-xl border overflow-hidden" style="border-color:#e7e5e4;box-shadow:0 1px 4px rgba(0,0,0,0.04)">
 
       <!-- 表头 -->
-      <div class="grid px-5 py-2.5 border-b text-xs font-semibold text-stone-400 uppercase tracking-wide"
-        style="grid-template-columns:140px 1fr 110px 80px 120px;border-color:#f0e6d8;background:#faf8f5">
+      <div class="grid px-5 py-2.5 border-b text-sm font-semibold text-stone-500 uppercase tracking-wide"
+        style="grid-template-columns:140px 1fr 110px 80px 120px;border-color:#e7e5e4;background:#faf8f5">
         <span>情绪标签</span>
         <span>声音名称 / URL</span>
         <span class="text-center">试听</span>
@@ -45,7 +46,7 @@
       </div>
 
       <!-- 空 -->
-      <div v-else-if="!list.length" class="flex flex-col items-center justify-center py-16 text-stone-400">
+      <div v-else-if="!list.length" class="flex flex-col items-center justify-center py-16 text-stone-500">
         <span class="text-4xl mb-3">🎵</span>
         <p class="text-sm">暂无预设声音，点击「新增声音」添加</p>
       </div>
@@ -54,7 +55,7 @@
       <template v-else>
         <div v-for="item in list" :key="item.id"
           class="grid px-5 py-3.5 border-b items-center hover:bg-amber-50/30 transition-colors"
-          style="grid-template-columns:140px 1fr 110px 80px 120px;border-color:#f5ede4">
+          style="grid-template-columns:140px 1fr 110px 80px 120px;border-color:#f5f5f4">
 
           <!-- 情绪标签 -->
           <div>
@@ -67,14 +68,14 @@
           <!-- 名称 + URL -->
           <div class="min-w-0 pr-4">
             <p class="text-sm font-medium text-stone-700 truncate">{{ item.name }}</p>
-            <p class="text-xs text-stone-400 font-mono truncate mt-0.5">{{ item.url }}</p>
+            <p class="text-xs text-stone-500 font-mono truncate mt-0.5">{{ item.url }}</p>
           </div>
 
           <!-- 试听 -->
           <div class="flex justify-center">
             <button
               class="w-8 h-8 rounded-xl flex items-center justify-center transition-all"
-              :style="playingId === item.id ? 'background:#fde68a;color:#d97706' : 'background:#f0e6d8;color:#a8917a'"
+              :style="playingId === item.id ? 'background:#fde68a;color:#d97706' : 'background:#e7e5e4;color:#a8917a'"
               @click="togglePlay(item)"
             >
               <UIcon :name="playingId === item.id ? 'i-heroicons-stop' : 'i-heroicons-play'" class="w-4 h-4" />
@@ -83,7 +84,7 @@
 
           <!-- 状态 -->
           <div class="flex justify-center">
-            <button class="px-2.5 py-1 rounded-full text-xs font-medium border transition-all"
+            <button class="px-2.5 py-1 rounded-lg text-xs font-medium border transition-all"
               :style="item.status===1 ? 'background:#d1fae5;color:#065f46;border-color:#a7f3d0' : 'background:#fef2f2;color:#991b1b;border-color:#fecaca'"
               @click="toggleStatus(item)">
               {{ item.status===1 ? '启用' : '禁用' }}
@@ -93,15 +94,15 @@
           <!-- 操作 -->
           <div class="flex items-center justify-end gap-1">
             <!-- 重新上传 -->
-            <label class="w-7 h-7 rounded-lg flex items-center justify-center text-stone-400 hover:text-amber-600 hover:bg-amber-50 transition-all cursor-pointer" :title="uploadingId===item.id?'上传中…':'重新上传'">
+            <label class="w-7 h-7 rounded-lg flex items-center justify-center text-stone-500 hover:text-amber-600 hover:bg-amber-50 transition-all cursor-pointer" :title="uploadingId===item.id?'上传中…':'重新上传'">
               <UIcon v-if="uploadingId===item.id" name="i-heroicons-arrow-path" class="w-4 h-4 animate-spin text-amber-500" />
               <UIcon v-else name="i-heroicons-arrow-up-tray" class="w-4 h-4" />
               <input type="file" accept="audio/*" class="hidden" @change="uploadSound($event, item)" />
             </label>
-            <button class="w-7 h-7 rounded-lg flex items-center justify-center text-stone-400 hover:text-amber-600 hover:bg-amber-50 transition-all" @click="openEdit(item)">
+            <button class="w-7 h-7 rounded-lg flex items-center justify-center text-stone-500 hover:text-amber-600 hover:bg-amber-50 transition-all" @click="openEdit(item)">
               <UIcon name="i-heroicons-pencil-square" class="w-4 h-4" />
             </button>
-            <button class="w-7 h-7 rounded-lg flex items-center justify-center text-stone-400 hover:text-red-500 hover:bg-red-50 transition-all" @click="confirmDelete(item)">
+            <button class="w-7 h-7 rounded-lg flex items-center justify-center text-stone-500 hover:text-red-500 hover:bg-red-50 transition-all" @click="confirmDelete(item)">
               <UIcon name="i-heroicons-trash" class="w-4 h-4" />
             </button>
           </div>
@@ -123,11 +124,11 @@
     <Transition name="modal">
       <div v-if="modal.show" class="fixed inset-0 z-50 flex items-center justify-center p-4">
         <div class="absolute inset-0 bg-black/30 backdrop-blur-sm" @click="closeModal" />
-        <div class="relative bg-white rounded-2xl shadow-2xl w-full max-w-md p-6" style="border:1px solid #f0e6d8">
+        <div class="relative bg-white rounded-2xl shadow-2xl w-full max-w-md p-6" style="border:1px solid #e7e5e4">
 
           <div class="flex items-center justify-between mb-5">
             <p class="font-bold text-stone-800">{{ modal.isEdit ? '编辑预设声音' : '新增预设声音' }}</p>
-            <button class="text-stone-400 hover:text-stone-600" @click="closeModal">
+            <button class="text-stone-500 hover:text-stone-600" @click="closeModal">
               <UIcon name="i-heroicons-x-mark" class="w-5 h-5" />
             </button>
           </div>
@@ -160,19 +161,19 @@
                 <!-- 试听 -->
                 <button v-if="form.url"
                   class="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 transition-all"
-                  :style="previewPlaying ? 'background:#fde68a;color:#d97706' : 'background:#f0e6d8;color:#a8917a'"
+                  :style="previewPlaying ? 'background:#fde68a;color:#d97706' : 'background:#e7e5e4;color:#a8917a'"
                   @click="togglePreview">
                   <UIcon :name="previewPlaying ? 'i-heroicons-stop' : 'i-heroicons-play'" class="w-4 h-4" />
                 </button>
                 <!-- 上传 -->
                 <label class="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 cursor-pointer transition-all"
-                  :style="modalUploading ? 'background:#fef3c7;color:#92400e' : 'background:#f0e6d8;color:#a8917a'">
+                  :style="modalUploading ? 'background:#fef3c7;color:#92400e' : 'background:#e7e5e4;color:#a8917a'">
                   <UIcon v-if="modalUploading" name="i-heroicons-arrow-path" class="w-4 h-4 animate-spin" />
                   <UIcon v-else name="i-heroicons-arrow-up-tray" class="w-4 h-4" />
                   <input type="file" accept="audio/*" class="hidden" @change="uploadInModal" />
                 </label>
               </div>
-              <p class="text-xs text-stone-400 mt-1">可直接填写 URL，也可点击 ↑ 上传音频文件</p>
+              <p class="text-xs text-stone-500 mt-1">可直接填写 URL，也可点击 ↑ 上传音频文件</p>
             </div>
 
             <!-- 排序 & 状态 -->

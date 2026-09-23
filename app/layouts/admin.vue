@@ -1,142 +1,51 @@
 <template>
-  <div class="flex h-screen overflow-hidden" style="background: #faf8f5">
-    <!-- 侧边栏 -->
-    <aside class="w-56 flex-shrink-0 flex flex-col border-r" style="background: #fff8f0; border-color: #f0e6d8">
-      <!-- Logo -->
-      <div class="h-14 flex items-center gap-3 px-4 border-b flex-shrink-0" style="border-color: #f0e6d8">
-        <div class="w-8 h-8 rounded-xl flex items-center justify-center text-base shadow-sm"
-          style="background: linear-gradient(135deg, #f59e0b, #ea580c)">
-          🐾
+  <div class="admin-shell flex h-screen overflow-hidden bg-[#f7f7f5]">
+    <aside class="w-16 lg:w-52 shrink-0 flex flex-col border-r border-stone-200 bg-white">
+      <div class="h-16 flex items-center gap-3 px-4 shrink-0">
+        <div class="size-8 rounded-xl flex items-center justify-center bg-amber-600 text-white shrink-0">
+          <UIcon name="i-heroicons-heart" class="size-5" />
         </div>
-        <div>
-          <p class="font-bold text-sm leading-none" style="color: #92400e">萌宠帮</p>
-          <p class="text-[10px] mt-0.5" style="color: #c4a882">管理后台</p>
+        <div class="hidden lg:block">
+          <p class="font-semibold text-base text-stone-900">萌宠帮</p>
+          <p class="text-xs text-stone-500">管理后台</p>
         </div>
       </div>
-
-      <!-- 导航 -->
-      <nav class="flex-1 px-2 py-3 space-y-0.5 overflow-y-auto">
-        <button
-          v-for="item in nav"
-          :key="item.to"
-          :class="[
-            'w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-150 text-left',
-            isNavActive(item.to)
-              ? 'text-amber-700 font-semibold'
-              : 'text-stone-500 hover:text-stone-700 hover:bg-amber-50'
-          ]"
-          :style="isNavActive(item.to) ? 'background: #fef3c7; border: 1px solid #fde68a' : 'border: 1px solid transparent'"
-          @click="openTab(item.to)"
-        >
-          <UIcon :name="item.icon" class="w-4 h-4 flex-shrink-0" />
-          <span>{{ item.label }}</span>
-        </button>
-      </nav>
-
-      <!-- 底部 -->
-      <div class="p-3 border-t flex-shrink-0" style="border-color: #f0e6d8">
-        <div class="flex items-center gap-2.5 px-2 py-1.5">
-          <div class="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold text-white"
-            style="background: linear-gradient(135deg, #f59e0b, #ea580c)">A</div>
-          <div class="flex-1 min-w-0">
-            <p class="text-xs font-medium text-stone-700 truncate">管理员</p>
-            <p class="text-[10px] text-stone-400">administrator</p>
-          </div>
-          <button class="text-stone-400 hover:text-red-500 transition-colors" title="退出登录" @click="logout">
-            <UIcon name="i-heroicons-arrow-right-on-rectangle" class="w-4 h-4" />
+      <nav aria-label="后台导航" class="flex-1 overflow-y-auto px-2 pb-4 space-y-4">
+        <section v-for="section in navSections" :key="section.label">
+          <p class="hidden lg:block px-3 pt-2 pb-1.5 text-xs text-stone-500">{{ section.label }}</p>
+          <button v-for="item in section.items" :key="item.to" :title="item.label"
+            :aria-current="isNavActive(item.to) ? 'page' : undefined"
+            :class="['w-full flex items-center justify-center lg:justify-start gap-2.5 px-3 py-2 rounded-lg text-sm transition-colors text-left focus-visible:outline-2 focus-visible:outline-amber-700', isNavActive(item.to) ? 'bg-amber-50 text-amber-800 font-semibold' : 'text-stone-600 hover:bg-stone-50 hover:text-stone-900']"
+            @click="openTab(item.to)">
+            <UIcon :name="item.icon" class="size-4 shrink-0" />
+            <span class="hidden lg:inline">{{ item.label }}</span>
           </button>
-        </div>
+        </section>
+      </nav>
+      <div class="p-3 border-t border-stone-200 shrink-0 flex items-center gap-2">
+        <div class="hidden lg:flex size-8 rounded-full bg-stone-100 items-center justify-center text-stone-600"><UIcon name="i-heroicons-user" class="size-4" /></div>
+        <span class="hidden lg:block flex-1 text-sm text-stone-600">管理员</span>
+        <UButton icon="i-heroicons-arrow-right-on-rectangle" color="neutral" variant="ghost" aria-label="退出登录" title="退出登录" @click="logout" />
       </div>
     </aside>
-
-    <!-- 主区域 -->
     <div class="flex-1 flex flex-col min-w-0 overflow-hidden">
-
-      <!-- Tab 栏 -->
-      <div
-        class="flex-shrink-0 flex items-end gap-0 border-b overflow-x-auto"
-        style="background: #fff8f0; border-color: #f0e6d8; min-height: 40px"
-        @contextmenu.prevent
-      >
-        <TransitionGroup name="tab" tag="div" class="flex items-end">
-          <div
-            v-for="tab in tabs"
-            :key="tab.path"
-            :class="[
-              'group relative flex items-center gap-1.5 px-3.5 py-2 text-xs font-medium cursor-pointer select-none flex-shrink-0 transition-all duration-150 border-t border-l border-r rounded-t-lg -mb-px',
-              activeTab === tab.path
-                ? 'text-amber-700 bg-white z-10'
-                : 'text-stone-400 bg-stone-100/80 hover:text-stone-600 hover:bg-amber-50'
-            ]"
-            :style="activeTab === tab.path
-              ? 'border-color: #f0e6d8; padding-bottom: 9px;'
-              : 'border-color: #e2d9d0; padding-bottom: 9px;'"
-            @click="switchTab(tab.path)"
-            @contextmenu.prevent="openContextMenu($event, tab)"
-          >
-            <UIcon :name="tab.icon || 'i-heroicons-document'" class="w-3.5 h-3.5 flex-shrink-0" />
-            <span class="max-w-[120px] truncate">{{ tab.title }}</span>
-            <!-- 关闭按钮 -->
-            <button
-              v-if="tab.closable"
-              :class="[
-                'w-4 h-4 rounded flex items-center justify-center transition-all ml-0.5',
-                activeTab === tab.path
-                  ? 'text-stone-400 hover:text-red-500 hover:bg-red-50'
-                  : 'text-transparent group-hover:text-stone-400 hover:!text-red-500 hover:bg-red-50'
-              ]"
-              @click.stop="closeTab(tab.path)"
-            >
-              <UIcon name="i-heroicons-x-mark" class="w-3 h-3" />
+      <nav aria-label="已打开页面" class="h-12 shrink-0 flex items-center border-b border-stone-200 bg-white px-3 gap-2">
+        <div class="flex-1 min-w-0 overflow-x-auto h-full flex items-center gap-1">
+          <div v-for="tab in tabs" :key="tab.path" :class="['group flex items-center h-9 rounded-lg shrink-0', activeTab === tab.path ? 'bg-amber-50 text-amber-800' : 'text-stone-500 hover:bg-stone-50']" @contextmenu.prevent="openContextMenu($event, tab)">
+            <button class="flex items-center gap-2 h-full pl-3 pr-2 text-sm rounded-lg focus-visible:outline-2 focus-visible:outline-amber-700" :aria-current="activeTab === tab.path ? 'page' : undefined" @click="switchTab(tab.path)">
+              <UIcon :name="tab.icon || 'i-heroicons-document'" class="size-4 shrink-0" /><span class="max-w-40 truncate">{{ tab.title }}</span>
             </button>
-            <!-- 活动状态底部指示线 -->
-            <div
-              v-if="activeTab === tab.path"
-              class="absolute bottom-0 left-0 right-0 h-px bg-white"
-            />
+            <button v-if="tab.closable" class="mr-1 p-1 rounded text-stone-500 hover:bg-stone-200/60 hover:text-stone-900 focus-visible:outline-2 focus-visible:outline-amber-700" :aria-label="`关闭${tab.title}`" @click="closeTab(tab.path)"><UIcon name="i-heroicons-x-mark" class="size-3 block" /></button>
           </div>
-        </TransitionGroup>
-
-        <!-- 更多操作 -->
-        <div class="ml-auto flex items-center gap-1 px-2 pb-1.5 flex-shrink-0">
-          <UButton
-            icon="i-heroicons-x-mark"
-            color="gray"
-            variant="ghost"
-            size="xs"
-            title="关闭所有标签"
-            @click="closeAll()"
-          />
         </div>
-      </div>
-
-      <!-- 页面内容 -->
-      <main class="flex-1 overflow-y-auto p-5" style="background: #faf8f5">
+        <UButton icon="i-heroicons-x-mark" color="neutral" variant="ghost" size="xs" title="关闭所有标签" aria-label="关闭所有标签" @click="closeAll()" />
+      </nav>
+      <main class="admin-content flex-1 overflow-y-auto p-4 lg:p-6">
         <NuxtPage :keepalive="keepAliveOptions" />
       </main>
     </div>
-
-    <!-- 右键菜单 -->
-    <div
-      v-if="contextMenu.show"
-      class="fixed z-50 bg-white rounded-xl shadow-lg border py-1.5 w-40 text-sm overflow-hidden"
-      :style="{ top: contextMenu.y + 'px', left: contextMenu.x + 'px', borderColor: '#f0e6d8' }"
-      @mouseleave="contextMenu.show = false"
-    >
-      <button
-        v-for="action in contextMenuActions"
-        :key="action.key"
-        :class="[
-          'w-full text-left px-3.5 py-2 transition-colors flex items-center gap-2',
-          action.danger
-            ? 'text-red-500 hover:bg-red-50'
-            : 'text-stone-600 hover:bg-amber-50'
-        ]"
-        @click="handleContextAction(action.key)"
-      >
-        <UIcon :name="action.icon" class="w-3.5 h-3.5" />
-        {{ action.label }}
-      </button>
+    <div v-if="contextMenu.show" class="fixed z-50 bg-white rounded-lg shadow-lg border border-stone-200 py-1.5 w-40 text-sm overflow-hidden" :style="{ top: contextMenu.y + 'px', left: contextMenu.x + 'px' }" @mouseleave="contextMenu.show = false">
+      <button v-for="action in contextMenuActions" :key="action.key" :class="['w-full text-left px-3.5 py-2 flex items-center gap-2', action.danger ? 'text-red-600 hover:bg-red-50' : 'text-stone-600 hover:bg-stone-50']" @click="handleContextAction(action.key)"><UIcon :name="action.icon" class="size-4" />{{ action.label }}</button>
     </div>
     <div v-if="contextMenu.show" class="fixed inset-0 z-40" @click="contextMenu.show = false" />
   </div>
@@ -179,6 +88,17 @@ const navBase = [
 const nav = computed(() => isSuperAdmin.value
   ? [...navBase, { to: '/admin/admins', label: '管理员管理', icon: 'i-heroicons-shield-check' }]
   : navBase)
+
+
+const navSections = computed(() => {
+  const groups = [
+    { label: '业务管理', paths: ['/admin', '/admin/users', '/admin/devices', '/admin/device-events', '/admin/pets', '/admin/stores'] },
+    { label: '宠物与内容', paths: ['/admin/virtual-pet/scenes', '/admin/virtual-pet/assignment', '/admin/virtual-pet/actions', '/admin/virtual-pet/events', '/admin/posts', '/admin/ai-analysis', '/admin/music', '/admin/sound', '/admin/media'] },
+    { label: '订阅与积分', paths: ['/admin/plans', '/admin/points/config', '/admin/points/rules', '/admin/checkin/rules'] },
+    { label: '系统管理', paths: ['/admin/feedback', '/admin/push', '/admin/settings', '/admin/admins'] },
+  ]
+  return groups.map(group => ({ ...group, items: nav.value.filter(item => group.paths.includes(item.to)) }))
+})
 
 // KeepAlive 配置：缓存所有已打开的 tab 页面组件
 const keepAliveOptions = computed(() => ({
@@ -249,27 +169,3 @@ function logout() {
   navigateTo('/admin/login')
 }
 </script>
-
-<style scoped>
-/* Tab 动画 */
-.tab-enter-active,
-.tab-leave-active {
-  transition: all 0.18s ease;
-}
-.tab-enter-from {
-  opacity: 0;
-  transform: translateX(-8px) scaleX(0.95);
-}
-.tab-leave-to {
-  opacity: 0;
-  transform: scaleX(0.9);
-}
-.tab-leave-active {
-  position: absolute;
-}
-
-/* Tab 栏横向滚动隐藏滚动条 */
-div:has(> .tab-enter-active) {
-  scrollbar-width: none;
-}
-</style>

@@ -1,30 +1,30 @@
 <template>
   <div class="space-y-4">
     <div class="flex items-center gap-3">
-      <h2 class="text-base font-bold text-stone-800 flex items-center gap-2">
+      <h2 class="text-xl font-bold text-stone-800 flex items-center gap-2">
         <UIcon name="i-heroicons-bolt" class="w-5 h-5 text-amber-500" />
         宠物硬件动作管理
       </h2>
-      <UButton label="新建动作码" icon="i-heroicons-plus" color="amber" size="sm" class="ml-auto" @click="openModal()" />
+      <UButton label="新建动作码" icon="i-heroicons-plus" color="primary" size="sm" class="ml-auto" @click="openModal()" />
     </div>
 
-    <div class="bg-white rounded-2xl border overflow-hidden" style="border-color: #f0e6d8; box-shadow: 0 1px 4px rgba(0,0,0,0.04)">
-      <div v-if="loading" class="flex justify-center py-10"><UIcon name="i-heroicons-arrow-path" class="w-5 h-5 text-stone-400 animate-spin" /></div>
-      <div v-else-if="!list.length" class="py-10 text-center text-sm text-stone-400">暂无动作码</div>
+    <div class="bg-white rounded-xl border overflow-hidden" style="border-color: #e7e5e4; box-shadow: 0 1px 4px rgba(0,0,0,0.04)">
+      <div v-if="loading" class="flex justify-center py-10"><UIcon name="i-heroicons-arrow-path" class="w-5 h-5 text-stone-500 animate-spin" /></div>
+      <div v-else-if="!list.length" class="py-10 text-center text-sm text-stone-500">暂无动作码</div>
       <div v-else>
-        <div class="grid grid-cols-[1fr_180px_100px_140px] gap-3 px-4 py-2 bg-amber-50/50 border-b border-orange-100 text-xs text-stone-500 font-medium">
+        <div class="grid grid-cols-[1fr_180px_100px_140px] gap-3 px-4 py-2 bg-stone-50 border-b border-stone-200 text-sm text-stone-500 font-medium">
           <span>名称 / 标识码</span><span>关联GLB动作</span><span>状态</span><span>操作</span>
         </div>
         <div v-for="h in list" :key="h.id" class="grid grid-cols-[1fr_180px_100px_140px] gap-3 px-4 py-3 border-b border-stone-100 hover:bg-amber-50/20 items-center">
           <div>
             <p class="text-sm text-stone-700 font-medium">{{ h.name }}</p>
-            <p class="text-xs text-stone-400 font-mono">{{ h.code }}</p>
+            <p class="text-xs text-stone-500 font-mono">{{ h.code }}</p>
           </div>
           <span class="text-xs text-stone-500 truncate">{{ h.glb_action_code ? `${h.glb_action_name}（${h.glb_action_code}）` : '未映射' }}</span>
-          <UBadge :label="h.enabled ? '启用' : '停用'" :color="h.enabled ? 'green' : 'gray'" variant="subtle" size="xs" class="w-fit" />
+          <UBadge :label="h.enabled ? '启用' : '停用'" :color="h.enabled ? 'success' : 'neutral'" variant="subtle" size="xs" class="w-fit" />
           <div class="flex items-center gap-1">
-            <UButton icon="i-heroicons-pencil-square" color="amber" variant="ghost" size="xs" @click="openModal(h)" />
-            <UButton icon="i-heroicons-trash" color="red" variant="ghost" size="xs" :loading="h._deleting" @click="deleteAction(h)" />
+            <UButton icon="i-heroicons-pencil-square" color="primary" variant="ghost" size="xs" @click="openModal(h)" />
+            <UButton icon="i-heroicons-trash" color="error" variant="ghost" size="xs" :loading="h._deleting" @click="deleteAction(h)" />
           </div>
         </div>
       </div>
@@ -45,7 +45,7 @@
           </div>
           <div>
             <label class="text-xs text-stone-500 font-medium block mb-1">关联 GLB 动作资源</label>
-            <select v-model="modal.glbActionId" class="w-full border rounded-lg px-3 py-2 text-sm text-stone-700 bg-white" style="border-color: #e5e7eb">
+            <select v-model="modal.glbActionId" class="admin-select w-full border rounded-lg px-3 py-2 text-sm text-stone-700 bg-white" style="border-color: #e5e7eb">
               <option value="">未映射</option>
               <option v-for="g in glbActions" :key="g.id" :value="g.id">{{ g.name }}（{{ g.code }}）</option>
             </select>
@@ -59,8 +59,8 @@
           </div>
         </div>
         <div class="flex gap-2 pt-2">
-          <UButton label="取消" color="gray" variant="outline" class="flex-1" @click="modal.show = false" />
-          <UButton :label="modal.editingId ? '保存修改' : '创建'" color="amber" class="flex-1" :loading="modal.saving" @click="saveModal" />
+          <UButton label="取消" color="neutral" variant="outline" class="flex-1" @click="modal.show = false" />
+          <UButton :label="modal.editingId ? '保存修改' : '创建'" color="primary" class="flex-1" :loading="modal.saving" @click="saveModal" />
         </div>
       </div>
     </div>
@@ -89,7 +89,7 @@ async function loadGlbActions() {
 function stateBtnCls(active: boolean) {
   return [
     'flex-1 py-2 rounded-xl text-sm font-medium border-2 transition-all',
-    active ? 'border-green-400 bg-green-50 text-green-700' : 'border-stone-200 text-stone-400 hover:border-stone-300',
+    active ? 'border-green-400 bg-green-50 text-green-700' : 'border-stone-200 text-stone-500 hover:border-stone-300',
   ]
 }
 
@@ -101,8 +101,8 @@ function openModal(h?: any) {
 }
 
 async function saveModal() {
-  if (!modal.editingId && !modal.code.trim()) return toast.add({ title: '请填写标识码', color: 'red' })
-  if (!modal.name.trim()) return toast.add({ title: '请填写名称', color: 'red' })
+  if (!modal.editingId && !modal.code.trim()) return toast.add({ title: '请填写标识码', color: 'error' })
+  if (!modal.name.trim()) return toast.add({ title: '请填写名称', color: 'error' })
   modal.saving = true
   try {
     const body: any = { name: modal.name.trim(), glb_action_id: modal.glbActionId || null, enabled: modal.enabled }
@@ -113,9 +113,9 @@ async function saveModal() {
       await $fetch('/api/admin/pet-hardware-actions/create', { method: 'POST', body })
     }
     modal.show = false
-    toast.add({ title: '保存成功', color: 'green' })
+    toast.add({ title: '保存成功', color: 'success' })
     await loadList()
-  } catch (err: any) { toast.add({ title: err?.data?.message || '保存失败', color: 'red' }) }
+  } catch (err: any) { toast.add({ title: err?.data?.message || '保存失败', color: 'error' }) }
   finally { modal.saving = false }
 }
 

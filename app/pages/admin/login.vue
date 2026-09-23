@@ -15,7 +15,7 @@
           style="background: linear-gradient(135deg, #f59e0b, #ea580c)">
           <span class="text-3xl">🐾</span>
         </div>
-        <h1 class="text-2xl font-bold text-gray-700 tracking-tight">萌宠帮管理后台</h1>
+        <h1 class="text-xl font-bold text-gray-700 tracking-tight">萌宠帮管理后台</h1>
         <p class="text-sm text-gray-500 mt-1.5">使用管理员账号登录</p>
       </div>
 

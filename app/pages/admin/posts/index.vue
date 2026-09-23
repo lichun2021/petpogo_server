@@ -1,5 +1,6 @@
 <template>
   <div class="space-y-4">
+    <h1 class="text-xl font-semibold text-stone-900">帖子审核</h1>
     <!-- 待审提示 -->
     <div v-if="pendingCount > 0"
       class="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 flex items-center gap-2 text-sm text-amber-700">
@@ -12,10 +13,10 @@
       <button
         v-for="(tab, i) in tabs" :key="tab.key"
         :class="[
-          'px-4 py-1.5 rounded-full text-sm font-medium transition-all',
+          'px-4 py-1.5 rounded-lg text-sm font-medium transition-all',
           activeTab === i ? 'bg-amber-500 text-white shadow-sm' : 'bg-white border text-stone-500 hover:text-stone-700 hover:border-amber-300'
         ]"
-        style="border-color: #f0e6d8"
+        style="border-color: #e7e5e4"
         @click="activeTab = i; page = 1; mediaType = ''; loadList()"
       >{{ tab.label }}</button>
 
@@ -24,10 +25,10 @@
       <button
         v-for="t in typeOpts" :key="t.value"
         :class="[
-          'px-3 py-1 rounded-full text-xs font-medium transition-all',
-          mediaType === t.value ? 'bg-stone-700 text-white' : 'bg-white border text-stone-400 hover:text-stone-600'
+          'px-3 py-1 rounded-lg text-xs font-medium transition-all',
+          mediaType === t.value ? 'bg-stone-700 text-white' : 'bg-white border text-stone-500 hover:text-stone-600'
         ]"
-        style="border-color: #f0e6d8"
+        style="border-color: #e7e5e4"
         @click="mediaType = t.value; page = 1; loadList()"
       >{{ t.label }}</button>
 
@@ -37,21 +38,21 @@
       <button
         v-for="tg in tagOpts" :key="tg.value"
         :class="[
-          'px-3 py-1 rounded-full text-xs font-medium transition-all flex items-center gap-1',
+          'px-3 py-1 rounded-lg text-xs font-medium transition-all flex items-center gap-1',
           activeTag === tg.value
             ? `${tg.activeCls} text-white`
-            : 'bg-white border text-stone-400 hover:text-stone-600'
+            : 'bg-white border text-stone-500 hover:text-stone-600'
         ]"
-        style="border-color: #f0e6d8"
+        style="border-color: #e7e5e4"
         @click="activeTag = tg.value; page = 1; loadList()"
       >
         <span>{{ tg.emoji }}</span>{{ tg.label }}
       </button>
 
-      <span class="ml-auto text-xs text-stone-400">共 {{ total }} 条</span>
+      <span class="ml-auto text-xs text-stone-500">共 {{ total }} 条</span>
       <UButton
         icon="i-heroicons-arrow-path"
-        color="stone"
+        color="neutral"
         variant="ghost"
         size="xs"
         title="刷新列表"
@@ -61,15 +62,15 @@
     </div>
 
     <!-- 列表 -->
-    <div class="bg-white rounded-2xl border overflow-hidden" style="border-color: #f0e6d8; box-shadow: 0 1px 4px rgba(0,0,0,0.04)">
+    <div class="bg-white rounded-xl border overflow-hidden" style="border-color: #e7e5e4; box-shadow: 0 1px 4px rgba(0,0,0,0.04)">
       <div v-if="loading" class="flex justify-center py-10">
-        <UIcon name="i-heroicons-arrow-path" class="w-5 h-5 text-stone-400 animate-spin" />
+        <UIcon name="i-heroicons-arrow-path" class="w-5 h-5 text-stone-500 animate-spin" />
       </div>
-      <div v-else-if="!list.length" class="py-10 text-center text-sm text-stone-400">暂无数据</div>
+      <div v-else-if="!list.length" class="py-10 text-center text-sm text-stone-500">暂无数据</div>
 
       <div v-else>
         <!-- 表头 -->
-        <div class="grid grid-cols-[80px_1fr_120px_80px_100px_140px] gap-3 px-4 py-2 bg-amber-50/50 border-b border-orange-100 text-xs text-stone-500 font-medium">
+        <div class="grid grid-cols-[80px_1fr_120px_80px_100px_140px] gap-3 px-4 py-2 bg-stone-50 border-b border-stone-200 text-sm text-stone-500 font-medium">
           <span>封面</span>
           <span>内容</span>
           <span>用户</span>
@@ -107,7 +108,7 @@
           <!-- 内容 -->
           <div class="min-w-0">
             <p class="text-sm text-stone-700 line-clamp-1 font-medium">{{ p.content || '（无文字）' }}</p>
-            <p class="text-xs text-stone-400 mt-0.5">{{ formatDate(p.created_at) }}</p>
+            <p class="text-xs text-stone-500 mt-0.5">{{ formatDate(p.created_at) }}</p>
             <div v-if="p.reject_reason" class="mt-1 text-xs text-red-400 flex items-center gap-1">
               <UIcon name="i-heroicons-exclamation-circle" class="w-3 h-3" />
               {{ p.reject_reason }}
@@ -124,7 +125,7 @@
           <div @click.stop>
             <span
               :class="tagBadgeCls(p.tag)"
-              class="inline-flex items-center gap-0.5 px-2 py-0.5 rounded-full text-xs font-medium cursor-pointer hover:opacity-80 transition-opacity"
+              class="inline-flex items-center gap-0.5 px-2 py-0.5 rounded-lg text-xs font-medium cursor-pointer hover:opacity-80 transition-opacity"
               @click="openTagModal(p)"
             >
               {{ tagEmoji(p.tag) }}{{ tagLabel(p.tag) }}
@@ -135,7 +136,7 @@
           <div>
             <UBadge
               :label="statusLabel[p.status] || '-'"
-              :color="statusColor[p.status] || 'gray'"
+              :color="statusColor[p.status] || 'neutral'"
               variant="subtle" size="xs"
             />
           </div>
@@ -144,13 +145,13 @@
           <div class="flex gap-1.5" @click.stop>
             <UButton
               v-if="p.status !== 1 && p.status !== 0"
-              label="通过" color="green" variant="subtle" size="xs"
+              label="通过" color="success" variant="subtle" size="xs"
               :loading="p._loading"
               @click="approvePost(p)"
             />
             <UButton
               v-if="p.status !== 3 && p.status !== 0"
-              label="违规" color="red" variant="subtle" size="xs"
+              label="违规" color="error" variant="subtle" size="xs"
               :loading="p._loading"
               @click="openReject(p)"
             />
@@ -160,7 +161,7 @@
 
       <!-- 分页 -->
       <div v-if="total > pageSize" class="flex justify-center py-4 border-t border-stone-100">
-        <UPagination v-model="page" :page-count="pageSize" :total="total" @update:model-value="loadList" />
+        <UPagination v-model:page="page" :items-per-page="pageSize" :total="total" @update:page="loadList" />
       </div>
     </div>
 
@@ -172,7 +173,7 @@
     >
       <div class="bg-white rounded-2xl shadow-xl w-80 p-5">
         <h3 class="font-semibold text-stone-800 mb-1">标记违规</h3>
-        <p class="text-xs text-stone-400 mb-4">请选择违规原因（必填）</p>
+        <p class="text-xs text-stone-500 mb-4">请选择违规原因（必填）</p>
 
         <div class="space-y-2 mb-4">
           <label
@@ -190,10 +191,10 @@
         </div>
 
         <div class="flex gap-2">
-          <UButton label="取消" color="gray" variant="outline" class="flex-1" @click="rejectModal.show = false" />
+          <UButton label="取消" color="neutral" variant="outline" class="flex-1" @click="rejectModal.show = false" />
           <UButton
             label="确认违规"
-            color="red"
+            color="error"
             class="flex-1"
             :disabled="!rejectModal.reason"
             :loading="rejectModal.loading"
@@ -211,7 +212,7 @@
     >
       <div class="bg-white rounded-2xl shadow-xl w-72 p-5">
         <h3 class="font-semibold text-stone-800 mb-1">修改帖子标签</h3>
-        <p class="text-xs text-stone-400 mb-4">为帖子选择合适的分类标签</p>
+        <p class="text-xs text-stone-500 mb-4">为帖子选择合适的分类标签</p>
 
         <div class="space-y-2 mb-5">
           <label
@@ -230,10 +231,10 @@
         </div>
 
         <div class="flex gap-2">
-          <UButton label="取消" color="gray" variant="outline" class="flex-1" @click="tagModal.show = false" />
+          <UButton label="取消" color="neutral" variant="outline" class="flex-1" @click="tagModal.show = false" />
           <UButton
             label="保存"
-            color="amber"
+            color="primary"
             class="flex-1"
             :loading="tagModal.loading"
             @click="confirmTag"
@@ -271,7 +272,7 @@ const tagOpts = [
 ]
 
 const statusLabel: Record<number, string> = { 0: '转码中', 1: '已通过', 2: '待审核', 3: '已违规' }
-const statusColor: Record<number, string> = { 0: 'gray',   1: 'green',  2: 'yellow', 3: 'red'   }
+const statusColor: Record<number, string> = { 0: 'neutral',   1: 'success',  2: 'warning', 3: 'error'   }
 
 const rejectReasons = ['内容违规', '版权问题', '违规广告', '涉嫌诈骗', '色情低俗', '虚假信息', '其他']
 
@@ -361,8 +362,8 @@ async function approvePost(p: any) {
     await $fetch(`/api/admin/posts/${p.id}/status`, { method: 'PUT', body: { status: 1 } })
     p.status = 1
     pendingCount.value = Math.max(0, pendingCount.value - 1)
-    toast.add({ title: '已通过审核', color: 'green' })
-  } catch { toast.add({ title: '操作失败', color: 'red' }) }
+    toast.add({ title: '已通过审核', color: 'success' })
+  } catch { toast.add({ title: '操作失败', color: 'error' }) }
   finally { p._loading = false }
 }
 
@@ -383,8 +384,8 @@ async function confirmReject() {
     rejectModal.post.status        = 3
     rejectModal.post.reject_reason = rejectModal.reason
     rejectModal.show               = false
-    toast.add({ title: `已标记违规：${rejectModal.reason}`, color: 'red' })
-  } catch { toast.add({ title: '操作失败', color: 'red' }) }
+    toast.add({ title: `已标记违规：${rejectModal.reason}`, color: 'error' })
+  } catch { toast.add({ title: '操作失败', color: 'error' }) }
   finally { rejectModal.loading = false }
 }
 
@@ -403,8 +404,8 @@ async function confirmTag() {
     })
     tagModal.post.tag = tagModal.tag
     tagModal.show     = false
-    toast.add({ title: `标签已更新为「${tagLabel(tagModal.tag)}」`, color: 'green' })
-  } catch { toast.add({ title: '操作失败', color: 'red' }) }
+    toast.add({ title: `标签已更新为「${tagLabel(tagModal.tag)}」`, color: 'success' })
+  } catch { toast.add({ title: '操作失败', color: 'error' }) }
   finally { tagModal.loading = false }
 }
 

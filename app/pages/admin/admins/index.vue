@@ -1,5 +1,6 @@
 <template>
   <div class="space-y-4">
+    <h1 class="text-xl font-semibold text-stone-900">管理员管理</h1>
 
     <!-- 顶部：搜索 + 新增 -->
     <div class="flex items-center gap-3">
@@ -23,10 +24,10 @@
     </div>
 
     <!-- 列表 -->
-    <div class="bg-white rounded-2xl border overflow-hidden" style="border-color:#f0e6d8;box-shadow:0 1px 4px rgba(0,0,0,0.04)">
+    <div class="bg-white rounded-xl border overflow-hidden" style="border-color:#e7e5e4;box-shadow:0 1px 4px rgba(0,0,0,0.04)">
 
-      <div class="grid px-5 py-2.5 border-b text-xs font-semibold text-stone-400 uppercase tracking-wide"
-        style="grid-template-columns:1fr 100px 100px 160px 140px;border-color:#f0e6d8;background:#faf8f5">
+      <div class="grid px-5 py-2.5 border-b text-sm font-semibold text-stone-500 uppercase tracking-wide"
+        style="grid-template-columns:1fr 100px 100px 160px 140px;border-color:#e7e5e4;background:#faf8f5">
         <span>账号 / 昵称</span>
         <span class="text-center">角色</span>
         <span class="text-center">状态</span>
@@ -38,7 +39,7 @@
         <UIcon name="i-heroicons-arrow-path" class="w-6 h-6 text-amber-400 animate-spin" />
       </div>
 
-      <div v-else-if="!list.length" class="flex flex-col items-center justify-center py-16 text-stone-400">
+      <div v-else-if="!list.length" class="flex flex-col items-center justify-center py-16 text-stone-500">
         <span class="text-4xl mb-3">🛡️</span>
         <p class="text-sm">暂无管理员，点击「新增管理员」添加</p>
       </div>
@@ -46,11 +47,11 @@
       <template v-else>
         <div v-for="item in list" :key="item.id"
           class="grid px-5 py-3.5 border-b items-center hover:bg-amber-50/30 transition-colors"
-          style="grid-template-columns:1fr 100px 100px 160px 140px;border-color:#f5ede4">
+          style="grid-template-columns:1fr 100px 100px 160px 140px;border-color:#f5f5f4">
 
           <div class="min-w-0 pr-4">
             <p class="text-sm font-medium text-stone-700 truncate">{{ item.username }}</p>
-            <p class="text-xs text-stone-400 truncate mt-0.5">{{ item.nickname || '—' }}</p>
+            <p class="text-xs text-stone-500 truncate mt-0.5">{{ item.nickname || '—' }}</p>
           </div>
 
           <div class="flex justify-center">
@@ -61,7 +62,7 @@
           </div>
 
           <div class="flex justify-center">
-            <button class="px-2.5 py-1 rounded-full text-xs font-medium border transition-all"
+            <button class="px-2.5 py-1 rounded-lg text-xs font-medium border transition-all"
               :disabled="item.id === myAdminId"
               :style="item.status===1 ? 'background:#d1fae5;color:#065f46;border-color:#a7f3d0' : 'background:#fef2f2;color:#991b1b;border-color:#fecaca'"
               @click="toggleStatus(item)">
@@ -74,12 +75,12 @@
           </div>
 
           <div class="flex items-center justify-end gap-1">
-            <button class="w-7 h-7 rounded-lg flex items-center justify-center text-stone-400 hover:text-amber-600 hover:bg-amber-50 transition-all" title="编辑" @click="openEdit(item)">
+            <button class="w-7 h-7 rounded-lg flex items-center justify-center text-stone-500 hover:text-amber-600 hover:bg-amber-50 transition-all" title="编辑" @click="openEdit(item)">
               <UIcon name="i-heroicons-pencil-square" class="w-4 h-4" />
             </button>
             <button
               class="w-7 h-7 rounded-lg flex items-center justify-center transition-all"
-              :class="item.id === myAdminId ? 'text-stone-200 cursor-not-allowed' : 'text-stone-400 hover:text-red-500 hover:bg-red-50'"
+              :class="item.id === myAdminId ? 'text-stone-200 cursor-not-allowed' : 'text-stone-500 hover:text-red-500 hover:bg-red-50'"
               :disabled="item.id === myAdminId"
               title="删除"
               @click="confirmDelete(item)"
@@ -105,11 +106,11 @@
     <Transition name="modal">
       <div v-if="modal.show" class="fixed inset-0 z-50 flex items-center justify-center p-4">
         <div class="absolute inset-0 bg-black/30 backdrop-blur-sm" @click="closeModal" />
-        <div class="relative bg-white rounded-2xl shadow-2xl w-full max-w-md p-6" style="border:1px solid #f0e6d8">
+        <div class="relative bg-white rounded-2xl shadow-2xl w-full max-w-md p-6" style="border:1px solid #e7e5e4">
 
           <div class="flex items-center justify-between mb-5">
             <p class="font-bold text-stone-800">{{ modal.isEdit ? '编辑管理员' : '新增管理员' }}</p>
-            <button class="text-stone-400 hover:text-stone-600" @click="closeModal">
+            <button class="text-stone-500 hover:text-stone-600" @click="closeModal">
               <UIcon name="i-heroicons-x-mark" class="w-5 h-5" />
             </button>
           </div>

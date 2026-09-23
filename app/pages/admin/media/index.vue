@@ -1,24 +1,25 @@
 <template>
   <div class="space-y-4">
+    <h1 class="text-xl font-semibold text-stone-900">用户图库</h1>
     <!-- 统计卡片 -->
     <div class="grid grid-cols-3 gap-3">
       <div
         v-for="card in statCards" :key="card.label"
         class="bg-white rounded-2xl p-4 border flex items-center gap-3"
-        style="border-color: #f0e6d8; box-shadow: 0 1px 4px rgba(0,0,0,0.04)"
+        style="border-color: #e7e5e4; box-shadow: 0 1px 4px rgba(0,0,0,0.04)"
       >
         <div class="w-10 h-10 rounded-xl flex items-center justify-center text-lg flex-shrink-0" :style="`background:${card.bg}`">
           {{ card.emoji }}
         </div>
         <div>
-          <p class="text-xs text-stone-400 mb-0.5">{{ card.label }}</p>
-          <p class="text-xl font-bold text-stone-800">{{ card.value }}</p>
+          <p class="text-xs text-stone-500 mb-0.5">{{ card.label }}</p>
+          <p class="text-2xl font-bold text-stone-800">{{ card.value }}</p>
         </div>
       </div>
     </div>
 
     <!-- 工具栏 -->
-    <div class="bg-white rounded-2xl border px-5 py-3.5 flex items-center gap-3" style="border-color: #f0e6d8; box-shadow: 0 1px 4px rgba(0,0,0,0.04)">
+    <div class="bg-white rounded-xl border px-5 py-3.5 flex items-center gap-3" style="border-color: #e7e5e4; box-shadow: 0 1px 4px rgba(0,0,0,0.04)">
       <!-- 类型筛选 -->
       <div class="flex items-center gap-1.5">
         <button
@@ -33,7 +34,7 @@
 
       <!-- 搜索 -->
       <div class="relative max-w-xs flex-1">
-        <UIcon name="i-heroicons-magnifying-glass" class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-stone-400" />
+        <UIcon name="i-heroicons-magnifying-glass" class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-stone-500" />
         <input
           v-model="keyword"
           type="text"
@@ -45,7 +46,7 @@
       </div>
 
       <div class="ml-auto flex items-center gap-2">
-        <UButton icon="i-heroicons-arrow-path" color="gray" variant="ghost" size="sm" :loading="loading" @click="loadData" />
+        <UButton icon="i-heroicons-arrow-path" color="neutral" variant="ghost" size="sm" :loading="loading" @click="loadData" />
       </div>
     </div>
 
@@ -53,7 +54,7 @@
     <div v-if="loading" class="py-20 flex items-center justify-center">
       <UIcon name="i-heroicons-arrow-path" class="w-6 h-6 text-amber-400 animate-spin" />
     </div>
-    <div v-else-if="!list.length" class="py-20 flex flex-col items-center gap-2 text-stone-400">
+    <div v-else-if="!list.length" class="py-20 flex flex-col items-center gap-2 text-stone-500">
       <span class="text-4xl">🖼️</span>
       <p class="text-sm">暂无媒体文件</p>
     </div>
@@ -85,13 +86,13 @@
           <!-- 用户信息（hover 才出现） -->
           <div class="opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1.5">
             <UAvatar :src="item.avatar" :alt="item.nickname" size="xs" class="flex-shrink-0 ring-1 ring-white" />
-            <p class="text-[11px] font-medium text-white drop-shadow truncate">{{ item.nickname || '未命名' }}</p>
+            <p class="text-xs font-medium text-white drop-shadow truncate">{{ item.nickname || '未命名' }}</p>
           </div>
           <!-- 删除按钮（hover 才出现） -->
           <div class="opacity-0 group-hover:opacity-100 transition-opacity flex justify-end" @click.stop>
             <UButton
               icon="i-heroicons-trash"
-              color="red"
+              color="error"
               variant="solid"
               size="xs"
               class="shadow"
@@ -102,18 +103,18 @@
 
         <!-- 时间标签（常显） -->
         <div class="absolute bottom-0 left-0 right-0 px-2 py-1 group-hover:opacity-0 transition-opacity" style="background: linear-gradient(transparent, rgba(0,0,0,0.5))">
-          <p class="text-[10px] text-white/80">{{ formatDate(item.created_at) }}</p>
+          <p class="text-xs text-white/80">{{ formatDate(item.created_at) }}</p>
         </div>
       </div>
     </div>
 
     <!-- 分页 -->
     <div v-if="total > pageSize" class="flex items-center justify-between px-1">
-      <p class="text-xs text-stone-400">共 {{ total }} 个文件</p>
+      <p class="text-xs text-stone-500">共 {{ total }} 个文件</p>
       <div class="flex items-center gap-1">
-        <UButton icon="i-heroicons-chevron-left" color="gray" variant="ghost" size="xs" :disabled="page <= 1" @click="page--; loadData()" />
+        <UButton icon="i-heroicons-chevron-left" color="neutral" variant="ghost" size="xs" :disabled="page <= 1" @click="page--; loadData()" />
         <span class="text-xs text-stone-500 px-2">{{ page }} / {{ Math.ceil(total / pageSize) }}</span>
-        <UButton icon="i-heroicons-chevron-right" color="gray" variant="ghost" size="xs" :disabled="page >= Math.ceil(total / pageSize)" @click="page++; loadData()" />
+        <UButton icon="i-heroicons-chevron-right" color="neutral" variant="ghost" size="xs" :disabled="page >= Math.ceil(total / pageSize)" @click="page++; loadData()" />
       </div>
     </div>
 

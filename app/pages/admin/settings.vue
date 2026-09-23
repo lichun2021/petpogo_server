@@ -4,12 +4,12 @@
     <!-- 页头 -->
     <div class="flex items-center justify-between">
       <div>
-        <h2 class="text-base font-semibold text-stone-800">系统设置</h2>
-        <p class="text-xs text-stone-400 mt-0.5">管理全局系统配置参数</p>
+        <h2 class="text-xl font-semibold text-stone-800">系统设置</h2>
+        <p class="text-xs text-stone-500 mt-0.5">管理全局系统配置参数</p>
       </div>
       <UButton
         label="保存全部"
-        color="amber"
+        color="primary"
         icon="i-heroicons-check"
         :loading="saving"
         @click="saveAll"
@@ -18,24 +18,24 @@
 
     <!-- 加载状态 -->
     <div v-if="loading" class="flex justify-center py-16">
-      <UIcon name="i-heroicons-arrow-path" class="w-6 h-6 text-stone-400 animate-spin" />
+      <UIcon name="i-heroicons-arrow-path" class="w-6 h-6 text-stone-500 animate-spin" />
     </div>
 
     <template v-else>
 
       <!-- SMS 短信网关 -->
       <div
-        class="bg-white rounded-2xl border overflow-hidden"
-        style="border-color: #f0e6d8; box-shadow: 0 1px 4px rgba(0,0,0,0.04)"
+        class="bg-white rounded-xl border overflow-hidden"
+        style="border-color: #e7e5e4; box-shadow: 0 1px 4px rgba(0,0,0,0.04)"
       >
         <!-- 分组标题 -->
-        <div class="flex items-center gap-2.5 px-5 py-3.5 border-b" style="border-color: #f0e6d8; background: #fffbf5">
+        <div class="flex items-center gap-2.5 px-5 py-3.5 border-b" style="border-color: #e7e5e4; background: #fffbf5">
           <div class="w-7 h-7 rounded-lg flex items-center justify-center" style="background: #fef3c7">
             <UIcon name="i-heroicons-chat-bubble-left-ellipsis" class="w-4 h-4 text-amber-600" />
           </div>
           <div>
             <p class="text-sm font-semibold text-stone-800">短信网关</p>
-            <p class="text-[11px] text-stone-400">控制短信验证码发送行为</p>
+            <p class="text-xs text-stone-500">控制短信验证码发送行为</p>
           </div>
           <!-- 核心开关：醒目放在标题行 -->
           <div class="ml-auto flex items-center gap-2.5">
@@ -66,7 +66,7 @@
             <div v-if="item.key !== 'sms_enabled'" class="flex items-start gap-4 px-5 py-4">
               <div class="flex-1 min-w-0">
                 <p class="text-sm font-medium text-stone-700">{{ item.label }}</p>
-                <p class="text-xs text-stone-400 mt-0.5">{{ item.description }}</p>
+                <p class="text-xs text-stone-500 mt-0.5">{{ item.description }}</p>
               </div>
               <!-- number / text -->
               <div class="w-48 flex-shrink-0">
@@ -84,16 +84,16 @@
 
       <!-- 通用设置 -->
       <div
-        class="bg-white rounded-2xl border overflow-hidden"
-        style="border-color: #f0e6d8; box-shadow: 0 1px 4px rgba(0,0,0,0.04)"
+        class="bg-white rounded-xl border overflow-hidden"
+        style="border-color: #e7e5e4; box-shadow: 0 1px 4px rgba(0,0,0,0.04)"
       >
-        <div class="flex items-center gap-2.5 px-5 py-3.5 border-b" style="border-color: #f0e6d8; background: #fffbf5">
+        <div class="flex items-center gap-2.5 px-5 py-3.5 border-b" style="border-color: #e7e5e4; background: #fffbf5">
           <div class="w-7 h-7 rounded-lg flex items-center justify-center" style="background: #dbeafe">
             <UIcon name="i-heroicons-cog-6-tooth" class="w-4 h-4 text-blue-600" />
           </div>
           <div>
             <p class="text-sm font-semibold text-stone-800">通用设置</p>
-            <p class="text-[11px] text-stone-400">基础应用参数配置</p>
+            <p class="text-xs text-stone-500">基础应用参数配置</p>
           </div>
         </div>
 
@@ -105,7 +105,7 @@
           >
             <div class="flex-1 min-w-0">
               <p class="text-sm font-medium text-stone-700">{{ item.label }}</p>
-              <p class="text-xs text-stone-400 mt-0.5">{{ item.description }}</p>
+              <p class="text-xs text-stone-500 mt-0.5">{{ item.description }}</p>
             </div>
             <!-- boolean 开关 -->
             <div v-if="item.type === 'boolean'" class="flex items-center gap-2 flex-shrink-0 mt-0.5">
@@ -141,16 +141,16 @@
 
       <!-- OSS 配置 -->
       <div
-        class="bg-white rounded-2xl border overflow-hidden"
-        style="border-color: #f0e6d8; box-shadow: 0 1px 4px rgba(0,0,0,0.04)"
+        class="bg-white rounded-xl border overflow-hidden"
+        style="border-color: #e7e5e4; box-shadow: 0 1px 4px rgba(0,0,0,0.04)"
       >
-        <div class="flex items-center gap-2.5 px-5 py-3.5 border-b" style="border-color: #f0e6d8; background: #fffbf5">
+        <div class="flex items-center gap-2.5 px-5 py-3.5 border-b" style="border-color: #e7e5e4; background: #fffbf5">
           <div class="w-7 h-7 rounded-lg flex items-center justify-center" style="background: #dcfce7">
             <UIcon name="i-heroicons-cloud" class="w-4 h-4 text-green-600" />
           </div>
           <div>
             <p class="text-sm font-semibold text-stone-800">OSS / 存储</p>
-            <p class="text-[11px] text-stone-400">对象存储相关配置</p>
+            <p class="text-xs text-stone-500">对象存储相关配置</p>
           </div>
         </div>
 
@@ -162,7 +162,7 @@
           >
             <div class="flex-1 min-w-0">
               <p class="text-sm font-medium text-stone-700">{{ item.label }}</p>
-              <p class="text-xs text-stone-400 mt-0.5">{{ item.description }}</p>
+              <p class="text-xs text-stone-500 mt-0.5">{{ item.description }}</p>
             </div>
             <div class="w-80 flex-shrink-0">
               <UInput v-model="localValues[item.key]" size="sm" />
@@ -173,21 +173,21 @@
 
       <!-- 客户端配置（App 运行时拉取，可增删） -->
       <div
-        class="bg-white rounded-2xl border overflow-hidden"
-        style="border-color: #f0e6d8; box-shadow: 0 1px 4px rgba(0,0,0,0.04)"
+        class="bg-white rounded-xl border overflow-hidden"
+        style="border-color: #e7e5e4; box-shadow: 0 1px 4px rgba(0,0,0,0.04)"
       >
-        <div class="flex items-center gap-2.5 px-5 py-3.5 border-b" style="border-color: #f0e6d8; background: #fffbf5">
+        <div class="flex items-center gap-2.5 px-5 py-3.5 border-b" style="border-color: #e7e5e4; background: #fffbf5">
           <div class="w-7 h-7 rounded-lg flex items-center justify-center" style="background: #ede9fe">
             <UIcon name="i-heroicons-device-phone-mobile" class="w-4 h-4 text-purple-600" />
           </div>
           <div class="flex-1">
             <p class="text-sm font-semibold text-stone-800">客户端配置</p>
-            <p class="text-[11px] text-stone-400">App 运行时通过 /sdkapi/config/client 拉取；secret 类型对 App 脱敏返回 ***</p>
+            <p class="text-xs text-stone-500">App 运行时通过 /sdkapi/config/client 拉取；secret 类型对 App 脱敏返回 ***</p>
           </div>
-          <UButton label="新增配置" color="amber" variant="soft" size="xs" icon="i-heroicons-plus" @click="openClientModal()" />
+          <UButton label="新增配置" color="primary" variant="soft" size="xs" icon="i-heroicons-plus" @click="openClientModal()" />
         </div>
 
-        <div v-if="getGroup('client').length === 0" class="py-8 text-center text-xs text-stone-400">
+        <div v-if="getGroup('client').length === 0" class="py-8 text-center text-xs text-stone-500">
           暂无客户端配置，点击右上角「新增配置」
         </div>
         <div v-else class="divide-y" style="divide-color: #faf6f2">
@@ -200,10 +200,10 @@
               <div class="flex items-center gap-2">
                 <p class="text-sm font-medium text-stone-700">{{ item.label }}</p>
                 <UBadge :label="item.type" :color="typeColor(item.type)" variant="subtle" size="xs" />
-                <UBadge v-if="item.status === 0" label="已停用" color="gray" variant="subtle" size="xs" />
+                <UBadge v-if="item.status === 0" label="已停用" color="neutral" variant="subtle" size="xs" />
               </div>
-              <p class="text-[11px] text-stone-400 mt-0.5 font-mono">{{ item.key }}</p>
-              <p v-if="item.description" class="text-xs text-stone-400 mt-0.5">{{ item.description }}</p>
+              <p class="text-xs text-stone-500 mt-0.5 font-mono">{{ item.key }}</p>
+              <p v-if="item.description" class="text-xs text-stone-500 mt-0.5">{{ item.description }}</p>
             </div>
             <!-- boolean 开关 -->
             <div v-if="item.type === 'boolean'" class="flex items-center gap-2 flex-shrink-0 mt-0.5">
@@ -235,7 +235,7 @@
               />
               <UButton
                 :icon="secretVisible[item.key] ? 'i-heroicons-eye-slash' : 'i-heroicons-eye'"
-                color="gray" variant="ghost" size="xs"
+                color="neutral" variant="ghost" size="xs"
                 @click="secretVisible[item.key] = !secretVisible[item.key]"
               />
             </div>
@@ -250,7 +250,7 @@
             <!-- 删除 -->
             <UButton
               icon="i-heroicons-trash"
-              color="red" variant="ghost" size="xs"
+              color="error" variant="ghost" size="xs"
               class="flex-shrink-0 mt-0.5"
               @click="deleteClient(item)"
             />
@@ -281,7 +281,7 @@
           </div>
           <div>
             <label class="text-xs text-stone-500 font-medium block mb-1">值类型</label>
-            <select v-model="clientModal.type" class="w-full rounded-lg text-sm py-1.5 px-2" style="border-color: #e7e5e4">
+            <select v-model="clientModal.type" class="admin-select w-full rounded-lg text-sm py-1.5 px-2" style="border-color: #e7e5e4">
               <option value="text">text（明文字符串）</option>
               <option value="secret">secret（对App脱敏返回 ***）</option>
               <option value="boolean">boolean（开关，值 1/0）</option>
@@ -294,8 +294,8 @@
           </div>
         </div>
         <div class="flex gap-2 pt-2">
-          <UButton label="取消" color="gray" variant="outline" class="flex-1" @click="clientModal.show = false" />
-          <UButton label="创建" color="amber" class="flex-1" :loading="clientModal.saving" :disabled="!clientModal.key.trim() || !clientModal.label.trim()" @click="createClient" />
+          <UButton label="取消" color="neutral" variant="outline" class="flex-1" @click="clientModal.show = false" />
+          <UButton label="创建" color="primary" class="flex-1" :loading="clientModal.saving" :disabled="!clientModal.key.trim() || !clientModal.label.trim()" @click="createClient" />
         </div>
       </div>
     </div>
@@ -331,7 +331,7 @@ function toggleBoolean(key: string) {
 
 // 类型 → 徽章颜色
 function typeColor(type: string) {
-  return ({ secret: 'red', boolean: 'blue', number: 'green', text: 'gray', json: 'purple' } as Record<string, any>)[type] || 'gray'
+  return ({ secret: 'error', boolean: 'info', number: 'success', text: 'neutral', json: 'secondary' } as Record<string, any>)[type] || 'neutral'
 }
 
 // ── 客户端配置：新增弹窗 ──
@@ -366,11 +366,11 @@ async function createClient() {
         },
       },
     })
-    toast.add({ title: '创建成功', color: 'green' })
+    toast.add({ title: '创建成功', color: 'success' })
     clientModal.show = false
     await loadSettings()
   } catch (e: any) {
-    toast.add({ title: '创建失败', description: e?.data?.message, color: 'red' })
+    toast.add({ title: '创建失败', description: e?.data?.message, color: 'error' })
   } finally {
     clientModal.saving = false
   }
@@ -380,10 +380,10 @@ async function deleteClient(item: any) {
   if (!confirm(`确认删除配置「${item.label}」(${item.key})？`)) return
   try {
     await $fetch(`/api/admin/settings?key=${encodeURIComponent(item.key)}`, { method: 'DELETE' })
-    toast.add({ title: '删除成功', color: 'green' })
+    toast.add({ title: '删除成功', color: 'success' })
     await loadSettings()
   } catch (e: any) {
-    toast.add({ title: '删除失败', description: e?.data?.message, color: 'red' })
+    toast.add({ title: '删除失败', description: e?.data?.message, color: 'error' })
   }
 }
 
@@ -396,7 +396,7 @@ async function loadSettings() {
       localValues[item.key] = item.value
     }
   } catch {
-    toast.add({ title: '加载失败', description: '无法获取系统设置', color: 'red' })
+    toast.add({ title: '加载失败', description: '无法获取系统设置', color: 'error' })
   } finally {
     loading.value = false
   }
@@ -413,9 +413,9 @@ async function saveAll() {
       value: localValues[item.key] ?? item.value,
     }))
     await $fetch('/api/admin/settings', { method: 'PUT', body: { batch } })
-    toast.add({ title: '保存成功', color: 'green' })
+    toast.add({ title: '保存成功', color: 'success' })
   } catch {
-    toast.add({ title: '保存失败', color: 'red' })
+    toast.add({ title: '保存失败', color: 'error' })
   } finally {
     saving.value = false
   }

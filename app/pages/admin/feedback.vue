@@ -1,5 +1,6 @@
 <template>
   <div class="space-y-4">
+    <h1 class="text-xl font-semibold text-stone-900">用户反馈</h1>
     <!-- 顶部统计卡片 -->
     <div class="grid grid-cols-4 gap-3">
       <div
@@ -7,7 +8,7 @@
         class="rounded-2xl p-4 border flex items-center gap-3 cursor-pointer transition-all duration-200"
         :style="activeType === card.value
           ? `background: ${card.activeBg}; border-color: ${card.borderColor}; box-shadow: 0 0 0 2px ${card.borderColor}`
-          : 'background: #fff; border-color: #f0e6d8; box-shadow: 0 1px 4px rgba(0,0,0,0.04)'"
+          : 'background: #fff; border-color: #e7e5e4; box-shadow: 0 1px 4px rgba(0,0,0,0.04)'"
         @click="setType(card.value)"
       >
         <div
@@ -17,20 +18,20 @@
           {{ card.emoji }}
         </div>
         <div class="min-w-0">
-          <p class="text-xs text-stone-400 mb-0.5">{{ card.label }}</p>
+          <p class="text-xs text-stone-500 mb-0.5">{{ card.label }}</p>
           <div class="flex items-baseline gap-1.5">
-            <p class="text-xl font-bold text-stone-800">{{ card.value === null ? unread.total : (unread as any)[card.unreadKey] }}</p>
-            <span class="text-xs text-stone-400">未读</span>
+            <p class="text-2xl font-bold text-stone-800">{{ card.value === null ? unread.total : (unread as any)[card.unreadKey] }}</p>
+            <span class="text-xs text-stone-500">未读</span>
           </div>
         </div>
       </div>
     </div>
 
     <!-- 工具栏 -->
-    <div class="bg-white rounded-2xl border px-5 py-3.5 flex items-center gap-3" style="border-color: #f0e6d8; box-shadow: 0 1px 4px rgba(0,0,0,0.04)">
+    <div class="bg-white rounded-xl border px-5 py-3.5 flex items-center gap-3" style="border-color: #e7e5e4; box-shadow: 0 1px 4px rgba(0,0,0,0.04)">
       <!-- 搜索 -->
       <div class="relative flex-1 max-w-xs">
-        <UIcon name="i-heroicons-magnifying-glass" class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-stone-400" />
+        <UIcon name="i-heroicons-magnifying-glass" class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-stone-500" />
         <input
           v-model="keyword"
           type="text"
@@ -63,7 +64,7 @@
       <div class="ml-auto flex items-center gap-2">
         <UButton
           icon="i-heroicons-arrow-path"
-          color="gray"
+          color="neutral"
           variant="ghost"
           size="sm"
           :loading="loading"
@@ -73,10 +74,10 @@
     </div>
 
     <!-- 反馈列表 -->
-    <div class="bg-white rounded-2xl border overflow-hidden" style="border-color: #f0e6d8; box-shadow: 0 1px 4px rgba(0,0,0,0.04)">
+    <div class="bg-white rounded-xl border overflow-hidden" style="border-color: #e7e5e4; box-shadow: 0 1px 4px rgba(0,0,0,0.04)">
       <!-- 表头 -->
-      <div class="grid px-5 py-2.5 border-b text-xs font-semibold text-stone-400 uppercase tracking-wide"
-        style="grid-template-columns: 100px 1fr 110px 140px 100px 90px 80px; border-color: #f0e6d8; background: #faf8f5">
+      <div class="grid px-5 py-2.5 border-b text-sm font-semibold text-stone-500 uppercase tracking-wide"
+        style="grid-template-columns: 100px 1fr 110px 140px 100px 90px 80px; border-color: #e7e5e4; background: #faf8f5">
         <span>类型</span>
         <span>内容</span>
         <span>用户</span>
@@ -92,7 +93,7 @@
       </div>
 
       <!-- 空状态 -->
-      <div v-else-if="!list.length" class="py-16 flex flex-col items-center gap-2 text-stone-400">
+      <div v-else-if="!list.length" class="py-16 flex flex-col items-center gap-2 text-stone-500">
         <span class="text-3xl">💬</span>
         <p class="text-sm">暂无反馈数据</p>
       </div>
@@ -102,7 +103,7 @@
         <div
           v-for="item in list" :key="item.id"
           class="grid items-center px-5 py-3 border-b last:border-0 hover:bg-amber-50/40 transition-colors cursor-pointer group"
-          style="grid-template-columns: 100px 1fr 110px 140px 100px 90px 80px; border-color: #f5ede4"
+          style="grid-template-columns: 100px 1fr 110px 140px 100px 90px 80px; border-color: #f5f5f4"
           @click="openDetail(item)"
         >
           <!-- 类型标签 -->
@@ -132,7 +133,7 @@
               class="text-xs font-mono px-2 py-1 rounded-lg transition-all duration-200 select-all"
               :class="revealedPhones.has(item.id)
                 ? 'bg-amber-50 text-amber-700 ring-1 ring-amber-200'
-                : 'text-stone-400 hover:text-stone-600 hover:bg-stone-50'"
+                : 'text-stone-500 hover:text-stone-600 hover:bg-stone-50'"
               :title="revealedPhones.has(item.id) ? '5秒后自动隐藏' : '点击查看完整号码'"
               @click="revealPhone(item)"
             >
@@ -141,7 +142,7 @@
           </div>
 
           <!-- 时间 -->
-          <p class="text-xs text-stone-400">{{ formatDate(item.created_at) }}</p>
+          <p class="text-xs text-stone-500">{{ formatDate(item.created_at) }}</p>
 
           <!-- 状态 -->
           <UBadge
@@ -157,7 +158,7 @@
             <UButton
               v-if="item.status === 0"
               icon="i-heroicons-eye"
-              color="gray"
+              color="neutral"
               variant="ghost"
               size="xs"
               title="标记已读"
@@ -166,7 +167,7 @@
             <UButton
               v-if="item.status < 2"
               icon="i-heroicons-check-circle"
-              color="green"
+              color="success"
               variant="ghost"
               size="xs"
               title="标记已处理"
@@ -179,11 +180,11 @@
 
     <!-- 分页 -->
     <div v-if="total > pageSize" class="flex items-center justify-between px-1">
-      <p class="text-xs text-stone-400">共 {{ total }} 条反馈</p>
+      <p class="text-xs text-stone-500">共 {{ total }} 条反馈</p>
       <div class="flex items-center gap-1">
         <UButton
           icon="i-heroicons-chevron-left"
-          color="gray"
+          color="neutral"
           variant="ghost"
           size="xs"
           :disabled="page <= 1"
@@ -192,7 +193,7 @@
         <span class="text-xs text-stone-500 px-2">{{ page }} / {{ Math.ceil(total / pageSize) }}</span>
         <UButton
           icon="i-heroicons-chevron-right"
-          color="gray"
+          color="neutral"
           variant="ghost"
           size="xs"
           :disabled="page >= Math.ceil(total / pageSize)"
@@ -208,9 +209,9 @@
           <!-- 背景蒙层 -->
           <div class="absolute inset-0 bg-black/20 backdrop-blur-sm" @click="detail = null" />
           <!-- 抽屉 -->
-          <div class="absolute right-0 top-0 bottom-0 w-[480px] bg-white shadow-2xl flex flex-col" style="border-left: 1px solid #f0e6d8">
+          <div class="absolute right-0 top-0 bottom-0 w-[480px] bg-white shadow-2xl flex flex-col" style="border-left: 1px solid #e7e5e4">
             <!-- 抽屉头部 -->
-            <div class="flex items-center justify-between px-6 py-4 border-b flex-shrink-0" style="border-color: #f0e6d8">
+            <div class="flex items-center justify-between px-6 py-4 border-b flex-shrink-0" style="border-color: #e7e5e4">
               <div class="flex items-center gap-3">
                 <span
                   class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-sm font-semibold"
@@ -220,7 +221,7 @@
                 </span>
                 <UBadge :label="statusLabel(detail.status)" :color="statusColor(detail.status)" variant="subtle" />
               </div>
-              <button class="text-stone-400 hover:text-stone-600 transition-colors" @click="detail = null">
+              <button class="text-stone-500 hover:text-stone-600 transition-colors" @click="detail = null">
                 <UIcon name="i-heroicons-x-mark" class="w-5 h-5" />
               </button>
             </div>
@@ -229,45 +230,45 @@
             <div class="flex-1 overflow-y-auto px-6 py-5 space-y-5">
               <!-- 标题 -->
               <div>
-                <p class="text-xs text-stone-400 mb-1">标题</p>
+                <p class="text-xs text-stone-500 mb-1">标题</p>
                 <p class="text-base font-semibold text-stone-800">{{ detail.title }}</p>
               </div>
 
               <!-- 内容 -->
               <div>
-                <p class="text-xs text-stone-400 mb-2">反馈内容</p>
-                <div class="rounded-xl p-4 text-sm text-stone-700 leading-relaxed whitespace-pre-wrap" style="background: #faf8f5; border: 1px solid #f0e6d8">
+                <p class="text-xs text-stone-500 mb-2">反馈内容</p>
+                <div class="rounded-xl p-4 text-sm text-stone-700 leading-relaxed whitespace-pre-wrap" style="background: #faf8f5; border: 1px solid #e7e5e4">
                   {{ detail.content }}
                 </div>
               </div>
 
               <!-- 用户信息 -->
               <div>
-                <p class="text-xs text-stone-400 mb-2">提交用户</p>
-                <div class="flex items-center gap-3 p-3 rounded-xl" style="background: #faf8f5; border: 1px solid #f0e6d8">
+                <p class="text-xs text-stone-500 mb-2">提交用户</p>
+                <div class="flex items-center gap-3 p-3 rounded-xl" style="background: #faf8f5; border: 1px solid #e7e5e4">
                   <UAvatar :src="detail.avatar" :alt="detail.nickname" size="md" />
                   <div>
                     <p class="text-sm font-semibold text-stone-700">{{ detail.nickname || '未命名' }}</p>
-                    <p class="text-xs text-stone-400 mt-0.5">{{ maskPhone(detail.phone) }}</p>
-                    <p class="text-xs text-stone-400">用户ID：{{ detail.user_id }}</p>
+                    <p class="text-xs text-stone-500 mt-0.5">{{ maskPhone(detail.phone) }}</p>
+                    <p class="text-xs text-stone-500">用户ID：{{ detail.user_id }}</p>
                   </div>
                 </div>
               </div>
 
               <!-- 提交时间 -->
               <div>
-                <p class="text-xs text-stone-400 mb-1">提交时间</p>
+                <p class="text-xs text-stone-500 mb-1">提交时间</p>
                 <p class="text-sm text-stone-600">{{ formatDateFull(detail.created_at) }}</p>
               </div>
             </div>
 
             <!-- 底部操作 -->
-            <div class="px-6 py-4 border-t flex items-center gap-3 flex-shrink-0" style="border-color: #f0e6d8">
+            <div class="px-6 py-4 border-t flex items-center gap-3 flex-shrink-0" style="border-color: #e7e5e4">
               <UButton
                 v-if="detail.status === 0"
                 icon="i-heroicons-eye"
                 label="标记已读"
-                color="gray"
+                color="neutral"
                 variant="outline"
                 size="sm"
                 @click="updateStatus(detail, 1)"
@@ -276,7 +277,7 @@
                 v-if="detail.status < 2"
                 icon="i-heroicons-check-circle"
                 label="标记已处理"
-                color="green"
+                color="success"
                 variant="soft"
                 size="sm"
                 @click="updateStatus(detail, 2)"
@@ -285,7 +286,7 @@
                 v-if="detail.status > 0"
                 icon="i-heroicons-arrow-uturn-left"
                 label="恢复未读"
-                color="gray"
+                color="neutral"
                 variant="ghost"
                 size="sm"
                 @click="updateStatus(detail, 0)"
@@ -352,7 +353,7 @@ function statusLabel(status: number) {
   return { 0: '未读', 1: '已读', 2: '已处理' }[status] ?? '未知'
 }
 function statusColor(status: number): any {
-  return { 0: 'red', 1: 'gray', 2: 'green' }[status] ?? 'gray'
+  return { 0: 'error', 1: 'neutral', 2: 'success' }[status] ?? 'neutral'
 }
 function maskPhone(phone: string) {
   if (!phone) return '—'

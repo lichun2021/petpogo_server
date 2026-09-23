@@ -3,7 +3,7 @@
 
     <!-- 顶部操作栏 -->
     <div class="flex items-center gap-3">
-      <h2 class="text-base font-bold text-stone-800 flex items-center gap-2">
+      <h2 class="text-xl font-bold text-stone-800 flex items-center gap-2">
         <UIcon name="i-heroicons-musical-note" class="w-5 h-5 text-amber-500" />
         宠物音乐管理
       </h2>
@@ -11,7 +11,7 @@
         <UButton
           label="新建分类"
           icon="i-heroicons-tag"
-          color="stone"
+          color="neutral"
           variant="outline"
           size="sm"
           @click="openCatModal()"
@@ -19,7 +19,7 @@
         <UButton
           label="上传音乐"
           icon="i-heroicons-plus"
-          color="amber"
+          color="primary"
           size="sm"
           :disabled="!categories.length"
           @click="openMusicModal()"
@@ -31,23 +31,23 @@
     <div class="flex items-center gap-2 flex-wrap">
       <button
         :class="[
-          'px-4 py-1.5 rounded-full text-sm font-medium transition-all',
+          'px-4 py-1.5 rounded-lg text-sm font-medium transition-all',
           activeCatId === null
             ? 'bg-amber-500 text-white shadow-sm'
             : 'bg-white border text-stone-500 hover:text-stone-700 hover:border-amber-300'
         ]"
-        style="border-color: #f0e6d8"
+        style="border-color: #e7e5e4"
         @click="activeCatId = null; loadMusic()"
       >全部</button>
       <button
         v-for="c in categories" :key="c.id"
         :class="[
-          'group px-4 py-1.5 rounded-full text-sm font-medium transition-all flex items-center gap-1.5',
+          'group px-4 py-1.5 rounded-lg text-sm font-medium transition-all flex items-center gap-1.5',
           activeCatId === c.id
             ? 'bg-amber-500 text-white shadow-sm'
             : 'bg-white border text-stone-500 hover:text-stone-700 hover:border-amber-300'
         ]"
-        style="border-color: #f0e6d8"
+        style="border-color: #e7e5e4"
         @click="activeCatId = c.id; loadMusic()"
       >
         <img v-if="c.icon_url" :src="c.icon_url" class="w-4 h-4 rounded object-cover" />
@@ -60,7 +60,7 @@
             'w-3.5 h-3.5 ml-0.5 transition-colors',
             activeCatId === c.id
               ? 'text-white/70 hover:text-white'
-              : 'text-stone-400 hover:text-amber-500'
+              : 'text-stone-500 hover:text-amber-500'
           ]"
           title="编辑分类"
           @click.stop="openCatModal(c)"
@@ -71,16 +71,16 @@
             'ml-0.5 leading-none transition-colors',
             activeCatId === c.id
               ? 'text-white/70 hover:text-red-200'
-              : 'text-stone-400 hover:text-red-500'
+              : 'text-stone-500 hover:text-red-500'
           ]"
           title="删除分类"
           @click.stop="deleteCat(c)"
         >×</span>
       </button>
-      <span class="ml-auto text-xs text-stone-400">共 {{ musicList.length }} 首</span>
+      <span class="ml-auto text-xs text-stone-500">共 {{ musicList.length }} 首</span>
       <UButton
         icon="i-heroicons-arrow-path"
-        color="stone"
+        color="neutral"
         variant="ghost"
         size="xs"
         title="刷新"
@@ -90,16 +90,16 @@
     </div>
 
     <!-- 音乐列表 -->
-    <div class="bg-white rounded-2xl border overflow-hidden" style="border-color: #f0e6d8; box-shadow: 0 1px 4px rgba(0,0,0,0.04)">
+    <div class="bg-white rounded-xl border overflow-hidden" style="border-color: #e7e5e4; box-shadow: 0 1px 4px rgba(0,0,0,0.04)">
       <div v-if="loading" class="flex justify-center py-10">
-        <UIcon name="i-heroicons-arrow-path" class="w-5 h-5 text-stone-400 animate-spin" />
+        <UIcon name="i-heroicons-arrow-path" class="w-5 h-5 text-stone-500 animate-spin" />
       </div>
-      <div v-else-if="!musicList.length" class="py-10 text-center text-sm text-stone-400">
+      <div v-else-if="!musicList.length" class="py-10 text-center text-sm text-stone-500">
         暂无音乐，点击「上传音乐」添加
       </div>
       <div v-else>
         <!-- 表头 -->
-        <div class="grid grid-cols-[56px_1fr_100px_80px_80px_80px_120px] gap-3 px-4 py-2 bg-amber-50/50 border-b border-orange-100 text-xs text-stone-500 font-medium">
+        <div class="grid grid-cols-[56px_1fr_100px_80px_80px_80px_120px] gap-3 px-4 py-2 bg-stone-50 border-b border-stone-200 text-sm text-stone-500 font-medium">
           <span>封面</span>
           <span>音乐名称</span>
           <span>分类</span>
@@ -132,14 +132,14 @@
             {{ petTypeLabel(m.pet_type) }}
           </span>
           <!-- 时长 -->
-          <span class="text-xs text-stone-400">{{ m.duration ? formatDuration(m.duration) : '-' }}</span>
+          <span class="text-xs text-stone-500">{{ m.duration ? formatDuration(m.duration) : '-' }}</span>
           <!-- 状态 -->
-          <UBadge :label="m.status === 1 ? '上架' : '下架'" :color="m.status === 1 ? 'green' : 'gray'" variant="subtle" size="xs" />
+          <UBadge :label="m.status === 1 ? '上架' : '下架'" :color="m.status === 1 ? 'success' : 'neutral'" variant="subtle" size="xs" />
           <!-- 操作 -->
           <div class="flex items-center gap-1">
             <UButton
               icon="i-heroicons-pencil-square"
-              color="amber"
+              color="primary"
               variant="ghost"
               size="xs"
               title="编辑"
@@ -147,7 +147,7 @@
             />
             <UButton
               icon="i-heroicons-trash"
-              color="red"
+              color="error"
               variant="ghost"
               size="xs"
               title="删除"
@@ -185,13 +185,13 @@
                 <UButton
                   label="选择图片"
                   icon="i-heroicons-arrow-up-tray"
-                  color="stone"
+                  color="neutral"
                   variant="outline"
                   size="sm"
                   :loading="catModal.uploading"
                   @click="catIconInput?.click()"
                 />
-                <p class="text-xs text-stone-400 mt-1">支持 JPG / PNG / WebP</p>
+                <p class="text-xs text-stone-500 mt-1">支持 JPG / PNG / WebP</p>
               </div>
             </div>
           </div>
@@ -202,10 +202,10 @@
         </div>
 
         <div class="flex gap-2 pt-2">
-          <UButton label="取消" color="gray" variant="outline" class="flex-1" @click="catModal.show = false" />
+          <UButton label="取消" color="neutral" variant="outline" class="flex-1" @click="catModal.show = false" />
           <UButton
             :label="catModal.editingId ? '保存修改' : '创建分类'"
-            color="amber"
+            color="primary"
             class="flex-1"
             :loading="catModal.saving"
             :disabled="!catModal.name.trim()"
@@ -229,7 +229,7 @@
             <label class="text-xs text-stone-500 font-medium block mb-1">所属分类 *</label>
             <select
               v-model="musicModal.categoryId"
-              class="w-full border rounded-lg px-3 py-2 text-sm text-stone-700 bg-white focus:outline-none focus:ring-2 focus:ring-amber-300"
+              class="admin-select w-full border rounded-lg px-3 py-2 text-sm text-stone-700 bg-white focus:outline-none focus:ring-2 focus:ring-amber-300"
               style="border-color: #e5e7eb"
             >
               <option value="" disabled>请选择分类</option>
@@ -247,7 +247,7 @@
                   'flex-1 py-2 rounded-xl text-sm font-medium border-2 transition-all',
                   musicModal.petType === pt.value
                     ? pt.activeCls
-                    : 'border-stone-200 text-stone-400 hover:border-stone-300'
+                    : 'border-stone-200 text-stone-500 hover:border-stone-300'
                 ]"
                 @click="musicModal.petType = pt.value"
               >
@@ -275,7 +275,7 @@
                 <UButton
                   :label="musicModal.iconUrl ? '已上传 ✓' : '选择封面图'"
                   icon="i-heroicons-arrow-up-tray"
-                  :color="musicModal.iconUrl ? 'green' : 'stone'"
+                  :color="musicModal.iconUrl ? 'success' : 'neutral'"
                   variant="outline"
                   size="sm"
                   :loading="musicModal.iconUploading"
@@ -296,14 +296,14 @@
               <UButton
                 :label="musicModal.musicUrl ? '已上传 ✓' : '选择音频'"
                 icon="i-heroicons-musical-note"
-                :color="musicModal.musicUrl ? 'green' : 'stone'"
+                :color="musicModal.musicUrl ? 'success' : 'neutral'"
                 variant="outline"
                 size="sm"
                 :loading="musicModal.audioUploading"
                 @click="musicAudioInput?.click()"
               />
             </div>
-            <p class="text-xs text-stone-400 mt-1">支持 MP3 / AAC / WAV / M4A，建议 5MB 以内</p>
+            <p class="text-xs text-stone-500 mt-1">支持 MP3 / AAC / WAV / M4A，建议 5MB 以内</p>
           </div>
 
           <!-- 排序 -->
@@ -321,7 +321,7 @@
                   'flex-1 py-2 rounded-xl text-sm font-medium border-2 transition-all',
                   musicModal.status === 1
                     ? 'border-green-400 bg-green-50 text-green-700'
-                    : 'border-stone-200 text-stone-400 hover:border-stone-300'
+                    : 'border-stone-200 text-stone-500 hover:border-stone-300'
                 ]"
                 @click="musicModal.status = 1"
               >✓ 上架</button>
@@ -330,7 +330,7 @@
                   'flex-1 py-2 rounded-xl text-sm font-medium border-2 transition-all',
                   musicModal.status === 0
                     ? 'border-stone-500 bg-stone-100 text-stone-700'
-                    : 'border-stone-200 text-stone-400 hover:border-stone-300'
+                    : 'border-stone-200 text-stone-500 hover:border-stone-300'
                 ]"
                 @click="musicModal.status = 0"
               >× 下架</button>
@@ -339,10 +339,10 @@
         </div>
 
         <div class="flex gap-2 pt-2">
-          <UButton label="取消" color="gray" variant="outline" class="flex-1" @click="musicModal.show = false" />
+          <UButton label="取消" color="neutral" variant="outline" class="flex-1" @click="musicModal.show = false" />
           <UButton
             :label="musicModal.editingId ? '保存修改' : '保存音乐'"
-            color="amber"
+            color="primary"
             class="flex-1"
             :loading="musicModal.saving"
             @click="saveMusic"
@@ -475,7 +475,7 @@ async function onCatIconPick(e: Event) {
     catModal.iconPreview = URL.createObjectURL(file)
     catModal.iconUrl = await uploadToOss(file, 'music-icon')
   } catch {
-    toast.add({ title: '图片上传失败', color: 'red' })
+    toast.add({ title: '图片上传失败', color: 'error' })
   } finally { catModal.uploading = false }
 }
 
@@ -517,12 +517,12 @@ async function saveCat() {
     catModal.show = false
     toast.add({
       title: isEdit ? `分类「${catModal.name}」已更新` : `分类「${catModal.name}」已创建`,
-      color: 'green',
+      color: 'success',
     })
     await loadCategories()
     if (isEdit) await loadMusic() // 重新加载音乐列表以更新关联的分类名
   } catch (err: any) {
-    toast.add({ title: err?.data?.message || '保存失败', color: 'red' })
+    toast.add({ title: err?.data?.message || '保存失败', color: 'error' })
   } finally { catModal.saving = false }
 }
 
@@ -530,12 +530,12 @@ async function deleteCat(c: any) {
   if (!confirm(`确定删除分类「${c.name}」？\n删除前请确保该分类下没有音乐。`)) return
   try {
     await $fetch(`/api/admin/music/categories/${c.id}`, { method: 'DELETE' })
-    toast.add({ title: '分类已删除', color: 'green' })
+    toast.add({ title: '分类已删除', color: 'success' })
     if (activeCatId.value === c.id) activeCatId.value = null
     await loadCategories()
     await loadMusic()
   } catch (err: any) {
-    toast.add({ title: err?.data?.message || '删除失败', color: 'red' })
+    toast.add({ title: err?.data?.message || '删除失败', color: 'error' })
   }
 }
 
@@ -583,9 +583,9 @@ async function onMusicIconPick(e: Event) {
   try {
     musicModal.iconPreview = URL.createObjectURL(file)
     musicModal.iconUrl = await uploadToOss(file, 'music-icon')
-    toast.add({ title: '封面图上传成功', color: 'green' })
+    toast.add({ title: '封面图上传成功', color: 'success' })
   } catch (err: any) {
-    toast.add({ title: `封面图上传失败: ${err?.data?.message || err?.message || '未知错误'}`, color: 'red' })
+    toast.add({ title: `封面图上传失败: ${err?.data?.message || err?.message || '未知错误'}`, color: 'error' })
   } finally { musicModal.iconUploading = false }
 }
 
@@ -600,31 +600,31 @@ async function onAudioPick(e: Event) {
     // 尝试读取音频时长
     const audio = new Audio(URL.createObjectURL(file))
     audio.onloadedmetadata = () => { musicModal.duration = Math.round(audio.duration) }
-    toast.add({ title: '音频上传成功', color: 'green' })
+    toast.add({ title: '音频上传成功', color: 'success' })
   } catch (err: any) {
-    toast.add({ title: `音频上传失败: ${err?.data?.message || err?.message || '未知错误'}`, color: 'red' })
+    toast.add({ title: `音频上传失败: ${err?.data?.message || err?.message || '未知错误'}`, color: 'error' })
   } finally { musicModal.audioUploading = false }
 }
 
 async function saveMusic() {
   // 逐项校验,告诉用户具体缺哪一项
   if (!musicModal.categoryId) {
-    return toast.add({ title: '请选择所属分类', color: 'red' })
+    return toast.add({ title: '请选择所属分类', color: 'error' })
   }
   if (!musicModal.name?.trim()) {
-    return toast.add({ title: '请填写音乐名称', color: 'red' })
+    return toast.add({ title: '请填写音乐名称', color: 'error' })
   }
   if (!musicModal.iconUrl) {
-    return toast.add({ title: '封面图未上传成功,请重新选择封面', color: 'red' })
+    return toast.add({ title: '封面图未上传成功,请重新选择封面', color: 'error' })
   }
   if (musicModal.iconUploading) {
-    return toast.add({ title: '封面图正在上传,请稍候', color: 'amber' })
+    return toast.add({ title: '封面图正在上传,请稍候', color: 'primary' })
   }
   if (!musicModal.musicUrl) {
-    return toast.add({ title: '音频文件未上传成功,请重新选择音频', color: 'red' })
+    return toast.add({ title: '音频文件未上传成功,请重新选择音频', color: 'error' })
   }
   if (musicModal.audioUploading) {
-    return toast.add({ title: '音频正在上传,请稍候', color: 'amber' })
+    return toast.add({ title: '音频正在上传,请稍候', color: 'primary' })
   }
 
   musicModal.saving = true
@@ -648,11 +648,11 @@ async function saveMusic() {
     musicModal.show = false
     toast.add({
       title: isEdit ? `「${musicModal.name}」已更新` : `「${musicModal.name}」已上传`,
-      color: 'green',
+      color: 'success',
     })
     await loadMusic()
   } catch (err: any) {
-    toast.add({ title: err?.data?.message || '保存失败', color: 'red' })
+    toast.add({ title: err?.data?.message || '保存失败', color: 'error' })
   } finally { musicModal.saving = false }
 }
 
@@ -662,9 +662,9 @@ async function deleteMusic(m: any) {
   try {
     await $fetch(`/api/admin/music/${m.id}`, { method: 'DELETE' })
     musicList.value = musicList.value.filter(x => x.id !== m.id)
-    toast.add({ title: '已删除', color: 'green' })
+    toast.add({ title: '已删除', color: 'success' })
   } catch {
-    toast.add({ title: '删除失败', color: 'red' })
+    toast.add({ title: '删除失败', color: 'error' })
   } finally { m._deleting = false }
 }
 

@@ -8,8 +8,8 @@
         🔔
       </div>
       <div>
-        <h1 class="text-lg font-bold text-stone-800">推送测试</h1>
-        <p class="text-xs text-stone-400">通过极光推送向用户发送通知</p>
+        <h1 class="text-xl font-bold text-stone-800">推送测试</h1>
+        <p class="text-xs text-stone-500">通过极光推送向用户发送通知</p>
       </div>
     </div>
 
@@ -20,8 +20,8 @@
       <div class="col-span-2 space-y-4">
 
         <!-- 推送目标 -->
-        <div class="bg-white rounded-2xl border p-5 space-y-4"
-             style="border-color: #f0e6d8; box-shadow: 0 1px 4px rgba(0,0,0,0.04)">
+        <div class="bg-white rounded-xl border p-5 space-y-4"
+             style="border-color: #e7e5e4; box-shadow: 0 1px 4px rgba(0,0,0,0.04)">
           <p class="text-sm font-bold text-stone-700 flex items-center gap-2">
             <span class="w-5 h-5 rounded-md bg-amber-100 flex items-center justify-center text-xs">①</span>
             推送目标
@@ -51,7 +51,7 @@
               class="w-full px-3.5 py-2.5 text-sm rounded-xl border resize-none focus:outline-none focus:ring-2 focus:ring-amber-300 transition"
               style="border-color: #e2d9d0; background: #faf8f5; font-family: monospace"
             />
-            <p class="text-xs text-stone-400">💡 用户登录 App 后，客户端会自动把 userId 注册为 alias</p>
+            <p class="text-xs text-stone-500">💡 用户登录 App 后，客户端会自动把 userId 注册为 alias</p>
           </div>
 
           <!-- 广播说明 -->
@@ -63,8 +63,8 @@
         </div>
 
         <!-- 通知内容 -->
-        <div class="bg-white rounded-2xl border p-5 space-y-4"
-             style="border-color: #f0e6d8; box-shadow: 0 1px 4px rgba(0,0,0,0.04)">
+        <div class="bg-white rounded-xl border p-5 space-y-4"
+             style="border-color: #e7e5e4; box-shadow: 0 1px 4px rgba(0,0,0,0.04)">
           <p class="text-sm font-bold text-stone-700 flex items-center gap-2">
             <span class="w-5 h-5 rounded-md bg-amber-100 flex items-center justify-center text-xs">②</span>
             通知内容
@@ -109,7 +109,7 @@
             <div class="space-y-1.5">
               <label class="text-xs font-semibold text-stone-500">
                 设备码（MAC）
-                <span class="font-normal text-stone-400 ml-1">（可选，填写后点开通知可跳转到对应设备界面）</span>
+                <span class="font-normal text-stone-500 ml-1">（可选，填写后点开通知可跳转到对应设备界面）</span>
               </label>
               <input
                 v-model="form.deviceMac"
@@ -125,7 +125,7 @@
             <div class="space-y-1.5">
               <label class="text-xs font-semibold text-stone-500">
                 附加数据 extras
-                <span class="font-normal text-stone-400 ml-1">（可选，JSON 格式，App 点击通知后可读取）</span>
+                <span class="font-normal text-stone-500 ml-1">（可选，JSON 格式，App 点击通知后可读取）</span>
               </label>
               <textarea
                 v-model="form.extras"
@@ -167,8 +167,8 @@
       <div class="space-y-4">
 
         <!-- 手机预览 -->
-        <div class="bg-white rounded-2xl border p-5"
-             style="border-color: #f0e6d8; box-shadow: 0 1px 4px rgba(0,0,0,0.04)">
+        <div class="bg-white rounded-xl border p-5"
+             style="border-color: #e7e5e4; box-shadow: 0 1px 4px rgba(0,0,0,0.04)">
           <p class="text-xs font-bold text-stone-500 mb-3">📱 通知预览</p>
           <div class="rounded-2xl p-4 space-y-1.5" style="background: #1c1c1e">
             <div class="flex items-center gap-2 mb-2">
@@ -184,12 +184,12 @@
         </div>
 
         <!-- 发送历史 -->
-        <div class="bg-white rounded-2xl border overflow-hidden"
-             style="border-color: #f0e6d8; box-shadow: 0 1px 4px rgba(0,0,0,0.04)">
+        <div class="bg-white rounded-xl border overflow-hidden"
+             style="border-color: #e7e5e4; box-shadow: 0 1px 4px rgba(0,0,0,0.04)">
           <div class="px-4 py-3 border-b flex items-center justify-between"
-               style="border-color: #f5ede4; background: #faf8f5">
+               style="border-color: #f5f5f4; background: #faf8f5">
             <p class="text-xs font-bold text-stone-600">发送记录</p>
-            <span class="text-xs text-stone-400">本次会话</span>
+            <span class="text-xs text-stone-500">本次会话</span>
           </div>
 
           <div v-if="!history.length" class="py-8 flex flex-col items-center gap-2 text-stone-300">
@@ -197,7 +197,7 @@
             <p class="text-xs">暂无发送记录</p>
           </div>
 
-          <div v-else class="divide-y max-h-96 overflow-y-auto" style="divide-color: #f5ede4">
+          <div v-else class="divide-y max-h-96 overflow-y-auto" style="divide-color: #f5f5f4">
             <div
               v-for="(h, i) in history" :key="i"
               class="px-4 py-3 space-y-1 cursor-pointer hover:bg-amber-50/40 transition-colors"
@@ -214,7 +214,7 @@
                   {{ h.success ? '✓ 成功' : '✗ 失败' }}
                 </span>
               </div>
-              <p class="text-xs text-stone-400 truncate">{{ h.content }}</p>
+              <p class="text-xs text-stone-500 truncate">{{ h.content }}</p>
               <div class="flex items-center gap-2">
                 <span class="text-xs text-stone-300">{{ h.targetLabel }}</span>
                 <span class="text-xs text-stone-300">·</span>

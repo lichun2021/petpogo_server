@@ -2,29 +2,29 @@
   <div class="space-y-4">
     <div class="flex items-center justify-between">
       <div>
-        <h2 class="text-base font-semibold text-stone-800">积分规则</h2>
-        <p class="text-xs text-stone-400 mt-0.5">配置各类 AI 消费行为对应的积分单价（AI 服务上报消费时按此扣分）</p>
+        <h2 class="text-xl font-semibold text-stone-800">积分规则</h2>
+        <p class="text-xs text-stone-500 mt-0.5">配置各类 AI 消费行为对应的积分单价（AI 服务上报消费时按此扣分）</p>
       </div>
       <div class="flex gap-2">
-        <UButton label="积分流水" color="gray" variant="outline" icon="i-heroicons-clipboard-document-list" to="/admin/points/logs" />
-        <UButton label="新增规则" color="amber" icon="i-heroicons-plus" @click="openModal()" />
+        <UButton label="积分流水" color="neutral" variant="outline" icon="i-heroicons-clipboard-document-list" to="/admin/points/logs" />
+        <UButton label="新增规则" color="primary" icon="i-heroicons-plus" @click="openModal()" />
       </div>
     </div>
 
-    <div class="bg-white rounded-2xl border overflow-hidden" style="border-color: #f0e6d8; box-shadow: 0 1px 4px rgba(0,0,0,0.04)">
+    <div class="bg-white rounded-xl border overflow-hidden" style="border-color: #e7e5e4; box-shadow: 0 1px 4px rgba(0,0,0,0.04)">
       <div v-if="loading" class="flex justify-center py-10">
-        <UIcon name="i-heroicons-arrow-path" class="w-5 h-5 text-stone-400 animate-spin" />
+        <UIcon name="i-heroicons-arrow-path" class="w-5 h-5 text-stone-500 animate-spin" />
       </div>
-      <div v-else-if="!list.length" class="py-10 text-center text-sm text-stone-400">暂无数据</div>
+      <div v-else-if="!list.length" class="py-10 text-center text-sm text-stone-500">暂无数据</div>
       <table v-else class="w-full text-sm">
         <thead>
-          <tr class="bg-amber-50/50 border-b border-orange-100">
-            <th class="text-left text-xs text-stone-500 font-medium py-3 px-4">消费类型标识</th>
-            <th class="text-left text-xs text-stone-500 font-medium py-3 px-4">展示名称</th>
-            <th class="text-left text-xs text-stone-500 font-medium py-3 px-4">单价（积分）</th>
-            <th class="text-left text-xs text-stone-500 font-medium py-3 px-4">计费方式</th>
-            <th class="text-left text-xs text-stone-500 font-medium py-3 px-4">状态</th>
-            <th class="text-left text-xs text-stone-500 font-medium py-3 px-4">操作</th>
+          <tr class="bg-stone-50 border-b border-stone-200">
+            <th class="text-left text-sm text-stone-500 font-medium py-3 px-4">消费类型标识</th>
+            <th class="text-left text-sm text-stone-500 font-medium py-3 px-4">展示名称</th>
+            <th class="text-left text-sm text-stone-500 font-medium py-3 px-4">单价（积分）</th>
+            <th class="text-left text-sm text-stone-500 font-medium py-3 px-4">计费方式</th>
+            <th class="text-left text-sm text-stone-500 font-medium py-3 px-4">状态</th>
+            <th class="text-left text-sm text-stone-500 font-medium py-3 px-4">操作</th>
           </tr>
         </thead>
         <tbody>
@@ -34,12 +34,12 @@
             <td class="py-3 px-4">{{ row.unit_points }}</td>
             <td class="py-3 px-4 text-xs text-stone-500">{{ row.unit_basis === 'per_call' ? '按次' : '按数量' }}</td>
             <td class="py-3 px-4">
-              <UBadge :label="row.status === 1 ? '启用' : '停用'" :color="row.status === 1 ? 'green' : 'red'" variant="subtle" size="xs" />
+              <UBadge :label="row.status === 1 ? '启用' : '停用'" :color="row.status === 1 ? 'success' : 'error'" variant="subtle" size="xs" />
             </td>
             <td class="py-3 px-4">
               <div class="flex gap-2">
-                <UButton label="编辑" color="gray" variant="subtle" size="xs" @click="openModal(row)" />
-                <UButton label="删除" color="red" variant="subtle" size="xs" @click="remove(row)" />
+                <UButton label="编辑" color="neutral" variant="subtle" size="xs" @click="openModal(row)" />
+                <UButton label="删除" color="error" variant="subtle" size="xs" @click="remove(row)" />
               </div>
             </td>
           </tr>
@@ -96,10 +96,10 @@
         </div>
 
         <div class="flex gap-2 pt-2">
-          <UButton label="取消" color="gray" variant="outline" class="flex-1" @click="modal.show = false" />
+          <UButton label="取消" color="neutral" variant="outline" class="flex-1" @click="modal.show = false" />
           <UButton
             :label="modal.editingId ? '保存修改' : '创建'"
-            color="amber" class="flex-1"
+            color="primary" class="flex-1"
             :loading="modal.saving"
             :disabled="!modal.name.trim() || !modal.unitPoints"
             @click="save"
@@ -171,11 +171,11 @@ async function save() {
       method: isEdit ? 'PUT' : 'POST',
       body,
     })
-    toast.add({ title: '保存成功', color: 'green' })
+    toast.add({ title: '保存成功', color: 'success' })
     modal.show = false
     loadList()
   } catch (e: any) {
-    toast.add({ title: '保存失败', description: e?.data?.message, color: 'red' })
+    toast.add({ title: '保存失败', description: e?.data?.message, color: 'error' })
   } finally {
     modal.saving = false
   }
@@ -184,10 +184,10 @@ async function save() {
 async function remove(row: any) {
   try {
     await $fetch(`/api/admin/points/rules/${row.id}`, { method: 'DELETE' })
-    toast.add({ title: '删除成功', color: 'green' })
+    toast.add({ title: '删除成功', color: 'success' })
     loadList()
   } catch {
-    toast.add({ title: '删除失败', color: 'red' })
+    toast.add({ title: '删除失败', color: 'error' })
   }
 }
 

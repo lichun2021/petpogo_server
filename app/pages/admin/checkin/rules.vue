@@ -2,45 +2,45 @@
   <div class="space-y-4">
     <div class="flex items-center justify-between">
       <div>
-        <h2 class="text-base font-semibold text-stone-800">签到奖励档位</h2>
-        <p class="text-xs text-stone-400 mt-0.5">配置每日签到奖励与连续签到奖励档位</p>
+        <h2 class="text-xl font-semibold text-stone-800">签到奖励档位</h2>
+        <p class="text-xs text-stone-500 mt-0.5">配置每日签到奖励与连续签到奖励档位</p>
       </div>
-      <UButton label="新增档位" color="amber" icon="i-heroicons-plus" @click="openModal()" />
+      <UButton label="新增档位" color="primary" icon="i-heroicons-plus" @click="openModal()" />
     </div>
 
-    <div class="bg-white rounded-2xl border overflow-hidden" style="border-color: #f0e6d8; box-shadow: 0 1px 4px rgba(0,0,0,0.04)">
+    <div class="bg-white rounded-xl border overflow-hidden" style="border-color: #e7e5e4; box-shadow: 0 1px 4px rgba(0,0,0,0.04)">
       <div v-if="loading" class="flex justify-center py-10">
-        <UIcon name="i-heroicons-arrow-path" class="w-5 h-5 text-stone-400 animate-spin" />
+        <UIcon name="i-heroicons-arrow-path" class="w-5 h-5 text-stone-500 animate-spin" />
       </div>
-      <div v-else-if="!list.length" class="py-10 text-center text-sm text-stone-400">暂无数据</div>
+      <div v-else-if="!list.length" class="py-10 text-center text-sm text-stone-500">暂无数据</div>
       <table v-else class="w-full text-sm">
         <thead>
-          <tr class="bg-amber-50/50 border-b border-orange-100">
-            <th class="text-left text-xs text-stone-500 font-medium py-3 px-4">类型</th>
-            <th class="text-left text-xs text-stone-500 font-medium py-3 px-4">名称</th>
-            <th class="text-left text-xs text-stone-500 font-medium py-3 px-4">连续天数门槛</th>
-            <th class="text-left text-xs text-stone-500 font-medium py-3 px-4">奖励积分</th>
-            <th class="text-left text-xs text-stone-500 font-medium py-3 px-4">积分类型</th>
-            <th class="text-left text-xs text-stone-500 font-medium py-3 px-4">状态</th>
-            <th class="text-left text-xs text-stone-500 font-medium py-3 px-4">操作</th>
+          <tr class="bg-stone-50 border-b border-stone-200">
+            <th class="text-left text-sm text-stone-500 font-medium py-3 px-4">类型</th>
+            <th class="text-left text-sm text-stone-500 font-medium py-3 px-4">名称</th>
+            <th class="text-left text-sm text-stone-500 font-medium py-3 px-4">连续天数门槛</th>
+            <th class="text-left text-sm text-stone-500 font-medium py-3 px-4">奖励积分</th>
+            <th class="text-left text-sm text-stone-500 font-medium py-3 px-4">积分类型</th>
+            <th class="text-left text-sm text-stone-500 font-medium py-3 px-4">状态</th>
+            <th class="text-left text-sm text-stone-500 font-medium py-3 px-4">操作</th>
           </tr>
         </thead>
         <tbody>
           <tr v-for="row in list" :key="row.id" class="border-b border-stone-100 hover:bg-amber-50/30 transition-colors">
             <td class="py-3 px-4">
-              <UBadge :label="row.rule_type === 1 ? '每日签到' : '连续签到'" :color="row.rule_type === 1 ? 'blue' : 'amber'" variant="subtle" size="xs" />
+              <UBadge :label="row.rule_type === 1 ? '每日签到' : '连续签到'" :color="row.rule_type === 1 ? 'info' : 'primary'" variant="subtle" size="xs" />
             </td>
             <td class="py-3 px-4">{{ row.name }}</td>
             <td class="py-3 px-4">{{ row.rule_type === 1 ? '-' : `${row.streak_days} 天` }}</td>
             <td class="py-3 px-4">{{ row.points_amount }}</td>
             <td class="py-3 px-4 text-xs text-stone-500">{{ typeName(row.points_type_code) }}</td>
             <td class="py-3 px-4">
-              <UBadge :label="row.status === 1 ? '启用' : '停用'" :color="row.status === 1 ? 'green' : 'red'" variant="subtle" size="xs" />
+              <UBadge :label="row.status === 1 ? '启用' : '停用'" :color="row.status === 1 ? 'success' : 'error'" variant="subtle" size="xs" />
             </td>
             <td class="py-3 px-4">
               <div class="flex gap-2">
-                <UButton label="编辑" color="gray" variant="subtle" size="xs" @click="openModal(row)" />
-                <UButton label="删除" color="red" variant="subtle" size="xs" @click="remove(row)" />
+                <UButton label="编辑" color="neutral" variant="subtle" size="xs" @click="openModal(row)" />
+                <UButton label="删除" color="error" variant="subtle" size="xs" @click="remove(row)" />
               </div>
             </td>
           </tr>
@@ -83,7 +83,7 @@
             <label class="text-xs text-stone-500 font-medium block mb-1">积分类型</label>
             <select
               v-model="modal.pointsTypeCode"
-              class="w-full rounded-lg text-sm py-1.5 px-2 focus:border-amber-400 focus:ring-amber-400"
+              class="admin-select w-full rounded-lg text-sm py-1.5 px-2 focus:border-amber-400 focus:ring-amber-400"
               style="border-color: #e7e5e4"
             >
               <option v-for="t in pointTypes" :key="t.type_code" :value="t.type_code">
@@ -111,10 +111,10 @@
         </div>
 
         <div class="flex gap-2 pt-2">
-          <UButton label="取消" color="gray" variant="outline" class="flex-1" @click="modal.show = false" />
+          <UButton label="取消" color="neutral" variant="outline" class="flex-1" @click="modal.show = false" />
           <UButton
             :label="modal.editingId ? '保存修改' : '创建'"
-            color="amber" class="flex-1"
+            color="primary" class="flex-1"
             :loading="modal.saving"
             :disabled="!modal.name.trim() || !modal.pointsAmount"
             @click="save"
@@ -200,11 +200,11 @@ async function save() {
       method: isEdit ? 'PUT' : 'POST',
       body,
     })
-    toast.add({ title: '保存成功', color: 'green' })
+    toast.add({ title: '保存成功', color: 'success' })
     modal.show = false
     loadList()
   } catch (e: any) {
-    toast.add({ title: '保存失败', description: e?.data?.message, color: 'red' })
+    toast.add({ title: '保存失败', description: e?.data?.message, color: 'error' })
   } finally {
     modal.saving = false
   }
@@ -213,10 +213,10 @@ async function save() {
 async function remove(row: any) {
   try {
     await $fetch(`/api/admin/checkin/rules/${row.id}`, { method: 'DELETE' })
-    toast.add({ title: '删除成功', color: 'green' })
+    toast.add({ title: '删除成功', color: 'success' })
     loadList()
   } catch {
-    toast.add({ title: '删除失败', color: 'red' })
+    toast.add({ title: '删除失败', color: 'error' })
   }
 }
 

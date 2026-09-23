@@ -1,26 +1,27 @@
 <template>
   <div class="space-y-4">
+    <h1 class="text-xl font-semibold text-stone-900">AI 识别记录</h1>
     <!-- 顶部统计 -->
     <div class="grid grid-cols-3 gap-4">
       <div v-for="s in summary" :key="s.label"
         class="bg-white rounded-2xl p-4 border flex items-center gap-4"
-        style="border-color: #f0e6d8; box-shadow: 0 1px 4px rgba(0,0,0,0.04)"
+        style="border-color: #e7e5e4; box-shadow: 0 1px 4px rgba(0,0,0,0.04)"
       >
         <div :class="['w-10 h-10 rounded-xl flex items-center justify-center text-xl', s.bg]">
           {{ s.emoji }}
         </div>
         <div>
-          <p class="text-xs text-stone-400">{{ s.label }}</p>
+          <p class="text-xs text-stone-500">{{ s.label }}</p>
           <p class="text-2xl font-bold text-stone-800">{{ s.value }}</p>
         </div>
       </div>
     </div>
 
     <!-- 筛选栏 -->
-    <div class="bg-white rounded-2xl border p-4 flex flex-wrap gap-3 items-center"
-      style="border-color: #f0e6d8"
+    <div class="bg-white rounded-xl border p-4 flex flex-wrap gap-3 items-center"
+      style="border-color: #e7e5e4"
     >
-      <div class="flex gap-1 rounded-lg overflow-hidden border" style="border-color: #f0e6d8">
+      <div class="flex gap-1 rounded-lg overflow-hidden border" style="border-color: #e7e5e4">
         <button
           v-for="t in typeOpts" :key="t.value"
           @click="filter.type = t.value; load()"
@@ -30,7 +31,7 @@
               : 'text-stone-500 hover:bg-amber-50']"
         >{{ t.label }}</button>
       </div>
-      <div class="flex gap-1 rounded-lg overflow-hidden border" style="border-color: #f0e6d8">
+      <div class="flex gap-1 rounded-lg overflow-hidden border" style="border-color: #e7e5e4">
         <button
           v-for="s in successOpts" :key="s.value"
           @click="filter.success = s.value; load()"
@@ -45,7 +46,7 @@
         @keyup.enter="load()"
         placeholder="用户 ID 搜索..."
         class="border rounded-lg px-3 py-1.5 text-xs text-stone-700 outline-none focus:ring-1 focus:ring-amber-300"
-        style="border-color: #f0e6d8; width: 160px"
+        style="border-color: #e7e5e4; width: 160px"
       />
       <button @click="load()" class="px-3 py-1.5 bg-amber-500 text-white text-xs rounded-lg hover:bg-amber-600 transition-colors">
         搜索
@@ -53,20 +54,20 @@
     </div>
 
     <!-- 表格 -->
-    <div class="bg-white rounded-2xl border overflow-hidden" style="border-color: #f0e6d8; box-shadow: 0 1px 4px rgba(0,0,0,0.04)">
-      <div v-if="loading" class="py-16 text-center text-stone-400 text-sm">加载中...</div>
-      <div v-else-if="!list.length" class="py-16 text-center text-stone-400 text-sm">暂无数据</div>
+    <div class="bg-white rounded-xl border overflow-hidden" style="border-color: #e7e5e4; box-shadow: 0 1px 4px rgba(0,0,0,0.04)">
+      <div v-if="loading" class="py-16 text-center text-stone-500 text-sm">加载中...</div>
+      <div v-else-if="!list.length" class="py-16 text-center text-stone-500 text-sm">暂无数据</div>
       <table v-else class="w-full text-sm">
         <thead>
-          <tr class="border-b" style="border-color: #f0e6d8; background: #fdf8f3">
+          <tr class="border-b" style="border-color: #e7e5e4; background: #fdf8f3">
             <th class="px-4 py-3 w-7"></th>
-            <th class="px-4 py-3 text-left text-xs font-semibold text-stone-500">类型</th>
-            <th class="px-4 py-3 text-left text-xs font-semibold text-stone-500">用户</th>
-            <th class="px-4 py-3 text-left text-xs font-semibold text-stone-500">资源</th>
-            <th class="px-4 py-3 text-left text-xs font-semibold text-stone-500">识别结果</th>
-            <th class="px-4 py-3 text-left text-xs font-semibold text-stone-500">状态</th>
-            <th class="px-4 py-3 text-left text-xs font-semibold text-stone-500">耗时</th>
-            <th class="px-4 py-3 text-left text-xs font-semibold text-stone-500">时间</th>
+            <th class="px-4 py-3 text-left text-sm font-semibold text-stone-500">类型</th>
+            <th class="px-4 py-3 text-left text-sm font-semibold text-stone-500">用户</th>
+            <th class="px-4 py-3 text-left text-sm font-semibold text-stone-500">资源</th>
+            <th class="px-4 py-3 text-left text-sm font-semibold text-stone-500">识别结果</th>
+            <th class="px-4 py-3 text-left text-sm font-semibold text-stone-500">状态</th>
+            <th class="px-4 py-3 text-left text-sm font-semibold text-stone-500">耗时</th>
+            <th class="px-4 py-3 text-left text-sm font-semibold text-stone-500">时间</th>
           </tr>
         </thead>
         <tbody>
@@ -82,12 +83,12 @@
               <td class="px-4 py-3 w-7">
                 <UIcon
                   :name="expandedId === r.id ? 'i-heroicons-chevron-down' : 'i-heroicons-chevron-right'"
-                  class="w-3.5 h-3.5 text-stone-400 transition-transform duration-200"
+                  class="w-3.5 h-3.5 text-stone-500 transition-transform duration-200"
                 />
               </td>
               <!-- 类型 -->
               <td class="px-4 py-3">
-                <span :class="['inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium',
+                <span :class="['inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-xs font-medium',
                   r.mediaType === 'image' ? 'bg-blue-50 text-blue-600' : 'bg-purple-50 text-purple-600']">
                   {{ r.mediaType === 'image' ? '📸 图片' : '🎙️ 音频' }}
                 </span>
@@ -105,9 +106,9 @@
               <!-- 资源缩略 -->
               <td class="px-4 py-3">
                 <div v-if="r.mediaType === 'image'" class="flex items-center gap-2">
-                  <img :src="r.image_url" class="w-10 h-10 rounded-lg object-cover border" style="border-color: #f0e6d8" />
+                  <img :src="r.image_url" class="w-10 h-10 rounded-lg object-cover border" style="border-color: #e7e5e4" />
                 </div>
-                <div v-else class="flex items-center gap-1 text-xs text-stone-400">
+                <div v-else class="flex items-center gap-1 text-xs text-stone-500">
                   <UIcon name="i-heroicons-musical-note" class="w-4 h-4" />
                   <span>音频</span>
                 </div>
@@ -116,24 +117,24 @@
               <td class="px-4 py-3">
                 <div v-if="r.emotion_zh" class="text-xs">
                   <span class="font-semibold text-stone-700">{{ r.emotion_zh }}</span>
-                  <span class="text-stone-400 ml-1">({{ r.species || '' }})</span>
-                  <div class="text-stone-400 mt-0.5">置信 {{ ((r.emotion_conf || 0) * 100).toFixed(0) }}%</div>
+                  <span class="text-stone-500 ml-1">({{ r.species || '' }})</span>
+                  <div class="text-stone-500 mt-0.5">置信 {{ ((r.emotion_conf || 0) * 100).toFixed(0) }}%</div>
                 </div>
-                <span v-else class="text-xs text-stone-400">—</span>
+                <span v-else class="text-xs text-stone-500">—</span>
               </td>
               <!-- 状态 -->
               <td class="px-4 py-3">
-                <UBadge :label="r.success ? '成功' : '非宠物'" :color="r.success ? 'green' : 'red'" variant="subtle" size="xs" />
+                <UBadge :label="r.success ? '成功' : '非宠物'" :color="r.success ? 'success' : 'error'" variant="subtle" size="xs" />
               </td>
               <!-- 耗时 -->
               <td class="px-4 py-3 text-xs text-stone-500">{{ r.processing_ms ? r.processing_ms + 'ms' : '—' }}</td>
               <!-- 时间 -->
-              <td class="px-4 py-3 text-xs text-stone-400 whitespace-nowrap">{{ fmtTime(r.created_at) }}</td>
+              <td class="px-4 py-3 text-xs text-stone-500 whitespace-nowrap">{{ fmtTime(r.created_at) }}</td>
             </tr>
 
             <!-- 展开详情行 -->
             <tr v-if="expandedId === r.id" style="background: #fffbf5">
-              <td colspan="8" class="px-6 py-5 border-b" style="border-color: #f0e6d8">
+              <td colspan="8" class="px-6 py-5 border-b" style="border-color: #e7e5e4">
                 <div class="flex gap-6">
                   <!-- 左：媒体预览 -->
                   <div class="flex-shrink-0 w-56">
@@ -142,7 +143,7 @@
                     <div v-else class="space-y-2">
                       <audio :src="r.audio_url" controls class="w-full rounded-lg" style="accent-color: #f59e0b" />
                       <a :href="r.audio_url" target="_blank"
-                        class="block text-[10px] text-stone-400 hover:text-amber-600 truncate transition-colors">
+                        class="block text-xs text-stone-500 hover:text-amber-600 truncate transition-colors">
                         {{ r.audio_url }}
                       </a>
                     </div>
@@ -152,41 +153,41 @@
                     <!-- 基础信息 -->
                     <div class="grid grid-cols-3 gap-3 text-xs">
                       <div>
-                        <p class="text-stone-400 mb-0.5">用户</p>
+                        <p class="text-stone-500 mb-0.5">用户</p>
                         <p class="font-medium text-stone-700">{{ r.nickname || r.user_id }}</p>
                       </div>
                       <div>
-                        <p class="text-stone-400 mb-0.5">状态</p>
+                        <p class="text-stone-500 mb-0.5">状态</p>
                         <p :class="r.success ? 'text-green-600' : 'text-red-500'" class="font-medium">
                           {{ r.success ? '识别成功' : '非宠物图片' }}
                         </p>
                       </div>
                       <div v-if="r.species">
-                        <p class="text-stone-400 mb-0.5">物种</p>
+                        <p class="text-stone-500 mb-0.5">物种</p>
                         <p class="font-medium text-stone-700">{{ r.species }}</p>
                       </div>
                       <div v-if="r.emotion_zh">
-                        <p class="text-stone-400 mb-0.5">主情绪</p>
+                        <p class="text-stone-500 mb-0.5">主情绪</p>
                         <p class="font-medium text-stone-700">{{ r.emotion_zh }} ({{ ((r.emotion_conf||0)*100).toFixed(0) }}%)</p>
                       </div>
                       <div>
-                        <p class="text-stone-400 mb-0.5">耗时</p>
+                        <p class="text-stone-500 mb-0.5">耗时</p>
                         <p class="font-medium text-stone-700">{{ r.processing_ms }}ms</p>
                       </div>
                       <div>
-                        <p class="text-stone-400 mb-0.5">时间</p>
+                        <p class="text-stone-500 mb-0.5">时间</p>
                         <p class="font-medium text-stone-700">{{ fmtTime(r.created_at) }}</p>
                       </div>
                     </div>
                     <!-- 情绪分布 -->
                     <div v-if="r.top3?.length">
-                      <p class="text-xs text-stone-400 mb-1.5">情绪分布</p>
+                      <p class="text-xs text-stone-500 mb-1.5">情绪分布</p>
                       <div v-for="e in r.top3" :key="e.label" class="flex items-center gap-2 mb-1.5">
                         <span class="text-xs text-stone-600 w-14 flex-shrink-0">{{ e.label_zh || e.label }}</span>
                         <div class="flex-1 bg-stone-100 rounded-full h-1.5">
                           <div class="bg-amber-400 h-1.5 rounded-full transition-all" :style="`width:${(e.confidence*100).toFixed(0)}%`" />
                         </div>
-                        <span class="text-xs text-stone-400 w-8 text-right">{{ (e.confidence*100).toFixed(0) }}%</span>
+                        <span class="text-xs text-stone-500 w-8 text-right">{{ (e.confidence*100).toFixed(0) }}%</span>
                       </div>
                     </div>
                     <!-- 建议 -->
@@ -202,16 +203,16 @@
       </table>
 
       <!-- 分页 -->
-      <div v-if="list.length" class="flex items-center justify-between px-4 py-3 border-t" style="border-color: #f0e6d8">
-        <span class="text-xs text-stone-400">共 {{ total }} 条</span>
+      <div v-if="list.length" class="flex items-center justify-between px-4 py-3 border-t" style="border-color: #e7e5e4">
+        <span class="text-xs text-stone-500">共 {{ total }} 条</span>
         <div class="flex gap-1">
           <button @click="prevPage" :disabled="page <= 1"
             class="px-2.5 py-1 text-xs rounded border disabled:opacity-40 hover:bg-amber-50 transition-colors"
-            style="border-color: #f0e6d8">上一页</button>
+            style="border-color: #e7e5e4">上一页</button>
           <span class="px-3 py-1 text-xs text-stone-500">{{ page }}</span>
           <button @click="nextPage" :disabled="page * size >= total"
             class="px-2.5 py-1 text-xs rounded border disabled:opacity-40 hover:bg-amber-50 transition-colors"
-            style="border-color: #f0e6d8">下一页</button>
+            style="border-color: #e7e5e4">下一页</button>
         </div>
       </div>
     </div>

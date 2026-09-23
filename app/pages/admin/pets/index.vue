@@ -2,36 +2,36 @@
   <div class="space-y-4">
     <!-- 顶部操作栏 -->
     <div class="flex items-center gap-3">
-      <h2 class="text-base font-bold text-stone-800 flex items-center gap-2">
+      <h2 class="text-xl font-bold text-stone-800 flex items-center gap-2">
         <UIcon name="i-heroicons-heart" class="w-5 h-5 text-amber-500" />
         宠物档案管理
       </h2>
-      <span class="text-xs text-stone-400">宠物档案由 App 端创建，后台可编辑/查询/删除</span>
+      <span class="text-xs text-stone-500">宠物档案由 App 端创建，后台可编辑/查询/删除</span>
     </div>
 
-    <div class="bg-white rounded-2xl border p-4 flex items-center gap-3" style="border-color: #f0e6d8">
-      <UInput v-model="keyword" placeholder="搜索宠物名 / 手机号 / 昵称..." icon="i-heroicons-magnifying-glass" class="flex-1" @keyup.enter="() => { page = 1; loadList() }" />
+    <div class="bg-white rounded-xl border p-4 flex flex-wrap items-center gap-3" style="border-color: #e7e5e4">
+      <UInput v-model="keyword" placeholder="搜索宠物名 / 手机号 / 昵称..." icon="i-heroicons-magnifying-glass" class="w-full sm:max-w-sm" @keyup.enter="() => { page = 1; loadList() }" />
       <UInput v-model="userId" placeholder="或按 userId 精确查" class="w-48" @keyup.enter="() => { page = 1; loadList() }" />
-      <UButton label="搜索" color="amber" @click="() => { page = 1; loadList() }" />
-      <UButton label="重置" color="gray" variant="outline" @click="reset" />
-      <UBadge :label="`共 ${total} 只`" color="amber" variant="subtle" size="xs" />
+      <UButton label="搜索" color="primary" @click="() => { page = 1; loadList() }" />
+      <UButton label="重置" color="neutral" variant="outline" @click="reset" />
+      <UBadge :label="`共 ${total} 只`" color="primary" variant="subtle" size="xs" />
     </div>
 
     <!-- 列表 -->
-    <div class="bg-white rounded-2xl border overflow-hidden" style="border-color: #f0e6d8; box-shadow: 0 1px 4px rgba(0,0,0,0.04)">
+    <div class="bg-white rounded-xl border overflow-hidden" style="border-color: #e7e5e4; box-shadow: 0 1px 4px rgba(0,0,0,0.04)">
       <div v-if="loading" class="flex justify-center py-10">
-        <UIcon name="i-heroicons-arrow-path" class="w-5 h-5 text-stone-400 animate-spin" />
+        <UIcon name="i-heroicons-arrow-path" class="w-5 h-5 text-stone-500 animate-spin" />
       </div>
-      <div v-else-if="!list.length" class="py-10 text-center text-sm text-stone-400">暂无数据</div>
+      <div v-else-if="!list.length" class="py-10 text-center text-sm text-stone-500">暂无数据</div>
       <table v-else class="w-full text-sm">
         <thead>
-          <tr class="bg-amber-50/50 border-b border-orange-100">
-            <th class="text-left text-xs text-stone-500 font-medium py-3 px-4">宠物</th>
-            <th class="text-left text-xs text-stone-500 font-medium py-3 px-4">主人</th>
-            <th class="text-left text-xs text-stone-500 font-medium py-3 px-4">物种/品种</th>
-            <th class="text-left text-xs text-stone-500 font-medium py-3 px-4">养成状态</th>
-            <th class="text-left text-xs text-stone-500 font-medium py-3 px-4">创建时间</th>
-            <th class="text-left text-xs text-stone-500 font-medium py-3 px-4">操作</th>
+          <tr class="bg-stone-50 border-b border-stone-200">
+            <th class="text-left text-sm text-stone-500 font-medium py-3 px-4">宠物</th>
+            <th class="text-left text-sm text-stone-500 font-medium py-3 px-4">主人</th>
+            <th class="text-left text-sm text-stone-500 font-medium py-3 px-4">物种/品种</th>
+            <th class="text-left text-sm text-stone-500 font-medium py-3 px-4">养成状态</th>
+            <th class="text-left text-sm text-stone-500 font-medium py-3 px-4">创建时间</th>
+            <th class="text-left text-sm text-stone-500 font-medium py-3 px-4">操作</th>
           </tr>
         </thead>
         <tbody>
@@ -44,21 +44,21 @@
             </td>
             <td class="py-3 px-4">
               <p class="text-stone-700">{{ row.nickname || '未设置' }}</p>
-              <p class="text-xs text-stone-400">{{ row.phone }}</p>
+              <p class="text-xs text-stone-500">{{ row.phone }}</p>
             </td>
             <td class="py-3 px-4 text-stone-600">{{ row.species || '-' }} {{ row.breed ? `/ ${row.breed}` : '' }}</td>
             <td class="py-3 px-4">
-              <div class="flex gap-2 text-[11px]">
+              <div class="flex gap-2 text-xs">
                 <span class="text-amber-600">饱腹 {{ row.satiety }}</span>
                 <span class="text-pink-600">心情 {{ row.mood }}</span>
                 <span class="text-sky-600">清洁 {{ row.cleanliness }}</span>
               </div>
             </td>
-            <td class="py-3 px-4 text-xs text-stone-400">{{ formatDate(row.created_at) }}</td>
+            <td class="py-3 px-4 text-xs text-stone-500">{{ formatDate(row.created_at) }}</td>
             <td class="py-3 px-4">
               <div class="flex items-center gap-1">
-                <UButton icon="i-heroicons-pencil-square" color="amber" variant="ghost" size="xs" title="编辑" @click="openEditModal(row)" />
-                <UButton icon="i-heroicons-trash" color="red" variant="ghost" size="xs" title="删除" :loading="row._deleting" @click="deletePet(row)" />
+                <UButton icon="i-heroicons-pencil-square" color="primary" variant="ghost" size="xs" title="编辑" @click="openEditModal(row)" />
+                <UButton icon="i-heroicons-trash" color="error" variant="ghost" size="xs" title="删除" :loading="row._deleting" @click="deletePet(row)" />
               </div>
             </td>
           </tr>
@@ -66,7 +66,7 @@
       </table>
 
       <div v-if="total > pageSize" class="flex justify-center py-4 border-t border-stone-100">
-        <UPagination v-model="page" :page-count="pageSize" :total="total" @update:model-value="loadList" />
+        <UPagination v-model:page="page" :items-per-page="pageSize" :total="total" @update:page="loadList" />
       </div>
     </div>
 
@@ -79,11 +79,11 @@
           <p>当前形象：{{ modal.modelName || '尚未分配' }}</p>
           <p class="text-xs text-stone-500">{{ modal.assignmentInfo }}</p>
           <label class="block">形象处理
-            <select v-model="modal.assignmentMode" class="w-full border rounded-lg p-2 bg-white mt-1">
+            <select v-model="modal.assignmentMode" class="admin-select w-full border rounded-lg p-2 bg-white mt-1">
               <option value="keep">保留当前形象</option><option value="rematch">按本次保存的资料重新匹配</option><option value="manual">手动指定形象</option>
             </select>
           </label>
-          <select v-if="modal.assignmentMode === 'manual'" v-model="modal.modelId" class="w-full border rounded-lg p-2 bg-white">
+          <select v-if="modal.assignmentMode === 'manual'" v-model="modal.modelId" class="admin-select w-full border rounded-lg p-2 bg-white">
             <option value="">请选择形象</option><option v-for="m in models" :key="m.id" :value="m.id">{{ m.name }}</option>
           </select>
           <p v-if="modal.assignmentMode !== 'keep'" class="text-xs text-amber-700">保存后将替换这只宠物的形象。</p>
@@ -106,7 +106,7 @@
           <div class="grid grid-cols-2 gap-3">
             <div>
               <label class="text-xs text-stone-500 font-medium block mb-1">性别</label>
-              <select v-model.number="modal.gender" class="w-full border rounded-lg px-3 py-2 text-sm text-stone-700 bg-white" style="border-color: #e5e7eb">
+              <select v-model.number="modal.gender" class="admin-select w-full border rounded-lg px-3 py-2 text-sm text-stone-700 bg-white" style="border-color: #e5e7eb">
                 <option :value="0">未知</option>
                 <option :value="1">男</option>
                 <option :value="2">女</option>
@@ -134,8 +134,8 @@
         </div>
 
         <div class="flex gap-2 pt-2">
-          <UButton label="取消" color="gray" variant="outline" class="flex-1" @click="modal.show = false" />
-          <UButton label="保存修改" color="amber" class="flex-1" :loading="modal.saving" :disabled="!modal.name.trim()" @click="saveModal" />
+          <UButton label="取消" color="neutral" variant="outline" class="flex-1" @click="modal.show = false" />
+          <UButton label="保存修改" color="primary" class="flex-1" :loading="modal.saving" :disabled="!modal.name.trim()" @click="saveModal" />
         </div>
       </div>
     </div>
@@ -187,7 +187,7 @@ const modal = reactive({
 
 async function openEditModal(row: any) {
   try { models.value = (await $fetch<any>('/api/admin/pet-models/list')).list.filter((m: any) => m.enabled) }
-  catch { toast.add({ title: '形象列表加载失败', color: 'red' }); return }
+  catch { toast.add({ title: '形象列表加载失败', color: 'error' }); return }
   Object.assign(modal, {
     show: true,
     editingId: row.id,
@@ -205,7 +205,7 @@ async function openEditModal(row: any) {
 }
 
 async function saveModal() {
-  if (!modal.name.trim()) return toast.add({ title: '请填写宠物名称', color: 'red' })
+  if (!modal.name.trim()) return toast.add({ title: '请填写宠物名称', color: 'error' })
   modal.saving = true
   try {
     await $fetch(`/api/admin/pets/${modal.editingId}`, {
@@ -224,10 +224,10 @@ async function saveModal() {
       },
     })
     modal.show = false
-    toast.add({ title: '已更新', color: 'green' })
+    toast.add({ title: '已更新', color: 'success' })
     await loadList()
   } catch (err: any) {
-    toast.add({ title: err?.data?.message || '保存失败', color: 'red' })
+    toast.add({ title: err?.data?.message || '保存失败', color: 'error' })
   } finally { modal.saving = false }
 }
 
@@ -238,9 +238,9 @@ async function deletePet(row: any) {
     await $fetch(`/api/admin/pets/${row.id}`, { method: 'DELETE' })
     list.value = list.value.filter(x => x.id !== row.id)
     total.value--
-    toast.add({ title: '已删除', color: 'green' })
+    toast.add({ title: '已删除', color: 'success' })
   } catch (err: any) {
-    toast.add({ title: err?.data?.message || '删除失败', color: 'red' })
+    toast.add({ title: err?.data?.message || '删除失败', color: 'error' })
   } finally { row._deleting = false }
 }
 
