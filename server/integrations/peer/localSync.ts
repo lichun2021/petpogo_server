@@ -19,7 +19,7 @@ function text(value: unknown, max: number, required = false): string | null {
   return value
 }
 async function readPeer(path: string, token: string, params: Params, requestId?: string) {
-  const response = await peerRequest(path, { method: 'POST', encoding: 'form', params, token, requestId })
+  const response = await peerRequest(path, { method: 'POST', encoding: 'form', params, token, requestId, quiet: true })
   const data = parseResourceJson(response.body)
   if (response.status < 200 || response.status >= 300 || String(data?.code) !== '0') throw invalid()
   return data

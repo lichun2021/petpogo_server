@@ -21,7 +21,7 @@ before(async () => {
   temp = await mkdtemp(join(tmpdir(), 'security-audit-'))
   const output = join(temp, 'audit.cjs')
   Object.assign(globalThis, { defineNitroPlugin: plugin => plugin, defineEventHandler: h3.defineEventHandler, getHeader: h3.getHeader, getRequestIP: () => '127.0.0.1', createError: h3.createError })
-  await build({ stdin: { contents: `export { default as refresh } from './server/routes/sdkapi/auth/refresh.post.ts'; export { default as logger } from './server/plugins/logger.ts'; export { default as signature } from './server/middleware/signature.ts'; export { default as rateLimit } from './server/middleware/rateLimit.ts'; export * from './server/integrations/ai/concurrency.ts'; export * from './server/integrations/shared/bounds.ts';`, resolveDir: process.cwd(), loader: 'ts' }, bundle: true, platform: 'node', format: 'cjs', outfile: output, logLevel: 'silent' })
+  await build({ stdin: { contents: `export * from './server/utils/payloadLog.ts'; export { default as refresh } from './server/routes/sdkapi/auth/refresh.post.ts'; export { default as logger } from './server/plugins/logger.ts'; export { default as signature } from './server/middleware/signature.ts'; export { default as rateLimit } from './server/middleware/rateLimit.ts'; export * from './server/integrations/ai/concurrency.ts'; export * from './server/integrations/shared/bounds.ts';`, resolveDir: process.cwd(), loader: 'ts' }, bundle: true, platform: 'node', format: 'cjs', outfile: output, logLevel: 'silent' })
   modules = (await import(pathToFileURL(output))).default
 })
 after(async () => rm(temp, { recursive: true, force: true }))
@@ -181,4 +181,42 @@ test('刷新按凭证用户ID定位，校验上游邮箱映射及调用期间的
       assert.equal(deletes.length, 0)
     }
   }
+})
+
+
+test('详细正文日志保留长ID及完整列表，脱敏嵌套凭证和签名地址', () => {
+  process.env.LOG_REDACT_TOKENS = 'true'
+  // 单独测试结构化输入及上游长ID解析。
+  const full = modules.redactLogPayload({ list: Array.from({ length: 1500 }, (_, id) => ({ id, name: '设备' })), refreshToken: 'hidden-token', nested: JSON.stringify({ password: 'hidden-password' }), url: 'https://example.com/image?signature=hidden-signature' })
+  assert.equal(full.list.length, 1500)
+  assert.equal(full.list[1499].name, '设备')
+  assert.doesNotMatch(JSON.stringify(full), /hidden-/)
+  assert.equal(full.url, 'https://example.com/image')
+  const upstream = modules.peerResponseLogPayload('{"code":0,"info":{"id":1237250046272094208,"ipet_token":"hidden-token","proof":{"secretKey":"hidden-key"}}}')
+  assert.equal(upstream.info.id, '1237250046272094208')
+  assert.equal(upstream.code, 0)
+  assert.doesNotMatch(JSON.stringify(upstream), /hidden-/)
+  assert.doesNotMatch(JSON.stringify(modules.peerResponseLogPayload('not-json hidden-token')), /hidden-token/)
+  delete process.env.LOG_REDACT_TOKENS
+  assert.equal(modules.redactLogPayload({ token: 'visible-ticket', password: 'secret' }).token, 'visible-ticket')
+  assert.equal(modules.redactLogPayload({ token: 'visible-ticket', password: 'secret' }).password, '[REDACTED]')
+})
+
+
+test('代理请求仅记录请求和返回两条日志，返回含最终正文', () => {
+  const hooks = {}; modules.logger({ hooks: { hook: (name, fn) => { hooks[name] = fn } } })
+  const records = [], original = console.info
+  console.info = value => records.push(parseLog(value))
+  try {
+    const e = event('/sdkapi/peer/user/device/qr/token')
+    hooks.request(e)
+    e.context.logPeerRequest({})
+    e.context.peerResponseBody = { code: 0, info: { token: 'test-ticket', expireIn: 600 } }
+    e.node.res.writableFinished = true
+    e.node.res.emit('finish'); e.node.res.emit('close')
+    assert.deepEqual(records.map(row => row.event), ['request.start', 'request.end'])
+    assert.equal(records[0].requestId, records[1].requestId)
+    assert.deepEqual(records[0].body, {})
+    assert.equal(records[1].body.info.token, 'test-ticket')
+  } finally { console.info = original }
 })

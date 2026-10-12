@@ -1,3 +1,4 @@
+import { redactLogPayload, peerResponseLogPayload } from '../../utils/payloadLog'
 import { assertPetModelDefaults } from '../../utils/petModelAssignment.ts'
 import {
   createError, defineEventHandler, getHeader, getQuery, readBody,
@@ -96,6 +97,7 @@ export const peerProxyHandler = defineEventHandler(async (event) => {
     await readProxyBody(event)
     input = await readBody(event)
   }
+  event.context.logPeerRequest?.(redactLogPayload(input ?? {}))
   const params = validatePeerParams(endpoint, input)
   // 在上游真正创建之前检查保底配置，避免配置缺失造成半成功。
   if (path === '/pet/info/add') {
@@ -105,7 +107,7 @@ export const peerProxyHandler = defineEventHandler(async (event) => {
   // 通网类型仅供本地档案使用，不扩展对方后台未经确认的参数协议。
   const upstreamParams = { ...params }
   if (path === '/user/device/bind') delete upstreamParams.networkType
-  const response = await peerRequest(endpoint.path, { ...endpoint, params: upstreamParams, token, requestId: event.context.reqId })
+  const response = await peerRequest(endpoint.path, { ...endpoint, params: upstreamParams, token, requestId: event.context.reqId, quiet: true })
   event.context.proxyUpstreamMs = Date.now() - upstreamStart
   event.context.proxyUpstreamStatus = response.status
   event.context.proxyBusinessCode = response.businessCode
@@ -132,5 +134,6 @@ export const peerProxyHandler = defineEventHandler(async (event) => {
   const body = path === '/user/device/list'
     ? await enrichDeviceNetwork(useDb(), response.body, response.status)
     : response.body
+  event.context.peerResponseBody = peerResponseLogPayload(body)
   return send(event, body, 'application/json; charset=utf-8')
 })

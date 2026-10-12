@@ -15,15 +15,25 @@ export default defineNitroPlugin(nitroApp => {
     setHeader(event, 'X-Request-Id', requestId)
     // 不记录 query；JSON 序列化避免换行注入，限制异常长路径的日志体积。
     const request = { requestId, method: event.method, path: event.path.split('?')[0].slice(0, 240) }
-    console.info(formatRequestLog({ event: 'request.start', ...request }))
+    const peer = request.path.startsWith('/sdkapi/peer/')
+    let requestLogged = false
+    const logRequest = (body?: unknown) => {
+      if (requestLogged) return
+      requestLogged = true
+      console.info(formatRequestLog({ event: 'request.start', message: '请求', ...request, ...(peer ? { body: body ?? null } : {}) }))
+    }
+    if (peer) event.context.logPeerRequest = logRequest
+    else logRequest()
     let logged = false
     const finish = (closed: boolean) => {
       if (logged) return
       logged = true
+      logRequest()
       const status = event.node.res.statusCode
       const businessCode = event.context.proxyBusinessCode
       console.info(formatRequestLog({
-        event: 'request.end', ...request,
+        event: 'request.end', message: '返回', ...request,
+        ...(peer ? { body: event.context.peerResponseBody ?? { message: event.context.requestErrorReason || '未取得业务响应正文' } } : {}),
         level: status >= 500 ? 'error' : status >= 400 ? 'warn' : 'info',
         status, durationMs: Date.now() - start,
         outcome: event.context.proxyOutcome || (closed ? 'client_closed' : status >= 400 ? 'http_error' : event.context.proxyBusinessSuccess === false || (businessCode !== undefined && Number(businessCode) !== 0) ? 'business_error' : event.context.proxySseDone === false ? 'incomplete_stream' : 'complete'),
