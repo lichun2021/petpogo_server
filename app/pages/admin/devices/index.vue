@@ -18,14 +18,15 @@
       <div class="overflow-x-auto">
         <table class="w-full min-w-[640px] text-sm">
           <thead><tr class="bg-stone-50 border-b border-stone-200">
-            <th v-for="label in ['设备信息', '状态', '最后位置', '最后上线']" :key="label" scope="col" class="text-left text-stone-600 font-medium py-3 px-5">{{ label }}</th>
+            <th v-for="label in ['设备信息', '通网类型', '状态', '最后位置', '最后上线']" :key="label" scope="col" class="text-left text-stone-600 font-medium py-3 px-5">{{ label }}</th>
           </tr></thead>
           <tbody>
-            <tr v-if="loading"><td colspan="4"><div class="flex items-center justify-center gap-2 py-16 text-stone-500" role="status"><UIcon name="i-heroicons-arrow-path" class="size-5 animate-spin" />正在加载设备</div></td></tr>
-            <tr v-else-if="loadError"><td colspan="4"><AdminEmptyState title="设备加载失败" description="请检查网络后重试" icon="i-heroicons-exclamation-circle"><UButton label="重新加载" color="neutral" variant="outline" @click="loadList" /></AdminEmptyState></td></tr>
-            <tr v-else-if="!list.length"><td colspan="4"><AdminEmptyState :title="appliedSearch || activeTab ? '没有符合条件的设备' : '暂无设备'" :description="appliedSearch || activeTab ? '调整搜索内容或状态筛选后再试' : '设备接入后，可在这里查看状态与最近活动'" icon="i-heroicons-cpu-chip"><UButton v-if="appliedSearch || activeTab" label="清除筛选" color="neutral" variant="outline" @click="reset" /></AdminEmptyState></td></tr>
+            <tr v-if="loading"><td colspan="5"><div class="flex items-center justify-center gap-2 py-16 text-stone-500" role="status"><UIcon name="i-heroicons-arrow-path" class="size-5 animate-spin" />正在加载设备</div></td></tr>
+            <tr v-else-if="loadError"><td colspan="5"><AdminEmptyState title="设备加载失败" description="请检查网络后重试" icon="i-heroicons-exclamation-circle"><UButton label="重新加载" color="neutral" variant="outline" @click="loadList" /></AdminEmptyState></td></tr>
+            <tr v-else-if="!list.length"><td colspan="5"><AdminEmptyState :title="appliedSearch || activeTab ? '没有符合条件的设备' : '暂无设备'" :description="appliedSearch || activeTab ? '调整搜索内容或状态筛选后再试' : '设备接入后，可在这里查看状态与最近活动'" icon="i-heroicons-cpu-chip"><UButton v-if="appliedSearch || activeTab" label="清除筛选" color="neutral" variant="outline" @click="reset" /></AdminEmptyState></td></tr>
             <tr v-for="row in (!loading && !loadError ? list : [])" :key="row.mac" class="border-b border-stone-100 last:border-0 hover:bg-stone-50/70 transition-colors">
               <td class="py-2 px-5"><p class="text-stone-800 font-medium">{{ row.name || '未命名设备' }}</p><p class="mt-0.5 font-mono text-xs text-stone-500">{{ row.mac }}</p></td>
+              <td class="py-2 px-5 text-stone-600">{{ row.network_type === '4g' ? '4G' : row.network_type === 'wifi' ? 'Wi-Fi' : '未设置' }}</td>
               <td class="py-2 px-5"><UBadge :label="row.online_status ? '在线' : '离线'" :color="row.online_status ? 'success' : 'neutral'" variant="soft" size="sm" /></td>
               <td class="py-2 px-5 text-stone-600 max-w-64 truncate" :title="row.address">{{ row.address || '—' }}</td>
               <td class="py-2 px-5 text-stone-600 whitespace-nowrap">{{ formatDate(row.last_online_at) }}</td>

@@ -89,7 +89,7 @@ before(async () => {
   const hooks = {}
   modules.logger({ hooks: { hook: (name, fn) => { hooks[name] = fn } } })
   console.info = value => {
-    try { const row = JSON.parse(value); if (row.event?.startsWith('request.')) { requestLogs.push(row); return } } catch {}
+    try { const row = JSON.parse(String(value).replace(/^\[[^\]]+\] /, '')); if (row.event?.startsWith('request.')) { requestLogs.push(row); return } } catch {}
     originalInfo(value)
   }
   appServer = createServer(h3.toNodeListener(h3.createApp().use(event => hooks.request(event)).use(modules.signature).use(modules.aiProxyHandler)))

@@ -24,6 +24,7 @@ export interface SessionUser {
  * ──────────────────────────────────────────────────────────────
  */
 export async function requireAuth(event: H3Event): Promise<SessionUser> {
+  event.context.authStage = 'token_header'
   const authHeader = getHeader(event, 'Authorization') || getHeader(event, 'authorization')
   const token = authHeader?.replace('Bearer ', '').trim()
 
@@ -34,12 +35,14 @@ export async function requireAuth(event: H3Event): Promise<SessionUser> {
   // 从 Redis 查询 Token 对应的 Session（登录时写入，刷新 Token 时更新）
   const redis = useRedis()
   const sessionKey = tokenSessionKey(token)
+  event.context.authStage = 'session_lookup'
   const raw = await redis.get(sessionKey)
 
   if (!raw) {
     throw createError({ statusCode: 401, message: 'Token 已过期，请重新登录' })
   }
 
+  event.context.authStage = 'session_decode'
   let user: SessionUser
   try {
     user = JSON.parse(raw) as SessionUser
@@ -48,6 +51,7 @@ export async function requireAuth(event: H3Event): Promise<SessionUser> {
   }
 
   // 校验用户是否存在且未被封号（本后台 DB 二次校验）
+  event.context.authStage = 'account_lookup'
   const db = useDb()
   const [[dbUser]]: any = await db.query(
     'SELECT id, status, credential_version FROM t_user WHERE id=? AND deleted=0 LIMIT 1',
@@ -61,10 +65,12 @@ export async function requireAuth(event: H3Event): Promise<SessionUser> {
     throw createError({ statusCode: 403, message: '账号已被封禁，无法执行此操作' })
   }
 
+  event.context.authStage = 'credential_check'
   if (Number(user.credentialVersion || 0) !== Number(dbUser.credential_version || 0)) throw createError({ statusCode: 401, message: '登录凭证已失效，请重新登录' })
 
   // 用 DB 中的精确 ID 覆盖（防止 Snowflake ID 精度问题）
   const accurateUser: SessionUser = { ...user, userId: String(dbUser.id) }
+  event.context.authStage = 'authenticated'
   event.context.user = accurateUser
   return accurateUser
 }

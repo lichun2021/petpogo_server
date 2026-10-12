@@ -38,9 +38,10 @@ async function saveDevice(db: PoolConnection, userId: string, value: any, owner?
   const [[device]]: any = await db.query('SELECT id,mac FROM t_device WHERE id=? OR mac=? FOR UPDATE', [peerId, mac])
   if (!device || String(device.id) !== peerId || device.mac !== mac) throw invalid()
   await db.query(`UPDATE t_device SET name=COALESCE(?,name),product_id=COALESCE(?,product_id),
-    merchant_id=COALESCE(?,merchant_id),online_status=COALESCE(?,online_status),deleted=0 WHERE id=?`,
+    merchant_id=COALESCE(?,merchant_id),online_status=COALESCE(?,online_status),network_type=COALESCE(?,network_type),deleted=0 WHERE id=?`,
   [text(value.name, 100), deviceId(value.productId), deviceId(value.merchantId),
-    typeof value.onlineStatus === 'boolean' ? value.onlineStatus : typeof value.connect === 'boolean' ? value.connect : null, peerId])
+    typeof value.onlineStatus === 'boolean' ? value.onlineStatus : typeof value.connect === 'boolean' ? value.connect : null,
+    ['4g', 'wifi'].includes(String(value.networkType ?? '').trim().toLowerCase()) ? String(value.networkType).trim().toLowerCase() : null, peerId])
   await db.query(`INSERT INTO t_user_device(id,user_id,device_id,mac,nickname,u_type,created_at)
     VALUES(?,?,?,?,?,?,NOW()) ON DUPLICATE KEY UPDATE nickname=VALUES(nickname),u_type=VALUES(u_type)`,
   [String(generateId()), userId, peerId, mac, text(value.deviceNickname ?? value.deviceNickName, 100) || mac,
@@ -81,7 +82,8 @@ export async function syncPeerMutation(input: {
     const value = response.info?.deviceId && response.info?.mac ? response.info
       : (await readPeer('/user/device/detail', token, { mac: params.mac }, requestId)).info
     if (!value || value.mac !== String(params.mac)) throw invalid()
-    devices = [{ ...value, deviceNickname: params.deviceNickName ?? value.deviceNickname ?? value.deviceNickName }]
+    devices = [{ ...value, networkType: params.networkType ?? value.networkType,
+      deviceNickname: params.deviceNickName ?? value.deviceNickname ?? value.deviceNickName }]
   }
   if (path === '/pet/info/add') {
     if (response.info?.petId) pets = [{ ...params, ...response.info }]

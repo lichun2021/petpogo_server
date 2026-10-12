@@ -1,3 +1,4 @@
+import { formatRequestLog } from './requestLog'
 /**
  * peerBackend.ts
  * ──────────────────────────────────────────────────────────────
@@ -114,11 +115,11 @@ export async function peerRequest(path: string, options: PeerRequestOptions) {
   const deadline = AbortSignal.timeout(timeout)
   const signal = options.signal ? AbortSignal.any([deadline, options.signal]) : deadline
   const startedAt = Date.now()
-  const trace = { requestId: options.requestId, method: options.method, path }
+  const trace = { requestId: options.requestId, method: options.method, upstreamHost: target.host, path }
   let stage = 'waiting_headers'
   let upstreamStatus: number | undefined
-  if (options.requestId) console.info(JSON.stringify({
-    time: new Date().toISOString(), event: 'peer.request.start', ...trace, timeoutMs: timeout,
+  if (options.requestId) console.info(formatRequestLog({
+    event: 'peer.request.start', ...trace, timeoutMs: timeout,
   }))
   try {
     const response = await fetch(target, { method: options.method, headers, body, signal, redirect: 'manual' })
@@ -137,9 +138,11 @@ export async function peerRequest(path: string, options: PeerRequestOptions) {
     } catch {
       throw createError({ statusCode: 502, message: 'Peer 上游响应格式异常' })
     }
-    if (options.requestId) console.info(JSON.stringify({
-      time: new Date().toISOString(), event: 'peer.request.end', ...trace,
+    if (options.requestId) console.info(formatRequestLog({
+      event: 'peer.request.end', ...trace,
       durationMs: Date.now() - startedAt, upstreamStatus, businessCode,
+      outcome: response.status >= 400 ? 'upstream_http_error' : businessCode !== undefined && Number(businessCode) !== 0 ? 'upstream_business_error' : 'complete',
+      reason: response.status >= 400 ? '已收到上游HTTP错误响应' : businessCode !== undefined && Number(businessCode) !== 0 ? '上游HTTP成功，但业务处理失败' : '已收到上游响应',
     }))
     return { status: response.status, body: text, businessCode }
   } catch (error: any) {
@@ -147,8 +150,8 @@ export async function peerRequest(path: string, options: PeerRequestOptions) {
     const rawCode = String(error?.cause?.code || error?.code || '')
     const errorCode = deadline.aborted ? 'PEER_TIMEOUT' : /^[A-Z][A-Z0-9_]{1,39}$/.test(rawCode) ? rawCode : 'PEER_UPSTREAM_ERROR'
     // 只记录接口与失败阶段，不记录账号、密码、token 或上游响应正文。
-    console.error(JSON.stringify({
-      time: new Date().toISOString(), event: 'peer.request.error',
+    console.error(formatRequestLog({
+      event: 'peer.request.error',
       ...trace, stage, upstreamStatus, errorCode, timeoutMs: timeout, durationMs: Date.now() - startedAt,
       status: deadline.aborted ? 504 : error?.statusCode || 502,
       outcome: deadline.aborted ? 'timeout' : 'upstream_error',
@@ -192,7 +195,7 @@ async function peerFetch<T = any>(
   }
 
   if (res.code !== 0) {
-    console.error(`[PeerBackend] POST ${path} 业务错误 code=${res.code}`)
+    console.error(formatRequestLog({ event: 'peer.business.error', requestId, path, businessCode: response.businessCode, reason: '上游业务处理失败' }))
     throw createError({ statusCode: 400, message: `[iPet] ${res.tip}` })
   }
 
@@ -227,10 +230,10 @@ export async function peerRegister(phone: string, requestId?: string): Promise<v
       tip.includes('已注册') || tip.includes('已存在') ||
       tip.includes('already') || tip.includes('exist') || tip.includes('duplicate')
     ) {
-      console.info(JSON.stringify({ time: new Date().toISOString(), event: 'peer.register.exists', requestId, next: '/user/login' }))
+      console.info(formatRequestLog({ event: 'peer.register.exists', requestId, next: '/user/login' }))
       return
     }
-    console.error(`[PeerBackend] POST /user/register 业务错误 code=${res.code}`)
+    console.error(formatRequestLog({ event: 'peer.business.error', requestId, path: '/user/register', businessCode: typeof res.code === 'number' ? res.code : undefined, reason: '上游注册业务失败' }))
     throw createError({ statusCode: 400, message: `[iPet] ${tip}` })
   }
 }
@@ -266,10 +269,10 @@ export async function peerLogin(phone: string, requestId?: string): Promise<Peer
  * @param refreshToken 登录时返回的 refresh_token
  * @returns 与登录相同结构的完整信息
  */
-export async function peerRefreshToken(refreshToken: string): Promise<PeerAuthInfo> {
+export async function peerRefreshToken(refreshToken: string, requestId?: string): Promise<PeerAuthInfo> {
   return peerFetch<PeerAuthInfo>('/user/refresh/token', {
     refreshToken,
-  })
+  }, undefined, requestId)
 }
 
 /**

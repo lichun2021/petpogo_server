@@ -42,6 +42,7 @@ CREATE TABLE IF NOT EXISTS t_device (
   product_id     BIGINT,
   name           VARCHAR(100),
   wifi_version   VARCHAR(50),
+  network_type   ENUM('4g','wifi') NULL COMMENT '通网类型，NULL表示未设置',
   mcu_version    VARCHAR(50),
   online_status  BOOLEAN      DEFAULT FALSE,
   last_online_at DATETIME,

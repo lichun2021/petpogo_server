@@ -23,7 +23,9 @@ const connection = {
     } else if (sql.startsWith('SELECT id,mac FROM t_device')) {
       return [state.devices.filter(d => d.id === params[0] || d.mac === params[1])]
     } else if (sql.startsWith('UPDATE t_device')) {
-      state.devices.find(d => d.id === params[params.length - 1]).deleted = 0
+      const device = state.devices.find(d => d.id === params[params.length - 1])
+      device.deleted = 0
+      if (params[4] != null) device.network_type = params[4]
     } else if (sql.startsWith('INSERT INTO t_user_device')) {
       const value = { user: params[1], device: params[2], mac: params[3], nickname: params[4], type: params[5] }
       const existing = state.links.find(d => d.user === value.user && d.device === value.device)
@@ -151,4 +153,14 @@ test('缺少真实宠物 ID 不按名字猜测，也不产生本地记录', asyn
   reset(); upstream.push({ code: 0, info: [] })
   await assert.rejects(invoke('/pet/info/add', { petName: '小狗' }))
   assert.equal(connections, 0)
+})
+
+test('客户端通网类型随绑定保存，重复绑定缺省保留原值', async () => {
+  reset()
+  await invoke('/user/device/bind', { mac: 'AA', networkType: '4g' }, { deviceId: devId, mac: 'AA' })
+  assert.equal(state.devices[0].network_type, '4g')
+  await invoke('/user/device/bind', { mac: 'AA' }, { deviceId: devId, mac: 'AA' })
+  assert.equal(state.devices[0].network_type, '4g')
+  await invoke('/user/device/bind', { mac: 'AA', networkType: 'wifi' }, { deviceId: devId, mac: 'AA' })
+  assert.equal(state.devices[0].network_type, 'wifi')
 })

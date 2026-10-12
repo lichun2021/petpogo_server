@@ -16,6 +16,7 @@ let banned = false
 let accountResponses = {}
 let sessionWrites = []
 let loginHash
+let deviceRows = []
 let syncConnection
 const nonces = new Set()
 const config = { peerBackendUrl: '', peerBackendTimeoutMs: 20000, peerBackendMerchantId: 1, appApiSecret: 'local-test-secret', signatureNonceRequired: true }
@@ -38,7 +39,7 @@ before(async () => {
       expire: async () => 1,
       setex: async (...args) => { sessionWrites.push(args) },
     }),
-    useDb: () => ({ query: async () => [[{ id: '123', phone: '13800138000', password: loginHash, status: banned ? 2 : 1 }]], getConnection: async () => { if (!syncConnection) throw new Error('local database unavailable'); return syncConnection } }),
+    useDb: () => ({ query: async (sql) => sql.startsWith('SELECT id,mac,network_type') ? [deviceRows] : [[{ id: '123', phone: '13800138000', password: loginHash, status: banned ? 2 : 1 }]], getConnection: async () => { if (!syncConnection) throw new Error('local database unavailable'); return syncConnection } }),
   })
   modules = (await import(pathToFileURL(output))).default
   loginHash = await modules.hashUserPassword('Individual!2026')
@@ -65,7 +66,7 @@ function call(path, { method = 'POST', body, token = 'valid-token', headers = {}
   const signedHeaders = signed ? { 'x-timestamp': ts, 'x-signature': crypto.createHash('md5').update(ts + config.appApiSecret).digest('hex'), 'x-nonce': crypto.randomUUID() } : {}
   return fetch(`${base}/sdkapi/peer${path}`, { method, signal: AbortSignal.timeout(3000), headers: { ...signedHeaders, ...(token ? { Authorization: `Bearer ${token}` } : {}), ...(body !== undefined ? { 'Content-Type': 'application/json' } : {}), ...headers }, body: body === undefined ? undefined : typeof body === 'string' ? body : JSON.stringify(body) })
 }
-function reset() { syncConnection = undefined; requests = []; accountResponses = {}; sessionWrites = []; responseBody = '{"code":0,"info":{}}'; responseStatus = 200; delay = 0; banned = false; config.peerBackendTimeoutMs = 20000 }
+function reset() { deviceRows = []; syncConnection = undefined; requests = []; accountResponses = {}; sessionWrites = []; responseBody = '{"code":0,"info":{}}'; responseStatus = 200; delay = 0; banned = false; config.peerBackendTimeoutMs = 20000 }
 
 test('37 条清单无重复；未知接口/错误方法/缺签名不会调用上游', async () => {
   reset()
@@ -211,7 +212,7 @@ test('密码登录：已注册后登录超时，日志明确失败接口且不�
     assert.equal(result.status, 504)
     assert.deepEqual(requests.map(r => r.url), ['/user/register', '/user/login'])
     assert.equal(sessionWrites.length, 0)
-    const entry = errors.map(v => JSON.parse(v)).find(v => v.event === 'peer.request.error')
+    const entry = errors.map(v => JSON.parse(String(v).replace(/^\[[^\]]+\] /, ''))).find(v => v.event === 'peer.request.error')
     assert.equal(entry.path, '/user/login')
     assert.equal(entry.requestId, 'test-login-request')
     assert.equal(entry.stage, 'waiting_headers')
@@ -250,4 +251,31 @@ test('本地同步失败明确返回上游已执行，不重试写操作', async
   const body = await result.json()
   assert.equal(body.data.code, 'PEER_LOCAL_SYNC_FAILED'); assert.equal(body.data.upstreamApplied, true)
   assert.equal(requests.length, 1)
+})
+
+test('绑定通网类型只接受4g/wifi，兼容旧客户端省略', () => {
+  const endpoint = modules.peerEndpoints.find(e => e.path === '/user/device/bind')
+  assert.equal(modules.validatePeerParams(endpoint, {mac:'AA',networkType:' WiFi '}).networkType,'wifi')
+  assert.equal(modules.validatePeerParams(endpoint, {mac:'AA',networkType:'4G'}).networkType,'4g')
+  assert.equal(modules.validatePeerParams(endpoint, {mac:'AA'}).networkType,undefined)
+  assert.throws(()=>modules.validatePeerParams(endpoint, {mac:'AA',networkType:'ethernet'}),e=>e.statusCode===400)
+})
+
+test('设备列表补充本地通网类型，保留共享设备、业务字段及长ID精度', async () => {
+  reset()
+  deviceRows = [{id:'1237250046272094208',mac:'AA',network_type:'wifi'}, {id:'2',mac:'BB',network_type:'4g'}, {id:'3',mac:'different',network_type:'wifi'}]
+  responseBody = '{"code":0,"tip":"成功","info":[{"deviceId":1237250046272094208,"mac":"AA","uType":2},{"deviceId":"2","mac":"BB"},{"deviceId":"3","mac":"CC"},{"deviceId":"4","mac":"DD"}]}'
+  const r = await call('/user/device/list')
+  assert.equal(r.status,200)
+  const data = await r.json()
+  assert.equal(data.tip,'成功');assert.equal(data.info.length,4)
+  assert.equal(data.info[0].deviceId,'1237250046272094208');assert.equal(data.info[0].uType,2)
+  assert.deepEqual(data.info.map(d=>d.networkType),['wifi','4g',null,null])
+})
+test('设备列表兼容list结构，空列表不追加本地设备', async () => {
+  reset();deviceRows=[{id:'2',mac:'BB',network_type:'4g'}]
+  responseBody='{"code":0,"list":[{"id":"2","mac":"BB"}]}'
+  assert.equal((await (await call('/user/device/list')).json()).list[0].networkType,'4g')
+  responseBody='{"code":0,"info":[]}'
+  assert.deepEqual((await (await call('/user/device/list')).json()).info,[])
 })

@@ -33,7 +33,7 @@ export const peerEndpoints: readonly PeerEndpoint[] = [
   form('/user/device/member/remove', 'deviceId userId'),
   form('/device/share/push/add', 'deviceId', 'type email'),
   form('/user/device/accept', 'order'),
-  form('/user/device/bind', 'mac', 'deviceNickName'),
+  form('/user/device/bind', 'mac', 'deviceNickName networkType'),
   form('/user/device/mcuota/get', 'mac'),
   form('/device/shadow/update', 'mac data'),
   form('/pet/agora/getToken', 'mac loginCustomerId'),

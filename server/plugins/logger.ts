@@ -1,5 +1,6 @@
 import crypto from 'node:crypto'
 import { setHeader } from 'h3'
+import { formatRequestLog, requestErrorSummary, httpErrorReason } from '../utils/requestLog'
 
 // 请求日志不预读正文、不序列化响应：避免凭证泄漏、重复缓冲和 SSE 日志缺失。
 const shouldLog = (path: string) => ['/api/', '/sdkapi/', '/openapi/'].some(prefix => path.startsWith(prefix))
@@ -14,15 +15,16 @@ export default defineNitroPlugin(nitroApp => {
     setHeader(event, 'X-Request-Id', requestId)
     // 不记录 query；JSON 序列化避免换行注入，限制异常长路径的日志体积。
     const request = { requestId, method: event.method, path: event.path.split('?')[0].slice(0, 240) }
-    console.info(JSON.stringify({ time: new Date().toISOString(), event: 'request.start', ...request }))
+    console.info(formatRequestLog({ event: 'request.start', ...request }))
     let logged = false
     const finish = (closed: boolean) => {
       if (logged) return
       logged = true
       const status = event.node.res.statusCode
       const businessCode = event.context.proxyBusinessCode
-      console.info(JSON.stringify({
-        time: new Date().toISOString(), event: 'request.end', ...request,
+      console.info(formatRequestLog({
+        event: 'request.end', ...request,
+        level: status >= 500 ? 'error' : status >= 400 ? 'warn' : 'info',
         status, durationMs: Date.now() - start,
         outcome: event.context.proxyOutcome || (closed ? 'client_closed' : status >= 400 ? 'http_error' : event.context.proxyBusinessSuccess === false || (businessCode !== undefined && Number(businessCode) !== 0) ? 'business_error' : event.context.proxySseDone === false ? 'incomplete_stream' : 'complete'),
         firstByteMs: event.context.proxyFirstByteMs,
@@ -30,6 +32,9 @@ export default defineNitroPlugin(nitroApp => {
         sseDone: event.context.proxySseDone,
         errorType: event.context.requestErrorType,
         errorCode: event.context.requestErrorCode,
+        errorReason: status >= 400 ? event.context.requestErrorReason || httpErrorReason(status) : undefined,
+        authStage: status >= 400 ? event.context.authStage : undefined,
+        authDiagnostics: status >= 400 ? event.context.authDiagnostics : undefined,
         localSync: event.context.peerLocalSync,
         localSyncMs: event.context.peerLocalSyncMs,
         permissionMs: event.context.proxyPermissionMs,
@@ -52,6 +57,11 @@ export default defineNitroPlugin(nitroApp => {
     event.context.requestErrorType = /^[A-Za-z0-9_]{1,40}$/.test(error.name) ? error.name : 'Error'
     const code = String((error as any).code || (error as any).cause?.code || '')
     if (/^[A-Z][A-Z0-9_]{1,39}$/.test(code)) event.context.requestErrorCode = code
+    const summary = requestErrorSummary(error, event.context.authStage)
+    if (summary) {
+      event.context.requestErrorCode ||= summary.code
+      event.context.requestErrorReason = summary.reason
+    }
     // 不记录异常原文/堆栈首行（可能带 SQL、密码或第三方响应）。
     if (Number((error as any).statusCode || 500) >= 500) {
       error.message = '服务器内部错误，请稍后重试'

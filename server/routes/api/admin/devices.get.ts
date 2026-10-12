@@ -10,7 +10,7 @@ export default defineEventHandler(async (event) => {
 
   const [[{ total }]]: any = await db.query(`SELECT COUNT(*) as total FROM t_device ${where}`, params)
   const [list]: any = await db.query(
-    `SELECT d.id, d.mac, d.name, d.online_status, d.last_online_at, d.longitude, d.latitude, d.address
+    `SELECT d.id, d.mac, d.name, d.network_type, d.online_status, d.last_online_at, d.longitude, d.latitude, d.address
      FROM t_device d ${where} ORDER BY d.online_status DESC, d.last_online_at DESC LIMIT ? OFFSET ?`,
     [...params, Number(size), offset]
   )

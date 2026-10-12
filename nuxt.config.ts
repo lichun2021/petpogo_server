@@ -1,3 +1,25 @@
+import { execFileSync } from 'node:child_process'
+import { readFileSync } from 'node:fs'
+import { randomUUID } from 'node:crypto'
+
+// 在构建时固化标识，服务器重启不会重新生成，也不依赖服务器上的 Git 仓库。
+function buildGitValue(args: string[]): string {
+  try {
+    return execFileSync('git', args, { cwd: import.meta.dirname, encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }).trim()
+  } catch {
+    return 'unknown'
+  }
+}
+const buildTime = new Date(Date.now() + 8 * 3600000).toISOString().slice(0, 19).replace('T', ' ')
+const buildInfo = {
+  version: JSON.parse(readFileSync(new URL('./package.json', import.meta.url), 'utf8')).version,
+  buildId: buildTime.replace(/[- :]/g, '') + '-' + randomUUID().slice(0, 8),
+  gitCommit: buildGitValue(['rev-parse', '--short=12', 'HEAD']),
+  sourceState: (() => { const status = buildGitValue(['status', '--porcelain']); return status === 'unknown' ? 'unknown' : status ? 'dirty' : 'clean' })(),
+  builtAt: buildTime,
+}
+console.info(`[${buildTime}] 构建版本 ${JSON.stringify(buildInfo)}`)
+
 export default defineNuxtConfig({
   compatibilityDate: '2026-04-30',
   telemetry: false,
@@ -54,6 +76,7 @@ export default defineNuxtConfig({
 
   nitro: {
     preset: 'node-server',
+    replace: { __PETPOGO_BUILD__: JSON.stringify(buildInfo) },
     esbuild: {
       options: {
         target: 'es2022',

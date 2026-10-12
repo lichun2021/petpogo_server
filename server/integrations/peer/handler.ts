@@ -7,6 +7,7 @@ import { readProxyBody } from '../shared/bounds.ts'
 import { requireAuth } from '../../utils/auth.ts'
 import { peerRequest } from '../../utils/peerBackend.ts'
 import { syncPeerMutation } from './localSync.ts'
+import { enrichDeviceNetwork } from './deviceNetwork.ts'
 import { peerEndpoints, type PeerEndpoint } from './endpoints.ts'
 
 export function validatePeerParams(endpoint: PeerEndpoint, input: unknown): Record<string, string | number> {
@@ -34,6 +35,11 @@ export function validatePeerParams(endpoint: PeerEndpoint, input: unknown): Reco
     throw createError({ statusCode: 400, message: `至少提供一个参数：${endpoint.oneOf.join(' / ')}` })
   }
   if (endpoint.path === '/pet/position') params.lang ??= 'zh'
+  if (endpoint.path === '/user/device/bind' && params.networkType !== undefined) {
+    const value = String(params.networkType).trim().toLowerCase()
+    if (!['4g', 'wifi'].includes(value)) throw createError({ statusCode: 400, message: 'networkType 只能为 4g 或 wifi' })
+    params.networkType = value
+  }
   if (['/device/share/push/add', '/pet/share/add'].includes(endpoint.path)) params.type ??= '3'
   if (['/pet/share/mylist', '/pet/share/withme'].includes(endpoint.path)) {
     params.pageNo ??= 1
@@ -96,7 +102,10 @@ export const peerProxyHandler = defineEventHandler(async (event) => {
     await assertPetModelDefaults(useDb())
   }
   const upstreamStart = Date.now()
-  const response = await peerRequest(endpoint.path, { ...endpoint, params, token })
+  // 通网类型仅供本地档案使用，不扩展对方后台未经确认的参数协议。
+  const upstreamParams = { ...params }
+  if (path === '/user/device/bind') delete upstreamParams.networkType
+  const response = await peerRequest(endpoint.path, { ...endpoint, params: upstreamParams, token, requestId: event.context.reqId })
   event.context.proxyUpstreamMs = Date.now() - upstreamStart
   event.context.proxyUpstreamStatus = response.status
   event.context.proxyBusinessCode = response.businessCode
@@ -119,6 +128,9 @@ export const peerProxyHandler = defineEventHandler(async (event) => {
   }
   setResponseStatus(event, response.status)
   setHeader(event, 'Cache-Control', 'no-store')
-  // 不传递上游 cookie/重定向等响应头，也不对 JSON 做解析后再序列化。
-  return send(event, response.body, 'application/json; charset=utf-8')
+  // 设备列表补充本地通网类型；其他接口继续原样透传。
+  const body = path === '/user/device/list'
+    ? await enrichDeviceNetwork(useDb(), response.body, response.status)
+    : response.body
+  return send(event, body, 'application/json; charset=utf-8')
 })
