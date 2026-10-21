@@ -83,6 +83,7 @@ export interface PeerRequestOptions {
   signal?: AbortSignal
   requestId?: string
   quiet?: boolean
+  context?: Record<string, any>
 }
 
 /**
@@ -118,6 +119,10 @@ export async function peerRequest(path: string, options: PeerRequestOptions) {
   const signal = options.signal ? AbortSignal.any([deadline, options.signal]) : deadline
   const startedAt = Date.now()
   const trace = { requestId: options.requestId, method: options.method, upstreamHost: target.host, path }
+  const context = options.context ?? {}
+  context.proxyUpstreamHost = target.host
+  context.proxyUpstreamPath = path
+  context.proxyUpstreamStage = 'waiting_headers'
   let stage = 'waiting_headers'
   let upstreamStatus: number | undefined
   if (options.requestId && !options.quiet) console.info(formatRequestLog({
@@ -126,10 +131,13 @@ export async function peerRequest(path: string, options: PeerRequestOptions) {
   try {
     const response = await fetch(target, { method: options.method, headers, body, signal, redirect: 'manual' })
     upstreamStatus = response.status
+    context.proxyUpstreamStatus = upstreamStatus
+    context.proxyUpstreamStage = 'reading_body'
     stage = 'reading_body'
     const text = await readProxyResponse(response)
     if (options.requestId && !options.quiet) console.info(formatRequestLog({ event: 'peer.response.payload', ...trace, upstreamStatus, body: peerResponseLogPayload(text) }))
     stage = 'validating_response'
+    context.proxyUpstreamStage = stage
     if (response.status >= 300 && response.status < 400) {
       throw createError({ statusCode: 502, message: 'Peer 上游返回了重定向' })
     }
@@ -152,7 +160,11 @@ export async function peerRequest(path: string, options: PeerRequestOptions) {
     if (options.signal?.aborted) throw options.signal.reason
     const rawCode = String(error?.cause?.code || error?.code || '')
     const errorCode = deadline.aborted ? 'PEER_TIMEOUT' : /^[A-Z][A-Z0-9_]{1,39}$/.test(rawCode) ? rawCode : 'PEER_UPSTREAM_ERROR'
-    // 只记录接口与失败阶段，不记录账号、密码、token 或上游响应正文。
+    context.requestErrorCode = errorCode
+    context.requestErrorReason = deadline.aborted ? '上游响应超时，请按上游路径和耗时排查'
+      : stage === 'validating_response' ? '上游返回格式异常或重定向' : '上游连接或读取失败'
+    context.proxyOutcome = deadline.aborted ? 'timeout' : 'upstream_error'
+    // 保留安全诊断字段到context，代理最终只打印请求和返回两条。
     if (!options.quiet) console.error(formatRequestLog({
       event: 'peer.request.error',
       ...trace, stage, upstreamStatus, errorCode, timeoutMs: timeout, durationMs: Date.now() - startedAt,
@@ -162,6 +174,8 @@ export async function peerRequest(path: string, options: PeerRequestOptions) {
     if (deadline.aborted) throw createError({ statusCode: 504, message: 'Peer 服务响应超时，请稍后重试', cause: { code: errorCode } })
     if (error?.statusCode) throw error
     throw createError({ statusCode: 502, message: 'Peer 服务暂时不可用，请稍后重试', cause: { code: errorCode } })
+  } finally {
+    context.proxyUpstreamMs = Date.now() - startedAt
   }
 }
 

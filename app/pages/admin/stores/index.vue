@@ -1,42 +1,22 @@
 <template>
   <div class="space-y-4">
-    <AdminPageTitle>门店管理</AdminPageTitle>
+    <AdminPageHeader title="门店管理" description="查看门店信息、分类与营业状态" :count="hasLoaded ? total : undefined" unit="家门店"><UButton label="刷新" icon="i-heroicons-arrow-path" color="neutral" variant="outline" :loading="loading" @click="loadList" /></AdminPageHeader>
     <!-- 搜索 -->
     <div class="bg-white rounded-xl border p-4 flex flex-wrap items-center gap-3" style="border-color: #e7e5e4">
-      <UInput v-model="search" placeholder="搜索门店名称 / 地址..." icon="i-heroicons-magnifying-glass" class="w-full sm:max-w-sm" @keyup.enter="() => { page = 1; loadList() }" />
-      <UButton label="搜索" color="primary" @click="() => { page = 1; loadList() }" />
+      <UInput v-model="search" placeholder="搜索门店名称 / 地址..." icon="i-heroicons-magnifying-glass" class="w-full sm:max-w-sm" @keyup.enter="searchList" />
+      <UButton label="搜索" color="primary" @click="searchList" />
       <UButton label="重置" color="neutral" variant="outline" @click="reset" />
-      <UBadge :label="`共 ${total} 家`" color="primary" variant="subtle" size="xs" class="ml-auto" />
+
     </div>
 
     <!-- 分类筛选 -->
-    <div class="flex gap-2 flex-wrap">
-      <button
-        v-for="(tab, i) in tabs" :key="tab.key"
-        :class="[
-          'px-4 py-1.5 rounded-lg text-sm font-medium transition-all',
-          activeTab === i
-            ? 'bg-primary/10 text-primary font-medium'
-            : 'bg-white border text-stone-500 hover:text-stone-700 hover:border-primary/30'
-        ]"
-        style="border-color: #e7e5e4"
-        @click="activeTab = i; page = 1; loadList()"
-      >{{ tab.label }}</button>
-    </div>
+    <div class="admin-segment flex-wrap" aria-label="门店分类筛选"><button v-for="(tab, i) in tabs" :key="tab.key" :aria-pressed="activeTab === i" @click="activeTab = i; page = 1; loadList()">{{ tab.label }}</button></div>
 
     <!-- 表格 -->
     <div class="bg-white rounded-xl border overflow-hidden" style="border-color: #e7e5e4; box-shadow: 0 1px 4px rgba(0,0,0,0.04)">
-      <div v-if="!list.length && !loading" class="py-14 text-center">
-        <UIcon name="i-heroicons-building-storefront" class="w-10 h-10 text-stone-200 mx-auto mb-3" />
-        <p class="text-sm text-stone-500">暂无门店数据</p>
-        <p class="text-xs text-stone-300 mt-1">请先通过 SQL 导入门店信息</p>
-      </div>
-
-      <div v-else-if="loading" class="flex justify-center py-10">
-        <UIcon name="i-heroicons-arrow-path" class="w-5 h-5 text-stone-500 animate-spin" />
-      </div>
-
-      <table v-else class="w-full text-sm">
+      <AdminListState :loading="loading" :has-data="list.length > 0" :empty="hasLoaded" :error="loadError" :request-id="errorRequestId" :filtered="!!appliedSearch || !!activeTab" empty-title="暂无门店" empty-description="门店资料录入后会显示在这里" icon="i-heroicons-building-storefront" @retry="loadList" @reset="reset" />
+      <div v-if="list.length" class="admin-table-scroll">
+      <table class="admin-table">
         <thead>
           <tr class="bg-stone-50 border-b border-stone-200">
             <th class="text-left text-sm text-stone-500 font-medium py-3 px-4">门店信息</th>
@@ -74,6 +54,7 @@
           </tr>
         </tbody>
       </table>
+      </div>
 
       <div v-if="total > pageSize" class="flex justify-center py-4 border-t border-stone-100">
         <UPagination v-model:page="page" :items-per-page="pageSize" :total="total" @update:page="loadList" />
@@ -98,22 +79,12 @@ const activeTab = ref(0)
 const search    = ref('')
 const page      = ref(1)
 const pageSize  = 20
-const list      = ref<any[]>([])
-const total     = ref(0)
-const loading   = ref(false)
-
-async function loadList() {
-  loading.value = true
-  try {
-    const categoryVal = tabs[activeTab.value]?.key || ''
-    const d = await $fetch<any>('/api/admin/stores', {
-      query: { page: page.value, size: pageSize, search: search.value, category: categoryVal }
-    }).catch(() => ({ list: [], total: 0 }))
-    list.value  = (d as any).list  || []
-    total.value = (d as any).total || 0
-  } finally { loading.value = false }
-}
-
-function reset() { search.value = ''; activeTab.value = 0; page.value = 1; loadList() }
+const appliedSearch = ref('')
+function searchList() { appliedSearch.value = search.value.trim(); page.value = 1; loadList() }
+interface StoreRow { id: string; name: string; address: string; category: string; rating: number; is_hot: boolean; status: number }
+const { list, total, loading, hasLoaded, error: loadError, errorRequestId, load: loadList } = useAdminList<StoreRow>(signal => $fetch('/api/admin/stores', {
+  query: { page: page.value, size: pageSize, search: appliedSearch.value, category: tabs[activeTab.value]?.key || '' }, signal,
+}))
+function reset() { search.value = ''; appliedSearch.value = ''; activeTab.value = 0; page.value = 1; loadList() }
 onMounted(loadList)
 </script>

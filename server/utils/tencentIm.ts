@@ -10,9 +10,10 @@ const IM_BASE  = 'https://console.tim.qq.com/v4'
 
 function getImConfig() {
   const c = useRuntimeConfig()
+  if (!c.tencentImAdminKey) throw createError({ statusCode: 503, message: '腾讯IM密钥未配置' })
   return {
     sdkAppId: Number(c.tencentImSdkAppId || '1600139420'),
-    adminKey:  String(c.tencentImAdminKey || 'f10fd3888e0c707830bf398bd51ffa6be657aeff601905c0f5230e0f82907775'),
+    adminKey:  String(c.tencentImAdminKey || ''),
   }
 }
 

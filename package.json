@@ -6,12 +6,13 @@
   "scripts": {
     "dev": "nuxt dev",
     "build": "nuxt build",
-    "start": "node .output/server/index.mjs",
+    "start": "node --env-file=.env scripts/start.mjs",
     "preview": "nuxt preview",
     "test": "node --test tests/*.test.mjs",
     "test:integration": "node --test tests/ledger.integration.test.mjs",
     "typecheck": "nuxt prepare && tsc --noEmit",
     "check": "npm test && npm run typecheck && npm run build",
+    "check:secrets": "node --env-file=.env scripts/check-build-secrets.mjs",
     "db:migrate": "node scripts/migrate.mjs",
     "db:check": "node scripts/migrate.mjs --check"
   },

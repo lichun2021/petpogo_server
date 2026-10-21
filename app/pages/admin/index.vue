@@ -1,6 +1,8 @@
 <template>
   <div class="space-y-5">
-    <AdminPageTitle>数据概览</AdminPageTitle>
+    <AdminPageHeader title="数据概览" description="用户、设备和内容的近期概况"><UButton label="刷新数据" icon="i-heroicons-arrow-path" color="neutral" variant="outline" :loading="loading" @click="loadDashboard" /></AdminPageHeader>
+    <AdminListState v-if="loading || loadError" :loading="loading" :has-data="hasLoaded" :empty="false" :error="loadError" @retry="loadDashboard" />
+    <template v-if="hasLoaded">
     <!-- 统计卡片 -->
     <div class="grid grid-cols-2 xl:grid-cols-4 gap-4">
       <div
@@ -62,6 +64,7 @@
         </div>
       </div>
     </div>
+    </template>
   </div>
 </template>
 
@@ -79,7 +82,9 @@ const onlineCount   = ref(0)
 const recentDevices = ref<any[]>([])
 const recentPosts   = ref<any[]>([])
 
-onMounted(async () => {
+const loading = ref(true), hasLoaded = ref(false), loadError = ref('')
+async function loadDashboard() {
+  loading.value = true; loadError.value = ''
   try {
     const d = await $fetch<any>('/api/admin/dashboard')
     stats.value[0].value = d.totalUsers
@@ -89,6 +94,8 @@ onMounted(async () => {
     onlineCount.value    = d.onlineDevices
     recentDevices.value  = d.recentDevices || []
     recentPosts.value    = d.recentPosts   || []
-  } catch {}
-})
+    hasLoaded.value = true
+  } catch { loadError.value = '概览数据加载失败，请稍后重试' } finally { loading.value = false }
+}
+onMounted(loadDashboard)
 </script>

@@ -107,7 +107,7 @@ export const peerProxyHandler = defineEventHandler(async (event) => {
   // 通网类型仅供本地档案使用，不扩展对方后台未经确认的参数协议。
   const upstreamParams = { ...params }
   if (path === '/user/device/bind') delete upstreamParams.networkType
-  const response = await peerRequest(endpoint.path, { ...endpoint, params: upstreamParams, token, requestId: event.context.reqId, quiet: true })
+  const response = await peerRequest(endpoint.path, { ...endpoint, params: upstreamParams, token, requestId: event.context.reqId, quiet: true, context: event.context })
   event.context.proxyUpstreamMs = Date.now() - upstreamStart
   event.context.proxyUpstreamStatus = response.status
   event.context.proxyBusinessCode = response.businessCode

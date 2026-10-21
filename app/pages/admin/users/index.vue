@@ -1,12 +1,12 @@
 <template>
   <div class="space-y-4">
-    <AdminPageTitle>用户管理</AdminPageTitle>
+    <AdminPageHeader title="用户管理" description="查看用户状态、订阅计划与积分记录" :count="hasLoaded ? total : undefined" unit="位用户"><UButton label="刷新" icon="i-heroicons-arrow-path" color="neutral" variant="outline" :loading="loading" @click="loadList" /></AdminPageHeader>
     <!-- 搜索栏 -->
     <div class="bg-white rounded-xl border p-4 flex flex-wrap items-center gap-3" style="border-color: #e7e5e4">
-      <UInput v-model="search" placeholder="搜索手机号 / 昵称..." icon="i-heroicons-magnifying-glass" class="w-full sm:max-w-sm" @keyup.enter="() => { page = 1; loadList() }" />
-      <UButton label="搜索" color="primary" @click="() => { page = 1; loadList() }" />
+      <UInput v-model="search" placeholder="搜索手机号 / 昵称..." icon="i-heroicons-magnifying-glass" class="w-full sm:max-w-sm" @keyup.enter="searchList" />
+      <UButton label="搜索" color="primary" @click="searchList" />
       <UButton label="重置" color="neutral" variant="outline" @click="reset" />
-      <UBadge :label="`共 ${total} 人`" color="primary" variant="subtle" size="xs" class="ml-auto" />
+
     </div>
 
     <!-- 状态筛选 Tab -->
@@ -20,11 +20,9 @@
 
     <!-- 表格 -->
     <div class="bg-white rounded-xl border overflow-hidden" style="border-color: #e7e5e4; box-shadow: 0 1px 4px rgba(0,0,0,0.04)">
-      <div v-if="loading" class="flex justify-center py-10">
-        <UIcon name="i-heroicons-arrow-path" class="w-5 h-5 text-stone-500 animate-spin" />
-      </div>
-      <div v-else-if="!list.length" class="py-10 text-center text-sm text-stone-500">暂无数据</div>
-      <table v-else class="w-full text-sm">
+      <AdminListState :loading="loading" :has-data="list.length > 0" :empty="hasLoaded" :error="loadError" :request-id="errorRequestId" :filtered="!!appliedSearch || !!activeTab" empty-title="暂无用户" empty-description="新用户注册后会出现在这里" @retry="loadList" @reset="reset" />
+      <div v-if="list.length" class="admin-table-scroll">
+      <table class="admin-table">
         <thead>
           <tr class="bg-stone-50 border-b border-stone-200">
             <th class="text-left text-sm text-stone-500 font-medium py-3 px-4 w-10"></th>
@@ -69,7 +67,7 @@
               <UBadge :label="row.status === 1 ? '正常' : '禁用'" :color="row.status === 1 ? 'success' : 'error'" variant="subtle" size="xs" />
             </td>
             <td class="py-3 px-4 text-xs text-stone-500">{{ formatDate(row.created_at) }}</td>
-            <td class="py-3 px-4">
+            <td class="admin-row-actions">
               <div class="flex items-center gap-2">
                 <UButton
                   label="流水"
@@ -91,6 +89,7 @@
           </tr>
         </tbody>
       </table>
+      </div>
 
       <!-- 分页 -->
       <div v-if="total > pageSize" class="flex justify-center py-4 border-t border-stone-100">
@@ -218,9 +217,6 @@ const activeTab = ref(0)
 const search    = ref('')
 const page      = ref(1)
 const pageSize  = 20
-const list      = ref<any[]>([])
-const total     = ref(0)
-const loading   = ref(false)
 
 // 侧边栏状态
 const showLog     = ref(false)
@@ -236,21 +232,13 @@ function planLabel(t: number) {
   return { 0: 'Free', 1: 'Pro', 2: 'ProMax' }[t] ?? 'Free'
 }
 
-async function loadList() {
-  loading.value = true
-  try {
-    const statusVal = tabs[activeTab.value]?.key || ''
-    const d = await $fetch<any>('/api/admin/users', {
-      query: { page: page.value, size: pageSize, search: search.value, status: statusVal }
-    })
-    list.value  = d.list
-    total.value = d.total
-  } finally { loading.value = false }
-}
+const appliedSearch = ref('')
+function searchList() { appliedSearch.value = search.value.trim(); page.value = 1; loadList() }
+const { list, total, loading, hasLoaded, error: loadError, errorRequestId, load: loadList } = useAdminList<any>(signal => $fetch('/api/admin/users', {
+  query: { page: page.value, size: pageSize, search: appliedSearch.value, status: tabs[activeTab.value]?.key || '' }, signal,
+}))
+function reset() { search.value = ''; appliedSearch.value = ''; activeTab.value = 0; page.value = 1; loadList() }
 
-function reset() { search.value = ''; activeTab.value = 0; page.value = 1; loadList() }
-
-const toast = useToast()
 async function toggleStatus(row: any) {
   row._loading = true
   try {

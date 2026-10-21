@@ -1,3 +1,4 @@
+import { peerAccountToPhone } from '../../../utils/peerIdentity'
 // POST /openapi/device-event/callback
 // PeerApi 设备事件回调：越界 / 离线 / 低电
 //
@@ -52,15 +53,16 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 400, message: 'phone 或 alias 不能为空' })
   }
 
-  // ── 2. 反查 user_id（alias 自动补 @qq.com，兼容 PeerApi 只传手机号）──
-  const normalizedAlias = aliasRaw.includes('@') ? aliasRaw : `${aliasRaw}@qq.com`
+  // ── 2. 规范为本地手机号再查询，兼容 Peer 的邮箱账号 ──
+  const normalizedPhone = peerAccountToPhone(aliasRaw)
+  if (!normalizedPhone) throw createError({ statusCode: 400, message: 'phone 或 alias 格式无效' })
   const db = useDb()
   const [[dbUser]]: any = await db.query(
     'SELECT id FROM t_user WHERE phone = ? AND deleted = 0 LIMIT 1',
-    [normalizedAlias]
+    [normalizedPhone]
   )
   if (!dbUser) {
-    throw createError({ statusCode: 404, message: `用户不存在（alias=${normalizedAlias}）` })
+    throw createError({ statusCode: 404, message: '用户不存在' })
   }
   const userId = String(dbUser.id)
 

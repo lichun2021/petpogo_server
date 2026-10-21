@@ -1,5 +1,6 @@
 <template>
   <div class="space-y-5">
+    <p v-if="!canManageSystem" class="rounded-lg border border-stone-200 bg-white px-4 py-3 text-sm text-stone-600">当前为只读查看，配置修改需要超级管理员权限。</p>
 
     <!-- 页头 -->
     <div class="flex items-center justify-between flex-wrap gap-3">
@@ -12,6 +13,7 @@
         color="primary"
         icon="i-heroicons-check"
         :loading="saving"
+        :disabled="!canManageSystem || loading || !!loadError || !dirty"
         @click="saveAll"
       />
     </div>
@@ -21,7 +23,8 @@
       <UIcon name="i-heroicons-arrow-path" class="w-6 h-6 text-stone-500 animate-spin" />
     </div>
 
-    <template v-else>
+    <AdminListState v-else-if="loadError" :loading="loading" :has-data="false" :empty="false" :error="loadError" @retry="loadSettings" />
+    <fieldset v-else :disabled="!canManageSystem || saving" class="contents">
 
       <!-- SMS 短信网关 -->
       <div
@@ -42,20 +45,7 @@
             <span class="text-xs text-stone-500">
               {{ getSetting('sms_enabled') === '1' ? '已启用' : '已关闭' }}
             </span>
-            <button
-              :class="[
-                'relative inline-flex h-6 w-11 items-center rounded-full transition-colors duration-200 focus:outline-none',
-                getSetting('sms_enabled') === '1' ? 'bg-primary' : 'bg-stone-300'
-              ]"
-              @click="toggleBoolean('sms_enabled')"
-            >
-              <span
-                :class="[
-                  'inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform duration-200',
-                  getSetting('sms_enabled') === '1' ? 'translate-x-6' : 'translate-x-1'
-                ]"
-              />
-            </button>
+            <USwitch :model-value="getSetting('sms_enabled') === '1'" aria-label="短信网关" @update:model-value="toggleBoolean('sms_enabled')" />
           </div>
         </div>
 
@@ -112,20 +102,7 @@
               <span class="text-xs text-stone-500">
                 {{ localValues[item.key] === '1' ? '是' : '否' }}
               </span>
-              <button
-                :class="[
-                  'relative inline-flex h-6 w-11 items-center rounded-full transition-colors duration-200 focus:outline-none',
-                  localValues[item.key] === '1' ? 'bg-primary' : 'bg-stone-300'
-                ]"
-                @click="toggleBoolean(item.key)"
-              >
-                <span
-                  :class="[
-                    'inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform duration-200',
-                    localValues[item.key] === '1' ? 'translate-x-6' : 'translate-x-1'
-                  ]"
-                />
-              </button>
+              <USwitch :model-value="localValues[item.key] === '1'" :aria-label="item.label" @update:model-value="toggleBoolean(item.key)" />
             </div>
             <!-- number / text -->
             <div v-else class="w-48 flex-shrink-0">
@@ -210,20 +187,7 @@
               <span class="text-xs text-stone-500">
                 {{ localValues[item.key] === '1' ? '是' : '否' }}
               </span>
-              <button
-                :class="[
-                  'relative inline-flex h-6 w-11 items-center rounded-full transition-colors duration-200 focus:outline-none',
-                  localValues[item.key] === '1' ? 'bg-primary' : 'bg-stone-300'
-                ]"
-                @click="toggleBoolean(item.key)"
-              >
-                <span
-                  :class="[
-                    'inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform duration-200',
-                    localValues[item.key] === '1' ? 'translate-x-6' : 'translate-x-1'
-                  ]"
-                />
-              </button>
+              <USwitch :model-value="localValues[item.key] === '1'" :aria-label="item.label" @update:model-value="toggleBoolean(item.key)" />
             </div>
             <!-- secret 类型：密码框 + 显示/隐藏 -->
             <div v-else-if="item.type === 'secret'" class="w-64 flex-shrink-0 flex items-center gap-1">
@@ -258,7 +222,7 @@
         </div>
       </div>
 
-    </template>
+    </fieldset>
 
   </div>
 
@@ -309,6 +273,12 @@ const saving  = ref(false)
 // 原始列表 & 本地编辑副本
 const allItems   = ref<any[]>([])
 const localValues = reactive<Record<string, string>>({})
+const { canManageSystem } = useAdminPermissions()
+const loadError = ref('')
+const revision = ref('')
+const savedValues = ref<Record<string, string>>({})
+const dirty = computed(() => allItems.value.some(item => String(localValues[item.key] ?? '') !== String(savedValues.value[item.key] ?? '')))
+useAdminDirtyForm(dirty)
 
 // secret 字段的明文显示开关（按 key）
 const secretVisible = reactive<Record<string, boolean>>({})
@@ -386,14 +356,18 @@ async function deleteClient(item: any) {
 
 // 加载设置
 async function loadSettings() {
+  if (dirty.value && !window.confirm('重新加载会丢弃未保存修改，是否继续？')) return
+  loading.value = true; loadError.value = ''
   try {
     const d = await $fetch<any>('/api/admin/settings')
     allItems.value = d.list
+    revision.value = d.revision
+    savedValues.value = Object.fromEntries(d.list.map((item: any) => [item.key, String(item.value ?? '')]))
     for (const item of d.list) {
       localValues[item.key] = item.value
     }
   } catch {
-    toast.add({ title: '加载失败', description: '无法获取系统设置', color: 'error' })
+    loadError.value = '无法获取系统设置，请稍后重试'
   } finally {
     loading.value = false
   }
@@ -403,16 +377,19 @@ onMounted(loadSettings)
 
 // 批量保存
 async function saveAll() {
+  if (!canManageSystem.value || saving.value || !dirty.value) return
   saving.value = true
   try {
-    const batch = allItems.value.map(item => ({
+    const batch = allItems.value.filter(item => String(localValues[item.key] ?? '') !== String(savedValues.value[item.key] ?? '')).map(item => ({
       key: item.key,
       value: localValues[item.key] ?? item.value,
     }))
-    await $fetch('/api/admin/settings', { method: 'PUT', body: { batch } })
+    const result = await $fetch<{ revision: string }>('/api/admin/settings', { method: 'PUT', body: { batch, revision: revision.value } })
+    revision.value = result.revision
+    savedValues.value = { ...localValues }
     toast.add({ title: '保存成功', color: 'success' })
-  } catch {
-    toast.add({ title: '保存失败', color: 'error' })
+  } catch (error: any) {
+    toast.add({ title: error?.statusCode === 409 ? '配置有更新，未保存内容已保留' : '保存失败', description: error?.statusCode === 409 ? '请重新加载并比对其他管理员的修改。' : '请稍后重试', color: 'error' })
   } finally {
     saving.value = false
   }

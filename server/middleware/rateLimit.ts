@@ -1,67 +1,46 @@
-// CC 限流中间件：基于 Redis 固定窗口的 IP 维度频率限制
-//
-// 覆盖范围：/sdkapi/**、/api/**、/openapi/** 三个 API 面
-// 分档阈值：
-//   默认档  60s / 60 次   —— 通用接口
-//   严格档  60s / 20 次   —— 重接口（AI 分析、上传预签名、短信发送）
-//
-// 豁免：
-//   /api/mps/callback          —— MNS 回调走 token 鉴权，且来源固定
-//   /api/admin/login|captcha   —— 已有滑块验证 + 失败次数锁定，避免双重限流误伤
-//
-// 注意：中间件按文件名字母序加载，rateLimit 排在 signature 之前，
-//       所以 /sdkapi/** 的非法请求（无签名）也会被限流计数，更能防 CC。
-//
-// IP 来源：h3 getRequestIP(event, { xForwardedFor: true })，生产经 nginx 代理读 XFF；
-//         取不到时（如本地）用 'unknown' 兜底，不影响正常请求。
+import crypto from 'node:crypto'
+import { readBody, setHeader } from 'h3'
+import { readProxyBody } from '../integrations/shared/bounds'
 
-// 默认窗口与阈值
-const DEFAULT_WINDOW = 60   // 秒
-const DEFAULT_LIMIT  = 60    // 次
-const STRICT_LIMIT   = 20    // 次（敏感端点）
+const WINDOW = 60
+const SKIP_PATHS = new Set(['/api/mps/callback', '/api/admin/login', '/api/admin/captcha'])
+const REPORT_PATHS = new Set(['/openapi/pet/action/report', '/openapi/device-event/callback'])
+const strictPath = (path: string) => path.startsWith('/sdkapi/ai-proxy/') || path === '/sdkapi/upload/sign' || path === '/sdkapi/auth/sms'
+const limitValue = (value: unknown, fallback: number) => Number.isSafeInteger(Number(value)) && Number(value) > 0 ? Number(value) : fallback
 
-// 严格限流端点匹配
-function isStrictPath(path: string): boolean {
-  return path.startsWith('/sdkapi/ai-proxy/')
-      || path === '/sdkapi/upload/sign'
-      || path === '/sdkapi/auth/sms'
-}
-
-// 豁免路径（精确匹配）
-const SKIP_PATHS = new Set<string>(['/api/mps/callback'])
-
-export default defineEventHandler(async (event) => {
+export default defineEventHandler(async event => {
   const path = event.path.split('?')[0]
-
-  // 只覆盖三个 API 面
-  if (!path.startsWith('/sdkapi/') && !path.startsWith('/api/') && !path.startsWith('/openapi/')) return
-
-  // 豁免
-  if (SKIP_PATHS.has(path)) return
-  if (path === '/api/admin/login' || path === '/api/admin/captcha') return
-
-  // 客户端 IP
+  if (!['/api/', '/sdkapi/', '/openapi/'].some(prefix => path.startsWith(prefix)) || SKIP_PATHS.has(path)) return
+  // 生产反代必须覆盖来访请求自带的XFF；不能将客户端声明的IP当作已认证身份。
   const ip = getRequestIP(event, { xForwardedFor: true }) || 'unknown'
-
-  // 分档
-  const limit  = isStrictPath(path) ? STRICT_LIMIT : DEFAULT_LIMIT
-  const surface = path.startsWith('/sdkapi/') ? 'sdkapi'
-                : path.startsWith('/api/')    ? 'api'
-                : 'openapi'
-
   const redis = useRedis()
-  const key   = RedisKey.rateLimit(`${surface}:${isStrictPath(path) ? 'strict' : 'default'}`, ip)
-  const count = Number(await redis.eval(
-    "local n=redis.call('INCR',KEYS[1]); if n==1 then redis.call('EXPIRE',KEYS[1],ARGV[1]) end; return n",
-    1, key, DEFAULT_WINDOW,
-  ))
-
-  if (count > limit) {
-    const ttl     = await redis.ttl(key)
-    const minutes = Math.max(1, Math.ceil(ttl / 60))
-    throw createError({
-      statusCode: 429,
-      message: `请求过于频繁，请 ${minutes} 分钟后重试`,
-    })
+  async function check(scope: string, subject: string, limit: number) {
+    const key = RedisKey.rateLimit(scope, subject)
+    const count = Number(await redis.eval(
+      "local n=redis.call('INCR',KEYS[1]); if n==1 then redis.call('EXPIRE',KEYS[1],ARGV[1]) end; return n",
+      1, key, WINDOW,
+    ))
+    if (count <= limit) return
+    const retryAfterSeconds = Math.max(1, await redis.ttl(key))
+    event.context.rateLimit = { scope, limit, count, windowSeconds: WINDOW, retryAfterSeconds }
+    event.context.requestErrorCode = 'RATE_LIMIT_EXCEEDED'
+    event.context.requestErrorReason = `${scope}限流：${WINDOW}秒最多${limit}次，当前${count}次，${retryAfterSeconds}秒后重试`
+    setHeader(event, 'Retry-After', String(retryAfterSeconds))
+    throw createError({ statusCode: 429, message: `请求过于频繁，请 ${retryAfterSeconds} 秒后重试`,
+      data: { code: 'RATE_LIMIT_EXCEEDED', ...event.context.rateLimit } })
   }
+  if (REPORT_PATHS.has(path) && event.context.openapiAuthenticated) {
+    const config = useRuntimeConfig()
+    await check('openapi:report-ip', ip, limitValue(config.openapiReportIpLimit, 1200))
+    await readProxyBody(event)
+    const body = await readBody(event)
+    const device = path.endsWith('/action/report') ? body?.deviceId : body?.device_mac
+    if (typeof device === 'string' && device.trim() && device.length <= 128) {
+      const subject = crypto.createHash('sha256').update(device.trim()).digest('hex')
+      await check(`openapi:report-device:${path}`, subject, limitValue(config.openapiReportDeviceLimit, 60))
+    }
+    return
+  }
+  const surface = path.startsWith('/sdkapi/') ? 'sdkapi' : path.startsWith('/openapi/') ? 'openapi' : 'api'
+  await check(`${surface}:${strictPath(path) ? 'strict' : 'default'}`, ip, strictPath(path) ? 20 : 60)
 })

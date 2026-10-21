@@ -33,7 +33,10 @@ export default defineEventHandler(async (event) => {
   }
 
   if (!config.openapiSecret) throw createError({statusCode:503,message:'OpenAPI 密钥未配置'})
-  if (await verifyRequestSignatureV2(event,'openapi',config.openapiSecret)) return
+  if (await verifyRequestSignatureV2(event,'openapi',config.openapiSecret)) {
+    event.context.openapiAuthenticated = true
+    return
+  }
   if (config.openapiSignatureV2Required) throw createError({statusCode:403,message:'请升级 OpenAPI 签名至 v2'})
   // 校验时间戳（5 分钟内有效，防重放）
   const ts = parseInt(timestamp, 10)
@@ -50,4 +53,5 @@ export default defineEventHandler(async (event) => {
   if (signature !== expected) {
     throw createError({ statusCode: 403, message: '签名验证失败' })
   }
+  event.context.openapiAuthenticated = true
 })

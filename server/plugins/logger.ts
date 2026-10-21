@@ -31,10 +31,11 @@ export default defineNitroPlugin(nitroApp => {
       logRequest()
       const status = event.node.res.statusCode
       const businessCode = event.context.proxyBusinessCode
+      const businessFailed = event.context.proxyBusinessSuccess === false || (businessCode !== undefined && Number(businessCode) !== 0)
       console.info(formatRequestLog({
         event: 'request.end', message: '返回', ...request,
         ...(peer ? { body: event.context.peerResponseBody ?? { message: event.context.requestErrorReason || '未取得业务响应正文' } } : {}),
-        level: status >= 500 ? 'error' : status >= 400 ? 'warn' : 'info',
+        level: status >= 500 ? 'error' : status >= 400 || businessFailed ? 'warn' : 'info',
         status, durationMs: Date.now() - start,
         outcome: event.context.proxyOutcome || (closed ? 'client_closed' : status >= 400 ? 'http_error' : event.context.proxyBusinessSuccess === false || (businessCode !== undefined && Number(businessCode) !== 0) ? 'business_error' : event.context.proxySseDone === false ? 'incomplete_stream' : 'complete'),
         firstByteMs: event.context.proxyFirstByteMs,
@@ -42,9 +43,10 @@ export default defineNitroPlugin(nitroApp => {
         sseDone: event.context.proxySseDone,
         errorType: event.context.requestErrorType,
         errorCode: event.context.requestErrorCode,
-        errorReason: status >= 400 ? event.context.requestErrorReason || httpErrorReason(status) : undefined,
+        errorReason: status >= 400 ? event.context.requestErrorReason || httpErrorReason(status) : businessFailed ? '上游业务处理失败，请结合businessCode和响应正文排查' : undefined,
         authStage: status >= 400 ? event.context.authStage : undefined,
         authDiagnostics: status >= 400 ? event.context.authDiagnostics : undefined,
+        rateLimit: status === 429 ? event.context.rateLimit : undefined,
         localSync: event.context.peerLocalSync,
         localSyncMs: event.context.peerLocalSyncMs,
         permissionMs: event.context.proxyPermissionMs,

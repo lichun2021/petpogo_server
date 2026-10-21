@@ -76,7 +76,8 @@ const available = computed(() => models.value.filter(m => m.enabled))
 const loading = ref(true), saving = ref(false), previewing = ref(false), loadError = ref(''), saved = ref('')
 const preview = reactive({ species: 'other', breed: '', gender: 0 })
 const result = ref<any>(null)
-const dirty = computed(() => JSON.stringify(config) !== saved.value)
+const dirty = computed(() => !!saved.value && JSON.stringify(config) !== saved.value)
+useAdminDirtyForm(dirty)
 watch([() => JSON.stringify(config), () => JSON.stringify(preview)], () => { result.value = null })
 function error(e: any) { return e?.data?.message || '操作失败，请稍后重试' }
 async function load() {

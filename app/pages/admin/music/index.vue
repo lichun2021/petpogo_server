@@ -89,15 +89,17 @@
       />
     </div>
 
+    <AdminListState v-if="loadError" :loading="loading" :has-data="musicList.length > 0" :empty="false" :error="loadError" @retry="loadMusic" />
     <!-- 音乐列表 -->
     <div class="bg-white rounded-xl border overflow-hidden" style="border-color: #e7e5e4; box-shadow: 0 1px 4px rgba(0,0,0,0.04)">
-      <div v-if="loading" class="flex justify-center py-10">
+      <div v-if="loading && !musicList.length" class="flex justify-center py-10">
         <UIcon name="i-heroicons-arrow-path" class="w-5 h-5 text-stone-500 animate-spin" />
       </div>
-      <div v-else-if="!musicList.length" class="py-10 text-center text-sm text-stone-500">
+      <div v-else-if="!musicList.length && !loadError" class="py-10 text-center text-sm text-stone-500">
         暂无音乐，点击「上传音乐」添加
       </div>
-      <div v-else>
+      <div v-if="musicList.length" class="admin-table-scroll">
+        <div class="min-w-[860px]">
         <!-- 表头 -->
         <div class="grid grid-cols-[56px_1fr_100px_80px_80px_80px_120px] gap-3 px-4 py-2 bg-stone-50 border-b border-stone-200 text-sm text-stone-500 font-medium">
           <span>封面</span>
@@ -157,6 +159,7 @@
           </div>
         </div>
       </div>
+      </div>
     </div>
 
     <!-- ── 新建分类弹窗 ─────────────────────── -->
@@ -208,7 +211,7 @@
     </AdminFormModal>
 
     <!-- ── 上传音乐弹窗 ─────────────────────── -->
-    <AdminFormModal v-model:open="musicModal.show" :title="musicModal.editingId ? '编辑音乐' : '上传音乐'" :busy="musicModal.iconUploading || musicModal.audioUploading || musicModal.saving">
+    <AdminFormModal v-model:open="musicModal.show" size="md" :title="musicModal.editingId ? '编辑音乐' : '上传音乐'" :busy="musicModal.iconUploading || musicModal.audioUploading || musicModal.saving">
       <div class="space-y-4">
           <!-- 分类 -->
           <div>
@@ -352,6 +355,8 @@ const _musicCache = useState<{ list: any[]; catId: number | null } | null>('admi
 const categories  = ref<any[]>(_catCache.value ?? [])
 const musicList   = ref<any[]>(_musicCache.value?.list ?? [])
 const loading     = ref(false)
+const loadError = ref('')
+let musicRequest = 0
 const activeCatId = ref<number | null>(_musicCache.value?.catId ?? null)
 
 // ── 文件输入引用 ──────────────────────────────────────────
@@ -416,14 +421,16 @@ async function loadCategories() {
 }
 
 async function loadMusic() {
-  loading.value = true
+  const request = ++musicRequest
+  loading.value = true; loadError.value = ''
   try {
     const d = await $fetch<any>('/api/admin/music', {
       query: activeCatId.value != null ? { categoryId: activeCatId.value } : {}
     })
+    if (request !== musicRequest) return
     musicList.value  = d.list
     _musicCache.value = { list: d.list, catId: activeCatId.value }
-  } finally { loading.value = false }
+  } catch { if (request === musicRequest) loadError.value = '音乐加载失败，请稍后重试' } finally { if (request === musicRequest) loading.value = false }
 }
 
 async function refresh() {

@@ -16,6 +16,7 @@ const reasons: Record<string, [string, string]> = {
   'Session 数据异常，请重新登录': ['AUTH_SESSION_INVALID', '本地会话数据异常'],
   '登录凭证已失效，请重新登录': ['AUTH_CREDENTIAL_CHANGED', '账号凭证版本已变更，旧会话失效'],
   '账号不存在': ['AUTH_USER_NOT_FOUND', '本地未找到有效账号'],
+  '该手机号尚未注册，请切换为「验证码登录」完成注册': ['AUTH_LOGIN_ACCOUNT_NOT_FOUND', '本地未找到该手机号的有效账号，请先通过验证码登录完成注册'],
   '账号已被封禁，无法执行此操作': ['AUTH_USER_DISABLED', '账号已被禁用'],
   '请重新登录': ['AUTH_REFRESH_PROOF_MISSING', '刷新凭证记录不存在或已过期'],
   '登录凭证已失效': ['AUTH_REFRESH_REVOKED', '刷新凭证失效：账号状态或凭证版本不匹配'],
@@ -36,6 +37,7 @@ export function requestErrorSummary(error: any, stage?: string) {
   return known ? { code: known[0], reason: known[1] } : undefined
 }
 export function httpErrorReason(status: number): string | undefined {
+  if (status === 429) return '请求超过频率限制，请等待后重试'
   if (status === 401) return '身份校验未通过，具体原因未分类'
   if (status === 403) return '访问被拒绝，具体原因未分类'
   if (status === 404) return '接口或业务资源不存在，具体原因未分类'

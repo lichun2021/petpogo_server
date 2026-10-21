@@ -59,3 +59,15 @@ body { color: var(--ui-text); background: #f7f7f5; -webkit-font-smoothing: antia
 .admin-form-fields input:not([type="checkbox"]):not([type="radio"]):not([type="file"]),
 .admin-form-fields select, .admin-form-fields textarea { min-width: 0; border-radius: 8px; }
 .admin-form-fields input:not([type="checkbox"]):not([type="radio"]):not([type="file"]) { min-height: 36px; }
+
+/* 列表样板：保持信息密度，窄屏横向滚动，不压缩正文或隐藏操作。 */
+.admin-table-scroll { overflow-x: auto; overscroll-behavior-x: contain; }
+.admin-table { width: 100%; min-width: 680px; font-size: var(--text-sm); border-collapse: collapse; }
+.admin-table thead { background: #fafaf9; }
+.admin-table th { height: 44px; padding: 10px 20px; text-align: left; font-weight: 500; color: #57534e; border-bottom: 1px solid var(--ui-border); }
+.admin-table td { padding: 12px 20px; border-bottom: 1px solid #f5f5f4; vertical-align: middle; }
+.admin-table tbody tr:last-child td { border-bottom: 0; }
+.admin-table tbody tr:hover { background: #fafaf9; }
+.admin-table .admin-row-actions { position: sticky; right: 0; background: white; white-space: nowrap; }
+.admin-table tbody tr:hover .admin-row-actions { background: #fafaf9; }
+.admin-update-time { font-size: var(--text-xs); color: #78716c; font-variant-numeric: tabular-nums; }

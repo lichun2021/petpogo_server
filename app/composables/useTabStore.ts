@@ -1,3 +1,4 @@
+import { resolveAdminPage } from '../utils/adminPages'
 // composables/useTabStore.ts
 // 多页签状态管理（使用 Nuxt useState 全局共享，无需 Pinia）
 
@@ -8,77 +9,6 @@ export interface TabItem {
   closable: boolean
 }
 
-const TAB_ICONS: Record<string, string> = {
-  '/admin':             'i-heroicons-squares-2x2',
-  '/admin/users':       'i-heroicons-users',
-  '/admin/devices':     'i-heroicons-cpu-chip',
-  '/admin/device-events': 'i-heroicons-bell-alert',
-  '/admin/plans/orders': 'i-heroicons-receipt-percent',
-  '/admin/posts':       'i-heroicons-photo',
-  '/admin/stores':      'i-heroicons-building-storefront',
-  '/admin/ai-analysis': 'i-heroicons-sparkles',
-  '/admin/music':       'i-heroicons-musical-note',
-  '/admin/sound':       'i-heroicons-speaker-wave',
-  '/admin/media':       'i-heroicons-photo',
-  '/admin/feedback':    'i-heroicons-chat-bubble-left-ellipsis',
-  '/admin/push':        'i-heroicons-bell',
-  '/admin/settings':    'i-heroicons-cog-6-tooth',
-  '/admin/admins':      'i-heroicons-shield-check',
-  '/admin/plans':       'i-heroicons-credit-card',
-  '/admin/points/config': 'i-heroicons-clock',
-  '/admin/points/rules': 'i-heroicons-star',
-  '/admin/points/logs':  'i-heroicons-clipboard-document-list',
-  '/admin/checkin/rules': 'i-heroicons-calendar-days',
-  '/admin/pets':          'i-heroicons-heart',
-  '/admin/virtual-pet/scenes':  'i-heroicons-sparkles',
-  '/admin/virtual-pet/assignment': 'i-heroicons-adjustments-horizontal',
-  '/admin/virtual-pet/actions': 'i-heroicons-bolt',
-  '/admin/virtual-pet/events':  'i-heroicons-clock',
-}
-
-const TAB_TITLES: Record<string, string> = {
-  '/admin':             '数据概览',
-  '/admin/users':       '用户管理',
-  '/admin/devices':     '设备管理',
-  '/admin/device-events': '设备事件',
-  '/admin/posts':       '帖子审核',
-  '/admin/stores':      '门店管理',
-  '/admin/ai-analysis': 'AI 识别记录',
-  '/admin/music':       '宠物音乐',
-  '/admin/sound':       '情绪声音',
-  '/admin/media':       '用户图库',
-  '/admin/feedback':    '用户反馈',
-  '/admin/push':        '推送测试',
-  '/admin/settings':    '系统设置',
-  '/admin/admins':      '管理员管理',
-  '/admin/plans':       '购买计划',
-  '/admin/plans/orders': '购买订单',
-  '/admin/points/config': '积分类型',
-  '/admin/points/rules': '积分规则',
-  '/admin/points/logs':  '积分流水',
-  '/admin/checkin/rules': '签到奖励',
-  '/admin/pets':          '宠物档案',
-  '/admin/virtual-pet/scenes':  '电子宠物环境',
-  '/admin/virtual-pet/assignment': '宠物形象分配',
-  '/admin/virtual-pet/actions': '硬件动作管理',
-  '/admin/virtual-pet/events':  '宠物事件查询',
-}
-
-function resolveTitleAndIcon(path: string): { title: string; icon: string } {
-  // 精确匹配
-  if (TAB_TITLES[path]) {
-    return { title: TAB_TITLES[path], icon: TAB_ICONS[path] || 'i-heroicons-document' }
-  }
-  // 动态路由：/admin/posts/123 → 帖子详情
-  if (path.startsWith('/admin/posts/')) {
-    return { title: `帖子 #${path.split('/').pop()}`, icon: 'i-heroicons-document-text' }
-  }
-  if (path.startsWith('/admin/users/')) {
-    return { title: `用户 #${path.split('/').pop()}`, icon: 'i-heroicons-user' }
-  }
-  return { title: '页面', icon: 'i-heroicons-document' }
-}
-
 export function useTabStore() {
   const tabs = useState<TabItem[]>('admin-tabs', () => [
     { path: '/admin', title: '数据概览', icon: 'i-heroicons-squares-2x2', closable: false },
@@ -87,12 +17,23 @@ export function useTabStore() {
   const activeTab = useState<string>('admin-active-tab', () => '/admin')
 
   const router = useRouter()
+  const forms = useState<Record<string, boolean>>('admin-dirty-forms', () => ({}))
+  const generations = useState<Record<string, number>>('admin-tab-generations', () => ({}))
+  function canClose(paths: string[]) {
+    return !paths.some(path => forms.value[path]) || window.confirm('页面有未保存修改，关闭后将丢弃这些修改。是否继续？')
+  }
+  function clearPage(path: string) {
+    generations.value[path] = (generations.value[path] || 0) + 1
+    delete forms.value[path]
+    if (path === '/admin/music') clearNuxtState(key => key.startsWith('admin-music-'))
+    if (path === '/admin/posts') clearNuxtState('admin-posts-cache')
+  }
 
   /** 打开或切换到某个 tab（不存在则新建） */
   function openTab(path: string, customTitle?: string) {
     const existing = tabs.value.find(t => t.path === path)
     if (!existing) {
-      const { title, icon } = resolveTitleAndIcon(path)
+      const { title, icon } = resolveAdminPage(path)
       tabs.value.push({
         path,
         title: customTitle || title,
@@ -111,6 +52,8 @@ export function useTabStore() {
     const idx = tabs.value.findIndex(t => t.path === path)
     if (idx === -1 || !tabs.value[idx].closable) return
 
+    if (!canClose([path])) return
+    clearPage(path)
     tabs.value.splice(idx, 1)
 
     // 关闭的是当前激活 tab → 跳转到相邻 tab
@@ -125,6 +68,9 @@ export function useTabStore() {
 
   /** 关闭其他所有 tab（保留首页和当前） */
   function closeOthers(path: string) {
+    const closing = tabs.value.filter(tab => tab.closable && tab.path !== path).map(tab => tab.path)
+    if (!canClose(closing)) return
+    closing.forEach(clearPage)
     tabs.value = tabs.value.filter(t => !t.closable || t.path === path)
     activeTab.value = path
     router.push(path)
@@ -132,6 +78,9 @@ export function useTabStore() {
 
   /** 关闭所有可关闭 tab */
   function closeAll() {
+    const closing = tabs.value.filter(tab => tab.closable).map(tab => tab.path)
+    if (!canClose(closing)) return
+    closing.forEach(clearPage)
     tabs.value = tabs.value.filter(t => !t.closable)
     activeTab.value = '/admin'
     router.push('/admin')
@@ -148,5 +97,5 @@ export function useTabStore() {
     }
   }
 
-  return { tabs, activeTab, openTab, closeTab, closeOthers, closeAll, syncRoute }
+  return { tabs, activeTab, generations, openTab, closeTab, closeOthers, closeAll, syncRoute }
 }

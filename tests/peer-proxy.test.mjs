@@ -279,3 +279,16 @@ test('设备列表兼容list结构，空列表不追加本地设备', async () =
   responseBody='{"code":0,"info":[]}'
   assert.deepEqual((await (await call('/user/device/list')).json()).info,[])
 })
+
+
+test('静默代理超时仍把上游路径、阶段、耗时和错误码传回请求上下文', async () => {
+  reset(); config.peerBackendTimeoutMs = 25; delay = 150
+  const context = {}
+  await assert.rejects(modules.peerRequest('/user/device/list', { method: 'POST', encoding: 'form', token: 'test-token', quiet: true, context }), error => error.statusCode === 504)
+  assert.equal(context.proxyUpstreamPath, '/user/device/list')
+  assert.equal(context.proxyUpstreamStage, 'waiting_headers')
+  assert.equal(context.requestErrorCode, 'PEER_TIMEOUT')
+  assert.equal(context.proxyOutcome, 'timeout')
+  assert.ok(context.proxyUpstreamMs >= 20)
+  assert.ok(context.proxyUpstreamHost)
+})

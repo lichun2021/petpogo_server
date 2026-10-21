@@ -26,9 +26,9 @@ npm run preview      # nuxt preview
 ./stop.sh
 ```
 
-There is **no test suite, no linter, no typecheck script** wired up. `nuxt build` is the only correctness gate — when verifying changes, run `npm run build` and check it succeeds.
+Verification: `npm test`, `npm run typecheck`, and `npm run build`. Real MySQL integration tests require their test environment and otherwise skip. After production builds run `npm run check:secrets` with the local environment available; it reports names only, never secret values.
 
-Deploy SSH key is `lc.pem` in the repo root (gitignored). `.env` holds all secrets and is shipped with the deploy zip.
+Deploy SSH key is `lc.pem` in the repo root (gitignored). `.env` holds local secrets and must never be shipped with the deploy zip. Production runtime defaults stay secret-free; `scripts/runtime-env.mjs` maps legacy variables to `NUXT_*` at startup. `npm start` loads the local `.env`; deployment includes the same startup mapping.
 
 ## Architecture
 
@@ -74,14 +74,14 @@ All in `server/utils/`:
 ### Frontend (admin console)
 
 - **Nuxt 4 compatibility mode** (`future.compatibilityVersion: 4`) — pages, layouts, composables are under `app/`, not the repo root. There's a legacy `composables/useTabStore.ts` at the root that is **not auto-scanned** in compat mode; the live copy is `app/composables/useTabStore.ts` (per commit e98aaba).
-- Multi-tab admin UI: `app/layouts/admin.vue` + `app/composables/useTabStore.ts`. Tab state is global via Nuxt `useState` (no Pinia). `<NuxtPage :keepalive>` caches up to 15 page components so switching tabs preserves form state.
+- Multi-tab admin UI: `app/layouts/admin.vue` + `app/composables/useTabStore.ts`. Tab state is global via Nuxt `useState` (no Pinia). `<NuxtPage :keepalive>` caches opened list/editor components; closing tabs invalidates their cache. Dynamic post details are not cached. Navigation/title/icon/cache metadata lives in `app/utils/adminPages.ts`.
 - Admin token stored in `localStorage.admin_token`; pages call `/api/admin/**` with `Authorization: Bearer`.
 - `/` redirects to `/admin/login` (see `routeRules` in `nuxt.config.ts`).
 - UI is `@nuxt/ui` v3 with heroicons; styling is hardcoded amber/orange palette via inline `style=`.
 
 ### Database
 
-Schema lives in `sql/init.sql` (single file, ~20 tables, MySQL 8.0+ with JSON columns). Tables are prefixed `t_`. Conventions: `id BIGINT PRIMARY KEY` (Snowflake or AUTO_INCREMENT), soft-delete via `deleted TINYINT DEFAULT 0`, timestamps in `+08:00` (set on the pool, not per-column). There is no migration tool — schema changes are applied by editing `init.sql` and running it manually against the DB.
+Schema lives in `sql/init.sql` (single file, ~20 tables, MySQL 8.0+ with JSON columns). Tables are prefixed `t_`. Conventions: `id BIGINT PRIMARY KEY` (Snowflake or AUTO_INCREMENT), soft-delete via `deleted TINYINT DEFAULT 0`, timestamps in `+08:00` (set on the pool, not per-column). Incremental migrations are under `migrations/`; use `npm run db:migrate` to apply and `npm run db:check` to verify. Keep `init.sql` aligned for new databases.
 
 ### Server route layout convention
 
@@ -93,7 +93,7 @@ Handlers use `defineEventHandler` and auto-import h3 helpers (`readBody`, `getQu
 
 ### Logging
 
-`server/plugins/logger.ts` logs every `/api/**` and `/sdkapi/**` request and response (with 1000-char truncation, body skipped for `/upload`). Set expectations accordingly when grepping production logs.
+`server/plugins/logger.ts` writes two records per request with a Beijing-time prefix and requestId. Peer requests include business JSON; token visibility currently follows the user-approved debugging setting `LOG_REDACT_TOKENS` (true hides tokens). Never log passwords or cloud secrets. Propagate upstream failures through request context rather than adding duplicate log lines.
 
 ## Config / environment
 

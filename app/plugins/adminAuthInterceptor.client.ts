@@ -19,7 +19,7 @@ export default defineNuxtPlugin(() => {
       }
       options.headers = headers
     },
-    onResponseError({ request, response }) {
+    async onResponseError({ request, response }) {
       if (response.status !== 401) return
 
       const url = typeof request === 'string' ? request : request.url
@@ -33,8 +33,9 @@ export default defineNuxtPlugin(() => {
       localStorage.removeItem('admin_username')
 
       if (window.location.pathname !== '/admin/login') {
-        navigateTo('/admin/login')
+        await navigateTo('/admin/login')
       }
+      clearNuxtState(key => key.startsWith('admin-'))
     },
   })
 

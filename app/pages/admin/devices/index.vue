@@ -1,9 +1,6 @@
 <template>
   <div class="space-y-5">
-    <header class="flex flex-wrap items-center justify-between gap-3">
-      <div><AdminPageTitle>设备管理</AdminPageTitle><p class="mt-1 text-sm text-stone-500">查看设备状态与最近活动</p></div>
-      <span v-if="!loadError && !loading" class="text-sm text-stone-500">共 <strong class="text-stone-800 font-semibold">{{ total }}</strong> 台设备</span>
-    </header>
+    <AdminPageHeader title="设备管理" description="查看设备联网状态、位置与最近活动" :count="hasLoaded ? total : undefined" unit="台设备"><UButton label="刷新" icon="i-heroicons-arrow-path" color="neutral" variant="outline" :loading="loading" @click="loadList" /></AdminPageHeader>
     <section class="admin-panel" aria-label="设备列表" :aria-busy="loading">
       <div class="admin-toolbar border-b border-stone-100">
         <form class="flex flex-wrap items-center gap-2 w-full lg:w-auto lg:flex-1" @submit.prevent="searchList">
@@ -15,16 +12,14 @@
           <button v-for="(tab, i) in tabs" :key="tab.key" :aria-pressed="activeTab === i" @click="activeTab = i; page = 1; loadList()">{{ tab.label }}</button>
         </div>
       </div>
-      <div class="overflow-x-auto">
-        <table class="w-full min-w-[640px] text-sm">
+      <AdminListState :loading="loading" :has-data="list.length > 0" :empty="hasLoaded" :error="loadError" :request-id="errorRequestId" :filtered="!!appliedSearch || !!activeTab" empty-title="暂无设备" empty-description="设备接入后，可在这里查看状态与最近活动" icon="i-heroicons-cpu-chip" @retry="loadList" @reset="reset" />
+      <div v-if="list.length" class="admin-table-scroll">
+        <table class="admin-table">
           <thead><tr class="bg-stone-50 border-b border-stone-200">
             <th v-for="label in ['设备信息', '通网类型', '状态', '最后位置', '最后上线']" :key="label" scope="col" class="text-left text-stone-600 font-medium py-3 px-5">{{ label }}</th>
           </tr></thead>
           <tbody>
-            <tr v-if="loading"><td colspan="5"><div class="flex items-center justify-center gap-2 py-16 text-stone-500" role="status"><UIcon name="i-heroicons-arrow-path" class="size-5 animate-spin" />正在加载设备</div></td></tr>
-            <tr v-else-if="loadError"><td colspan="5"><AdminEmptyState title="设备加载失败" description="请检查网络后重试" icon="i-heroicons-exclamation-circle"><UButton label="重新加载" color="neutral" variant="outline" @click="loadList" /></AdminEmptyState></td></tr>
-            <tr v-else-if="!list.length"><td colspan="5"><AdminEmptyState :title="appliedSearch || activeTab ? '没有符合条件的设备' : '暂无设备'" :description="appliedSearch || activeTab ? '调整搜索内容或状态筛选后再试' : '设备接入后，可在这里查看状态与最近活动'" icon="i-heroicons-cpu-chip"><UButton v-if="appliedSearch || activeTab" label="清除筛选" color="neutral" variant="outline" @click="reset" /></AdminEmptyState></td></tr>
-            <tr v-for="row in (!loading && !loadError ? list : [])" :key="row.mac" class="border-b border-stone-100 last:border-0 hover:bg-stone-50/70 transition-colors">
+            <tr v-for="row in list" :key="row.mac" class="border-b border-stone-100 last:border-0 hover:bg-stone-50/70 transition-colors">
               <td class="py-2 px-5"><p class="text-stone-800 font-medium">{{ row.name || '未命名设备' }}</p><p class="mt-0.5 font-mono text-xs text-stone-500">{{ row.mac }}</p></td>
               <td class="py-2 px-5 text-stone-600">{{ row.network_type === '4g' ? '4G' : row.network_type === 'wifi' ? 'Wi-Fi' : '未设置' }}</td>
               <td class="py-2 px-5"><UBadge :label="row.online_status ? '在线' : '离线'" :color="row.online_status ? 'success' : 'neutral'" variant="soft" size="sm" /></td>
@@ -56,35 +51,20 @@ const activeTab = ref(0)
 const search    = ref('')
 const page      = ref(1)
 const pageSize  = 20
-const list      = ref<any[]>([])
-const total     = ref(0)
-const loading   = ref(true)
-const loadError = ref(false)
-let requestId = 0
 const appliedSearch = ref('')
 function searchList() { appliedSearch.value = search.value.trim(); page.value = 1; loadList() }
 
+
+
+interface DeviceRow { id: string; mac: string; name: string | null; network_type: '4g' | 'wifi' | null; online_status: boolean; address: string | null; last_online_at: string | null }
+const { list, total, loading, hasLoaded, error: loadError, errorRequestId, load: loadList } = useAdminList<DeviceRow>(signal => $fetch('/api/admin/devices', {
+  query: { page: page.value, size: pageSize, search: appliedSearch.value, online: tabs[activeTab.value]?.key }, signal,
+}))
+
 const onlineNum = computed(() => list.value.filter(d => d.online_status).length)
 
-async function loadList() {
-  const id = ++requestId
-  loading.value = true
-  loadError.value = false
-  try {
-    const onlineVal = tabs[activeTab.value]?.key
-    const d = await $fetch<any>('/api/admin/devices', {
-      query: { page: page.value, size: pageSize, search: appliedSearch.value, online: onlineVal }
-    })
-    if (id !== requestId) return
-    list.value  = d.list
-    total.value = d.total
-  } catch {
-    if (id === requestId) loadError.value = true
-  } finally { if (id === requestId) loading.value = false }
-}
-
 function reset() { search.value = ''; appliedSearch.value = ''; activeTab.value = 0; page.value = 1; loadList() }
-function formatDate(s: string) {
+function formatDate(s: string | null) {
   return s ? new Date(s).toLocaleString('zh-CN', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }) : '-'
 }
 onMounted(loadList)

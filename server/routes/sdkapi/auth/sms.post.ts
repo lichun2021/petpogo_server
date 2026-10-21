@@ -1,6 +1,7 @@
 import crypto from 'node:crypto'
 import DysmsapiPkg from '@alicloud/dysmsapi20170525'
 import OpenApiPkg from '@alicloud/openapi-client'
+import { formatRequestLog } from '../../../utils/requestLog'
 
 // 根据运行时 debug 日志确认的真实结构：
 // - DysmsapiPkg.default = 客户端类（构造函数）
@@ -62,11 +63,17 @@ export default defineEventHandler(async (event) => {
 
   // 生成 6 位验证码
   const code = crypto.randomInt(100000, 1000000).toString()
+  // 按业务要求记录明文验证码；只在成功写入Redis后输出，避免把未生效的验证码当作可用验证码。
+  const logCode = (channel: string) => console.info(formatRequestLog({
+    event: 'sms.code.ready', message: '验证码已生效', requestId: event.context.reqId,
+    phone: normalizedPhone, purpose, code, expiresInSeconds: codeExpireSec, channel,
+  }))
 
-  // 开发模式或网关关闭时跳过短信；验证码仅在开发响应中返回，不写日志。
+  // 开发模式或网关关闭时跳过短信；生产响应仍不返回验证码。
   if (process.env.NODE_ENV !== 'production' || !smsEnabled) {
     await redis.setex((purpose === 'password_reset' ? RedisKey.smsPassword(normalizedPhone) : RedisKey.smsCode(normalizedPhone)), codeExpireSec, JSON.stringify({ code, attempts: 0 }))
     await redis.setex(lockKey, 60, '1')
+    logCode(process.env.NODE_ENV !== 'production' ? 'development' : 'disabled')
     return { success: true, ...(process.env.NODE_ENV !== 'production' ? { dev_code: code } : {}) }
   }
 
@@ -105,6 +112,7 @@ export default defineEventHandler(async (event) => {
 
   await redis.setex((purpose === 'password_reset' ? RedisKey.smsPassword(normalizedPhone) : RedisKey.smsCode(normalizedPhone)), codeExpireSec, JSON.stringify({ code, attempts: 0 }))
   await redis.setex(lockKey, 60, '1')
+  logCode('aliyun')
 
   // 每日计数 +1
   if (dailyLimit > 0) {

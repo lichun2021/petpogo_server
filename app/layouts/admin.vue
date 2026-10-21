@@ -45,7 +45,7 @@
         <UButton icon="i-heroicons-x-mark" color="neutral" variant="ghost" size="xs" title="关闭所有标签" aria-label="关闭所有标签" @click="closeAll()" />
       </nav>
       <main class="admin-content flex-1 overflow-y-auto p-4 lg:p-6">
-        <NuxtPage :keepalive="keepAliveOptions" />
+        <NuxtPage :page-key="page => page.path + ':' + (generations[page.path] || 0)" :keepalive="keepAliveOptions" />
       </main>
     </div>
     <div v-if="contextMenu.show" class="fixed z-50 bg-white rounded-lg shadow-lg border border-stone-200 py-1.5 w-40 text-sm overflow-hidden" :style="{ top: contextMenu.y + 'px', left: contextMenu.x + 'px' }" @mouseleave="contextMenu.show = false">
@@ -56,53 +56,20 @@
 </template>
 
 <script setup lang="ts">
+import { adminPages, resolveAdminPage } from '../utils/adminPages'
+
 const route = useRoute()
-const { tabs, activeTab, openTab, closeTab, closeOthers, closeAll, syncRoute } = useTabStore()
+const { tabs, activeTab, generations, openTab, closeTab, closeOthers, closeAll, syncRoute } = useTabStore()
 
 const isSuperAdmin = ref(false)
 onMounted(() => {
   isSuperAdmin.value = localStorage.getItem('admin_role') === 'super_admin'
 })
 
-const navBase = [
-  { to: '/admin',          label: '数据概览',    icon: 'i-heroicons-squares-2x2' },
-  { to: '/admin/users',    label: '用户管理',    icon: 'i-heroicons-users' },
-  { to: '/admin/devices',  label: '设备管理',    icon: 'i-heroicons-cpu-chip' },
-  { to: '/admin/device-events', label: '设备事件', icon: 'i-heroicons-bell-alert' },
-  { to: '/admin/pets',     label: '宠物档案',    icon: 'i-heroicons-heart' },
-  { to: '/admin/virtual-pet/scenes', label: '电子宠物环境', icon: 'i-heroicons-sparkles' },
-  { to: '/admin/virtual-pet/assignment', label: '宠物形象分配', icon: 'i-heroicons-adjustments-horizontal' },
-  { to: '/admin/virtual-pet/actions', label: '硬件动作管理', icon: 'i-heroicons-bolt' },
-  { to: '/admin/virtual-pet/events', label: '宠物事件查询', icon: 'i-heroicons-clock' },
-  { to: '/admin/posts',    label: '帖子审核',    icon: 'i-heroicons-photo' },
-  { to: '/admin/stores',   label: '门店管理',    icon: 'i-heroicons-building-storefront' },
-  { to: '/admin/ai-analysis', label: 'AI 识别记录', icon: 'i-heroicons-sparkles' },
-  { to: '/admin/plans',    label: '购买计划',    icon: 'i-heroicons-credit-card' },
-  { to: '/admin/points/config', label: '积分类型', icon: 'i-heroicons-clock' },
-  { to: '/admin/points/rules', label: '积分规则', icon: 'i-heroicons-star' },
-  { to: '/admin/checkin/rules', label: '签到奖励', icon: 'i-heroicons-calendar-days' },
-  { to: '/admin/music',    label: '宠物音乐',    icon: 'i-heroicons-musical-note' },
-  { to: '/admin/sound',    label: '情绪声音',    icon: 'i-heroicons-speaker-wave' },
-  { to: '/admin/media',    label: '用户图库',    icon: 'i-heroicons-photo' },
-  { to: '/admin/feedback', label: '用户反馈',    icon: 'i-heroicons-chat-bubble-left-ellipsis' },
-  { to: '/admin/push',     label: '推送测试',    icon: 'i-heroicons-bell' },
-  { to: '/admin/settings', label: '系统设置',    icon: 'i-heroicons-cog-6-tooth' },
-]
-
-const nav = computed(() => isSuperAdmin.value
-  ? [...navBase, { to: '/admin/admins', label: '管理员管理', icon: 'i-heroicons-shield-check' }]
-  : navBase)
-
-
-const navSections = computed(() => {
-  const groups = [
-    { label: '业务管理', paths: ['/admin', '/admin/users', '/admin/devices', '/admin/device-events', '/admin/pets', '/admin/stores'] },
-    { label: '宠物与内容', paths: ['/admin/virtual-pet/scenes', '/admin/virtual-pet/assignment', '/admin/virtual-pet/actions', '/admin/virtual-pet/events', '/admin/posts', '/admin/ai-analysis', '/admin/music', '/admin/sound', '/admin/media'] },
-    { label: '订阅与积分', paths: ['/admin/plans', '/admin/points/config', '/admin/points/rules', '/admin/checkin/rules'] },
-    { label: '系统管理', paths: ['/admin/feedback', '/admin/push', '/admin/settings', '/admin/admins'] },
-  ]
-  return groups.map(group => ({ ...group, items: nav.value.filter(item => group.paths.includes(item.to)) }))
-})
+const navSections = computed(() => ['业务管理', '宠物与内容', '订阅与积分', '系统管理'].map(label => ({
+  label,
+  items: adminPages.filter(page => page.group === label && !page.hidden && (!page.superOnly || isSuperAdmin.value)).map(page => ({ to: page.path, label: page.title, icon: page.icon })),
+})))
 
 const expandedSections = useState<Record<string, boolean>>('admin-nav-expanded', () => ({}))
 // 路由变化时展开当前分组，其余分组保留用户的选择。
@@ -114,7 +81,8 @@ watch([() => route.path, navSections], () => {
 
 // KeepAlive 配置：缓存所有已打开的 tab 页面组件
 const keepAliveOptions = computed(() => ({
-  max: 15,  // 最多缓存15个组件
+  max: Math.max(15, tabs.value.length),  // 保留仍打开页面的草稿，关闭后由include驱逐。
+  include: [...new Set(tabs.value.map(tab => resolveAdminPage(tab.path).component).filter(Boolean))],
 }))
 
 function isNavActive(to: string) {
@@ -169,7 +137,9 @@ function handleContextAction(key: string) {
   if (key === 'all')    closeAll()
 }
 
-function logout() {
+async function logout() {
+  const forms = useState<Record<string, boolean>>('admin-dirty-forms')
+  if (Object.values(forms.value || {}).some(Boolean) && !window.confirm('退出将丢弃未保存修改，是否继续？')) return
   const token = localStorage.getItem('admin_token')
   if (token) {
     $fetch('/api/admin/logout', { method: 'POST', headers: { Authorization: `Bearer ${token}` } }).catch(() => {})
@@ -178,6 +148,7 @@ function logout() {
   localStorage.removeItem('admin_id')
   localStorage.removeItem('admin_role')
   localStorage.removeItem('admin_username')
-  navigateTo('/admin/login')
+  await navigateTo('/admin/login')
+  clearNuxtState(key => key.startsWith('admin-'))
 }
 </script>

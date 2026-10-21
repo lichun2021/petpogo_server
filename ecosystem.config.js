@@ -2,7 +2,9 @@ module.exports = {
   apps: [
     {
       name: 'petpogo-server',
-      script: './server/index.mjs',
+      script: './server/scripts/start.mjs',
+      cwd: __dirname,
+      node_args: ['--env-file=' + __dirname + '/.env'],
 
       // ── 运行环境 ──────────────────────────────
       instances: 1,          // 单实例（如需多核 CPU 负载均衡改为 'max'）
