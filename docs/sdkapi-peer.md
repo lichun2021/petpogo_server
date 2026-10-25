@@ -1,15 +1,17 @@
 # SDKAPI Peer 中转接口
 
-本项目已提供 37 个客户端 Peer 接口的中转入口，部署后使用。Peer 管理设备、宠物、围栏和分享数据；设备绑定/解绑、宠物添加/删除成功后，后台同步本地档案。
+本项目已提供 43 个客户端 Peer 接口的中转入口，部署后使用。Peer 管理设备、宠物、围栏和分享数据；设备绑定/解绑、宠物添加/删除成功后，后台同步本地档案。
 
 2026-10-12 通网类型增量：绑定请求支持本地字段 `networkType`（不转发上游）；设备列表成功响应补充该字段，并将超长整数转为字符串以保留精度。这是下文“原样透传”的例外。接口示例、兼容规则及发布状态见 [设备通网类型对接说明](./sdkapi-device-network-type.md)。
+
+2026-10-25 音视频增量：新增开始、停止、视频开关、音频开关和状态查询 5 个接口。HTTP 控制经本服务中转，客户端直接连接上游返回的 `wsAppUrl` 观看和对讲，详见 [设备音视频客户端接入说明](./sdkapi-peer-stream.md)。
 
 ## 链路与代码职责
 
 `App → /sdkapi/peer/** → PEER_BACKEND_URL + 原始路径`
 
 - `server/routes/sdkapi/peer/[...path].ts`：薄路由入口。
-- `server/integrations/peer/endpoints.ts`：37 个固定路径、方法、上游编码和参数白名单；新增接口在此集中维护。
+- `server/integrations/peer/endpoints.ts`：43 个固定路径、方法、上游编码和参数白名单；新增接口在此集中维护。
 - `server/integrations/peer/handler.ts`：本地登录检查、参数校验、响应转交，成功后调用独立的本地同步模块。
 - `server/utils/peerBackend.ts`：唯一 Peer HTTP 出口 `peerRequest()`，同时供原有注册、登录、刷新、资料同步使用；原有方法仍保持业务解包及注册幂等处理。
 
@@ -23,7 +25,7 @@
 
 ## 客户端鉴权
 
-所有 37 个接口均沿用 `/sdkapi/**` 签名中间件：
+所有 43 个接口均沿用 `/sdkapi/**` 签名中间件：
 
 ```text
 x-timestamp: 当前毫秒时间戳
@@ -32,18 +34,19 @@ x-nonce: 每次请求唯一的随机串，至少 8 位（默认强制）
 Authorization: Bearer <ipet_token>
 ```
 
-国家列表、默认国家两条接口免登录，因此不需要 Authorization，但仍需应用签名和 nonce。其余 35 条先经 `requireAuth()` 校验 Redis session、本地账号和封禁状态，再把同一个 ipet_token 作为 `token` Header 发送到 Peer。不会采用客户端自行提供的 `token` Header，也不透传 Cookie 等任意请求头。
+国家列表、默认国家、音视频状态查询三条接口免登录，因此不需要 Authorization，但仍需应用签名和 nonce。其余 40 条先经 `requireAuth()` 校验 Redis session、本地账号和封禁状态，再把同一个 ipet_token 作为 `token` Header 发送到 Peer。不会采用客户端自行提供的 `token` Header，也不透传 Cookie 等任意请求头。
 
 本项目不会用本地 `t_pet/t_device` 的 ID 或所有者关系替代 Peer 资源关系。设备归属、分享和操作权限继续由 Peer 根据用户 token 校验，与原客户端直连链路一致。上线前仍需真实账号验证共享用户与无权限用户行为；本地会话有效不等于有权操作任意设备。
 
 ## 参数与响应
 
-- 方法与原 Peer 接口一致。GET 使用 query；POST 支持 JSON 或 `application/x-www-form-urlencoded`，中转按清单转换成上游要求的编码。
+- 方法以清单为准。GET 使用 query；POST 支持 JSON 或 `application/x-www-form-urlencoded` 请求体，中转按清单转换成上游要求的编码。音视频上游同时支持 GET/POST，本中转统一为 POST 控制、GET 查询状态。
 - 参数白名单以 `endpoints.ts` 为准。未知参数、嵌套对象、数组会被拒绝；可选 null 被忽略。国家列表可发送空 body 或 `{}`。
 - ID 推荐全部传字符串，特别是超出 `Number.MAX_SAFE_INTEGER` 的 ID；JSON 中不安全的数值会返回 400，不能先经过 JS Number 再转字符串。
 - 宠物详情、位置、围栏列表／添加要求至少一个 `mac/deviceId`；删除宠物至少一个 `petId/deviceId`；发起宠物分享至少一个 `petId/deviceId/mac`；拒绝分享至少一个 `shareId/order`。
 - 默认值：位置 `lang=zh`；两种发起分享 `type=3`；分享分页 `pageNo=1,pageSize=20`；播放音量 `volume=15`，范围 0–21。
 - shadow 的 `data` 必须是 JSON 对象编码后的字符串；中转不展开或重写其中的设备命令。
+- 音视频的 `video/audio/enable` 支持 JSON 布尔值或字符串 `"true"/"false"`，转为上游表单字符串；默认值由上游维护，具体参数校验见音视频接入说明。
 - 上游统一使用 `Accept: */*`，兼容已发现的 406 问题。
 - 中转保留上游 HTTP 状态和完整 JSON 文本，包括 `code/tip/info/list/pageTurn`、裸国家对象和长数字 ID，不重新序列化。
 - HTTP 200 并不代表业务成功：客户端仍需处理 Peer 的 `code/tip`，例如 token 过期时的 `code=1010`。沿用 `/sdkapi/auth/refresh` 刷新后重试的既有登录流程。
@@ -68,6 +71,7 @@ Authorization: Bearer <ipet_token>
 |---|---|---|---|
 | POST | `/user/device/list` | 设备列表 | 表单 |
 | POST | `/user/device/detail` | 设备详情 | 表单 |
+| GET | `/device/property/query` | 设备属性（电量、温度等） | Query |
 | GET | `/user/device/online/state` | 在线状态 | Query |
 | POST | `/user/device/update` | 设备改名 | 表单 |
 | POST | `/user/device/unbind` | 解绑设备 | 表单 |
@@ -81,6 +85,11 @@ Authorization: Bearer <ipet_token>
 | POST | `/user/device/mcuota/get` | OTA 信息 | 表单 |
 | POST | `/device/shadow/update` | 影子及电机控制 | 表单 |
 | POST | `/pet/agora/getToken` | 获取音视频通话凭证 | 表单 |
+| POST | `/pet/stream/start` | 开始音视频观看 | 表单 |
+| POST | `/pet/stream/stop` | 停止音视频观看 | 表单 |
+| POST | `/pet/stream/video` | 开关视频 | 表单 |
+| POST | `/pet/stream/audio` | 开关音频／对讲 | 表单 |
+| GET | `/pet/stream/status` | 查询推流状态（免登录） | Query |
 | POST | `/pet/info/list` | 我的宠物 | 表单 |
 | POST | `/pet/info/get` | 宠物详情 | 表单 |
 | POST | `/pet/info/add` | 添加宠物 | 表单 |
@@ -104,16 +113,51 @@ Authorization: Bearer <ipet_token>
 | POST | `/world/country/list` | 国家列表 | 空 body |
 | GET | `/world/country/default` | 默认国家 | Query |
 
+## 设备电量与属性查询
+
+`GET /sdkapi/peer/device/property/query?mac=ipet-esp32-Device-03`
+
+Query 必填 `mac`（设备 MAC/设备标识），仅支持此参数。沿用上述应用签名与 `Authorization: Bearer <ipet_token>`；后台将 token 转为上游要求的 `token` Header，以 GET 请求调用 `PEER_BACKEND_URL/device/property/query`。
+
+```bash
+curl -sG "${SDKAPI_BASE_URL}/sdkapi/peer/device/property/query" \
+  --data-urlencode "mac=ipet-esp32-Device-03" \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "x-timestamp: $TIMESTAMP" \
+  -H "x-signature: $SIGNATURE" \
+  -H "x-nonce: $NONCE"
+```
+
+`SDKAPI_BASE_URL` 为本服务地址，其余变量按上文客户端鉴权规则生成。上游成功响应示例（对接资料提供的 collar 设备实测结果）：
+
+```json
+{
+  "code": 0,
+  "info": {
+    "battery": "57",
+    "temp": "37.5",
+    "led_r": "", "led_g": "", "led_b": "",
+    "brightness_r": "", "brightness_g": "", "brightness_b": "",
+    "speaker": "", "speaker_volume": "", "speaker_sound": "",
+    "mic": "", "mic_level": "",
+    "reportDataTime": 0
+  },
+  "tip": "响应成功"
+}
+```
+
+客户端从 `info.battery` 读取电量百分比；示例中 `"57"` 表示 57%。响应原样透传，字符串、空字符串与 `reportDataTime: 0` 均保留，不在中转层转换类型或补默认值。此接口不写入本地设备档案或缓存。
+
 
 ## 耦合边界与验证情况
 
 - 不新增数据库表；同步沿用 Peer ID，冲突时不覆盖其他资源。独立同步模块不承担上游权限判断。
 - 创建和删除统一由中转完成本地同步，移除重复本地创建/删除入口；客户端现有编辑后的资料更新流程继续保留。
-- 音视频媒体仍走 Agora，AWS IoT 链路保持原实现；这里只中转清单内 HTTP 请求。
+- 原 Agora、AWS IoT 链路保留；新增设备推流通过返回的 `wsAppUrl` 直连上游 WebSocket，这里只中转清单内 HTTP 请求。
 - `/pet/share/member/remove` 已提供中转路由，但上游路径尚未真实确认。设备分享 email 要求、分享成功码等差异保持上游原始结果，需继续联调。
 - 未修改旧刷新接口对 `account` 直接按手机号查询的行为；若 Peer 返回 `手机号@qq.com`，可能导致刷新无法找到用户。上线联调需确认返回格式。
 - 验证：`npm run build`；`node --test tests/peer-proxy.test.mjs tests/peer-local-sync.test.mjs`。集成测试使用本地 HTTP 模拟上游和模拟 session/数据库，覆盖真实请求编码、签名与登录拦截、响应保真、超时及不重试，也检查原有账号封装。
-- 本地验证不等同于 37 条接口已通过真实 Peer 联调；尚未部署或操作真实设备。
+- 本地验证不等同于 43 条接口已通过真实 Peer 联调。2026-10-25 已部署构建 `20261025143935-7d736b7f`，包含设备电量和音视频中转；已核对线上版本、健康状态及只读推流状态查询，真实设备音视频仍待客户端联调。
 
 
 ## 设备与宠物本地同步

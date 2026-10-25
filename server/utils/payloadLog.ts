@@ -15,8 +15,8 @@ export function redactLogPayload(value: unknown, key = ''): unknown {
     if (/^\s*[\[{]/.test(value)) {
       try { return redactLogPayload(parseResourceJson(value)) } catch { return '[无法解析的嵌套内容]' }
     }
-    // 签名下载地址的查询参数可能携带临时访问凭证。
-    return value.replace(/https?:\/\/[^\s"<>]+/g, url => url.split(/[?#]/)[0])
+    // 下载和音视频 WebSocket 地址的查询参数可能携带临时访问凭证。
+    return value.replace(/(?:https?|wss?):\/\/[^\s"<>]+/g, url => url.split(/[?#]/)[0])
       .replace(/Bearer\s+\S+/gi, 'Bearer [REDACTED]')
   }
   return value

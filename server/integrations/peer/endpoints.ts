@@ -21,9 +21,10 @@ const query = (path: string, fields = '', required = ''): PeerEndpoint => ({
 })
 
 export const peerEndpoints: readonly PeerEndpoint[] = [
-  // 设备（15）
+  // 设备（16）
   form('/user/device/list'),
   form('/user/device/detail', 'mac'),
+  query('/device/property/query', 'mac', 'mac'),
   query('/user/device/online/state', 'mac', 'mac'),
   form('/user/device/update', 'mac deviceNickName'),
   form('/user/device/unbind', 'mac'),
@@ -37,6 +38,12 @@ export const peerEndpoints: readonly PeerEndpoint[] = [
   form('/user/device/mcuota/get', 'mac'),
   form('/device/shadow/update', 'mac data'),
   form('/pet/agora/getToken', 'mac loginCustomerId'),
+  // 设备音视频（5）：HTTP 控制走中转，媒体 WebSocket 使用上游返回的 wsAppUrl。
+  form('/pet/stream/start', 'mac', 'video audio fps quality serverHost serverPort'),
+  form('/pet/stream/stop', 'mac'),
+  form('/pet/stream/video', 'mac enable'),
+  form('/pet/stream/audio', 'mac enable'),
+  { ...query('/pet/stream/status', 'mac', 'mac'), public: true },
   // 宠物与围栏（10）：沿用 Peer ID；添加/删除成功后同步本地档案。
   form('/pet/info/list'),
   form('/pet/info/get', '', 'mac deviceId', 'mac deviceId'),

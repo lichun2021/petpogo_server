@@ -196,11 +196,13 @@ test('刷新按凭证用户ID定位，校验上游邮箱映射及调用期间的
 test('详细正文日志保留长ID及完整列表，脱敏嵌套凭证和签名地址', () => {
   process.env.LOG_REDACT_TOKENS = 'true'
   // 单独测试结构化输入及上游长ID解析。
-  const full = modules.redactLogPayload({ list: Array.from({ length: 1500 }, (_, id) => ({ id, name: '设备' })), refreshToken: 'hidden-token', nested: JSON.stringify({ password: 'hidden-password' }), url: 'https://example.com/image?signature=hidden-signature' })
+  const full = modules.redactLogPayload({ list: Array.from({ length: 1500 }, (_, id) => ({ id, name: '设备' })), refreshToken: 'hidden-token', nested: JSON.stringify({ password: 'hidden-password' }), url: 'https://example.com/image?signature=hidden-signature', wsAppUrl: 'ws://example.com/ws/app/device?token=hidden-ws-token', secureWsUrl: 'wss://example.com/ws/app/device?ticket=hidden-ticket#hidden-fragment' })
   assert.equal(full.list.length, 1500)
   assert.equal(full.list[1499].name, '设备')
   assert.doesNotMatch(JSON.stringify(full), /hidden-/)
   assert.equal(full.url, 'https://example.com/image')
+  assert.equal(full.wsAppUrl, 'ws://example.com/ws/app/device')
+  assert.equal(full.secureWsUrl, 'wss://example.com/ws/app/device')
   const upstream = modules.peerResponseLogPayload('{"code":0,"info":{"id":1237250046272094208,"ipet_token":"hidden-token","proof":{"secretKey":"hidden-key"}}}')
   assert.equal(upstream.info.id, '1237250046272094208')
   assert.equal(upstream.code, 0)

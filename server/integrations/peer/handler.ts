@@ -17,11 +17,22 @@ export function validatePeerParams(endpoint: PeerEndpoint, input: unknown): Reco
     throw createError({ statusCode: 400, message: '请求参数必须为对象' })
   }
   const params: Record<string, string | number> = {}
+  // 只为音视频开关接受 JSON 布尔值，并转为上游表单要求的 true/false。
+  const booleanFields = endpoint.path === '/pet/stream/start' ? ['video', 'audio']
+    : ['/pet/stream/video', '/pet/stream/audio'].includes(endpoint.path) ? ['enable'] : []
   for (const [key, value] of Object.entries(input as Record<string, unknown>)) {
     if (!endpoint.fields.includes(key)) {
       throw createError({ statusCode: 400, message: `不支持的参数：${key}` })
     }
     if (value == null) continue
+    if (booleanFields.includes(key)) {
+      const flag = String(value).trim().toLowerCase()
+      if (!['boolean', 'string'].includes(typeof value) || !['true', 'false'].includes(flag)) {
+        throw createError({ statusCode: 400, message: `${key} 必须为 true 或 false` })
+      }
+      params[key] = flag
+      continue
+    }
     if ((typeof value !== 'string' && typeof value !== 'number') ||
         (typeof value === 'number' && (!Number.isFinite(value) || (Number.isInteger(value) && !Number.isSafeInteger(value))))) {
       throw createError({ statusCode: 400, message: `${key} 必须为字符串或安全数值，长 ID 请使用字符串` })
@@ -34,6 +45,21 @@ export function validatePeerParams(endpoint: PeerEndpoint, input: unknown): Reco
   }
   if (endpoint.oneOf && !endpoint.oneOf.some(present)) {
     throw createError({ statusCode: 400, message: `至少提供一个参数：${endpoint.oneOf.join(' / ')}` })
+  }
+  if (endpoint.path === '/pet/stream/start') {
+    // 默认值由上游维护；fps 文档仅建议 5~15，不在本地限制建议范围。
+    for (const [key, min] of [['fps', 1], ['quality', 0], ['serverPort', 1]] as const) {
+      if (params[key] === undefined) continue
+      const value = Number(params[key])
+      if (!/^\d+$/.test(String(params[key])) || !Number.isSafeInteger(value) || value < min ||
+          (key === 'serverPort' && value > 65535)) {
+        throw createError({ statusCode: 400, message: key === 'serverPort'
+          ? 'serverPort 必须为 1–65535 的整数' : `${key} 必须为不小于 ${min} 的整数` })
+      }
+    }
+    if (params.serverHost !== undefined && (typeof params.serverHost !== 'string' || !params.serverHost.trim())) {
+      throw createError({ statusCode: 400, message: 'serverHost 必须为非空字符串' })
+    }
   }
   if (endpoint.path === '/pet/position') params.lang ??= 'zh'
   if (endpoint.path === '/user/device/bind' && params.networkType !== undefined) {

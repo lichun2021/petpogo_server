@@ -68,10 +68,10 @@ function call(path, { method = 'POST', body, token = 'valid-token', headers = {}
 }
 function reset() { deviceRows = []; syncConnection = undefined; requests = []; accountResponses = {}; sessionWrites = []; responseBody = '{"code":0,"info":{}}'; responseStatus = 200; delay = 0; banned = false; config.peerBackendTimeoutMs = 20000 }
 
-test('37 条清单无重复；未知接口/错误方法/缺签名不会调用上游', async () => {
+test('43 条清单无重复；未知接口/错误方法/缺签名不会调用上游', async () => {
   reset()
-  assert.equal(modules.peerEndpoints.length, 37)
-  assert.equal(new Set(modules.peerEndpoints.map(e => e.path)).size, 37)
+  assert.equal(modules.peerEndpoints.length, 43)
+  assert.equal(new Set(modules.peerEndpoints.map(e => e.path)).size, 43)
   assert.equal((await call('/user/login')).status, 404)
   const wrong = await call('/user/device/list', { method: 'GET' })
   assert.equal(wrong.status, 405)
@@ -115,6 +115,150 @@ test('GET 分页、JSON 播放与 shadow 的二次表单编码', async () => {
   const data = '{"motor_0":{"direction":1,"speed":50}}'
   await call('/device/shadow/update', { body: { mac: 'AA', data } })
   assert.equal(new URLSearchParams(requests[2].body).get('data'), data)
+})
+
+test('设备属性查询：GET 转发 MAC 和当前用户 token，完整保留电量等属性', async () => {
+  reset()
+  responseBody = JSON.stringify({
+    code: 0,
+    info: {
+      battery: '57', temp: '37.5',
+      led_r: '', led_g: '', led_b: '',
+      brightness_r: '', brightness_g: '', brightness_b: '',
+      speaker: '', speaker_volume: '', speaker_sound: '',
+      mic: '', mic_level: '', reportDataTime: 0,
+    },
+    tip: '响应成功',
+  })
+  const result = await call('/device/property/query?mac=ipet-esp32-Device-03', {
+    method: 'GET', headers: { token: 'forged', Cookie: 'private=1' },
+  })
+  assert.equal(result.status, 200)
+  assert.equal(await result.text(), responseBody)
+  assert.equal(result.headers.get('cache-control'), 'no-store')
+  assert.equal(requests.length, 1)
+  assert.equal(requests[0].method, 'GET')
+  assert.equal(requests[0].url, '/device/property/query?mac=ipet-esp32-Device-03')
+  assert.equal(requests[0].body, '')
+  assert.equal(requests[0].headers.token, 'valid-token')
+  assert.equal(requests[0].headers.authorization, undefined)
+  assert.equal(requests[0].headers.cookie, undefined)
+})
+
+test('设备属性查询：缺失或非法 MAC、错误方法、未登录和缺签名均不调用上游', async () => {
+  reset()
+  for (const query of ['', '?mac=', '?mac=%20', '?mac=AA&mac=BB', '?mac=AA&deviceId=123']) {
+    assert.equal((await call(`/device/property/query${query}`, { method: 'GET' })).status, 400)
+  }
+  const path = '/device/property/query?mac=ipet-esp32-Device-03'
+  const wrong = await call(path)
+  assert.equal(wrong.status, 405)
+  assert.equal(wrong.headers.get('allow'), 'GET')
+  assert.equal((await call(path, { method: 'GET', token: '' })).status, 401)
+  assert.equal((await call(path, { method: 'GET', token: 'expired' })).status, 401)
+  assert.equal((await call(path, { method: 'GET', signed: false })).status, 401)
+  assert.equal(requests.length, 0)
+})
+
+test('音视频开始：JSON 布尔值转表单，保留 wsAppUrl、shared 及上游默认参数', async () => {
+  reset()
+  responseBody = '{"code":0,"info":{"mac":"ipet-bot-01","wsAppUrl":"ws://stream.example.test:8006/ws/app/ipet-bot-01?ticket=future-ticket","video":true,"audio":true,"shared":true},"tip":"响应成功"}'
+  const result = await call('/pet/stream/start', {
+    body: { mac: 'ipet-bot-01', video: true, audio: false, fps: 10, quality: 20, serverHost: 'stream.example.test', serverPort: 8006 },
+    headers: { token: 'forged' },
+  })
+  assert.equal(result.status, 200)
+  assert.equal(await result.text(), responseBody)
+  assert.equal(result.headers.get('cache-control'), 'no-store')
+  assert.equal(requests[0].url, '/pet/stream/start')
+  assert.equal(requests[0].method, 'POST')
+  assert.equal(requests[0].headers['content-type'], 'application/x-www-form-urlencoded')
+  assert.equal(requests[0].headers.token, 'valid-token')
+  assert.deepEqual(Object.fromEntries(new URLSearchParams(requests[0].body)), {
+    mac: 'ipet-bot-01', video: 'true', audio: 'false', fps: '10', quality: '20', serverHost: 'stream.example.test', serverPort: '8006',
+  })
+  assert.equal((await call('/pet/stream/start', { body: { mac: 'ipet-bot-01' } })).status, 200)
+  assert.equal(requests[1].body, 'mac=ipet-bot-01')
+  // 允许建议范围之外的 fps，以及最小质量值；由 Peer 决定设备实际能力。
+  assert.equal((await call('/pet/stream/start', { body: { mac: 'ipet-bot-01', fps: '30', quality: 0 } })).status, 200)
+})
+
+test('音视频停止与开关：兼容表单和 JSON false，业务失败原样返回', async () => {
+  reset()
+  responseBody = '{"code":0,"info":"success","tip":"响应成功"}'
+  for (const [path, body, headers = {}] of [
+    ['/pet/stream/stop', { mac: 'ipet-bot-01' }],
+    ['/pet/stream/video', { mac: 'ipet-bot-01', enable: false }],
+    ['/pet/stream/audio', 'mac=ipet-bot-01&enable=true', { 'Content-Type': 'application/x-www-form-urlencoded' }],
+    ['/pet/stream/start', 'mac=ipet-bot-01&video=false&audio=true', { 'Content-Type': 'application/x-www-form-urlencoded' }],
+  ]) {
+    const result = await call(path, { body, headers })
+    assert.equal(result.status, 200)
+    assert.equal(await result.text(), responseBody)
+    assert.equal(requests.at(-1).url, path)
+    assert.equal(requests.at(-1).method, 'POST')
+    assert.equal(requests.at(-1).headers.token, 'valid-token')
+  }
+  assert.equal(new URLSearchParams(requests[1].body).get('enable'), 'false')
+  assert.equal(new URLSearchParams(requests[2].body).get('enable'), 'true')
+  assert.equal(new URLSearchParams(requests[3].body).get('video'), 'false')
+  for (const code of [1, 1010, 12003, 12021]) {
+    responseBody = JSON.stringify({ code, info: null, tip: '上游失败' })
+    const result = await call('/pet/stream/start', { body: { mac: 'ipet-bot-01' } })
+    assert.equal(result.status, 200)
+    assert.equal(await result.text(), responseBody)
+  }
+})
+
+test('音视频状态：免登录 GET 查询，仍需应用签名且不转发客户端凭证', async () => {
+  reset()
+  responseBody = '{"code":0,"info":{"deviceConnected":true,"appViewerCount":2},"tip":"响应成功"}'
+  const path = '/pet/stream/status?mac=ipet-bot-01'
+  const result = await call(path, { method: 'GET', token: '', headers: { token: 'forged', Cookie: 'private=1' } })
+  assert.equal(result.status, 200)
+  assert.equal(await result.text(), responseBody)
+  assert.equal(result.headers.get('cache-control'), 'no-store')
+  assert.equal(requests[0].url, path)
+  assert.equal(requests[0].method, 'GET')
+  assert.equal(requests[0].body, '')
+  assert.equal(requests[0].headers.token, undefined)
+  assert.equal(requests[0].headers.cookie, undefined)
+  assert.equal((await call(path, { method: 'GET', signed: false })).status, 401)
+  assert.equal((await call('/pet/stream/status', { method: 'GET', token: '' })).status, 400)
+  assert.equal(requests.length, 1)
+})
+
+test('音视频控制：非法参数、登录、签名和方法拦截，未开放的流路径不会调用上游', async () => {
+  reset()
+  for (const [path, body] of [
+    ['/pet/stream/start', {}],
+    ['/pet/stream/start', { mac: ['AA', 'BB'] }],
+    ['/pet/stream/start', { mac: true }],
+    ['/pet/stream/start', { mac: 'AA', video: 1 }],
+    ['/pet/stream/start', { mac: 'AA', audio: 'yes' }],
+    ['/pet/stream/start', { mac: 'AA', audio: ['true'] }],
+    ['/pet/stream/start', { mac: 'AA', fps: 0 }],
+    ['/pet/stream/start', { mac: 'AA', fps: 1.5 }],
+    ['/pet/stream/start', { mac: 'AA', fps: '' }],
+    ['/pet/stream/start', { mac: 'AA', quality: -1 }],
+    ['/pet/stream/start', { mac: 'AA', quality: 'NaN' }],
+    ['/pet/stream/start', { mac: 'AA', serverPort: 65536 }],
+    ['/pet/stream/start', { mac: 'AA', serverPort: 0 }],
+    ['/pet/stream/start', { mac: 'AA', serverHost: '' }],
+    ['/pet/stream/start', { mac: 'AA', token: 'forged' }],
+    ['/pet/stream/stop', { mac: ' ' }],
+    ['/pet/stream/video', { mac: 'AA' }],
+    ['/pet/stream/audio', { mac: 'AA', enable: 'on' }],
+    ['/pet/info/update', { petId: '123', petName: true }],
+  ]) assert.equal((await call(path, { body })).status, 400)
+  for (const path of ['/pet/stream/start', '/pet/stream/stop', '/pet/stream/video', '/pet/stream/audio']) {
+    assert.equal((await call(path, { token: '', body: { mac: 'AA', enable: true } })).status, 401)
+    assert.equal((await call(path, { signed: false, body: { mac: 'AA', enable: true } })).status, 401)
+    assert.equal((await call(`${path}?mac=AA`, { method: 'GET' })).status, 405)
+  }
+  assert.equal((await call('/pet/stream/status', { body: { mac: 'AA' }, token: '' })).status, 405)
+  assert.equal((await call('/pet/stream/unknown', { body: { mac: 'AA' } })).status, 404)
+  assert.equal(requests.length, 0)
 })
 
 test('长 ID 与根 list/业务码逐字保留，不重新序列化', async () => {
